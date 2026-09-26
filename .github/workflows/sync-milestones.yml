@@ -1,0 +1,52 @@
+name: Sync milestones
+
+# Creates the M0-M6 milestones and assigns every ICS-### issue to its milestone
+# from planning/ics-tasks.json. Idempotent; safe to re-run by hand.
+
+on:
+  push:
+    branches:
+      - claude/upbeat-galileo-0edn9e
+    paths:
+      - planning/ics-tasks.json
+      - .github/scripts/sync_milestones.py
+      - .github/scripts/test_sync_milestones.py
+      - .github/workflows/sync-milestones.yml
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print planned changes without applying them
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: sync-milestones
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Test the sync script
+        run: python3 -m unittest discover -s .github/scripts -p 'test_*.py' -v
+
+      - name: Sync milestones
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          args=(--manifest planning/ics-tasks.json)
+          if [ "${DRY_RUN}" = "true" ]; then
+            args+=(--dry-run)
+          fi
+          python3 .github/scripts/sync_milestones.py "${args[@]}"

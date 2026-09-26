@@ -1,0 +1,2049 @@
+{
+  "source": "docs/github-issues-path-b.md",
+  "milestones": [
+    {
+      "title": "M0 Foundation",
+      "description": "Build the repository, toolchains, evidence pipeline and shared contracts. No product code merges until M0 closes."
+    },
+    {
+      "title": "M1 Core services",
+      "description": "Build the C++ foundation, the SITL rig and every data-ingest path: timing, PLI and camera I/O."
+    },
+    {
+      "title": "M2 Station control",
+      "description": "Build the encoder time-tagger, mount control, tracking and triggering. Critical path: staff ICS-032 and ICS-035 in month 1."
+    },
+    {
+      "title": "M3 Python models",
+      "description": "Write every algorithm first as a reviewed Python reference with golden outputs; the C++ ports in M4 must match them."
+    },
+    {
+      "title": "M4 Algorithms",
+      "description": "Port each Python reference to C++ and gate every port on parity with its golden files."
+    },
+    {
+      "title": "M5 Front end",
+      "description": "Build the read-only operator and evaluator interface on ics-api."
+    },
+    {
+      "title": "M6 Integration and release",
+      "description": "Prove the system on the bench, then in the field in validation-event order, then release with the full evidence package."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "ICS-001",
+      "title": "Create the monorepo and protections",
+      "plan_id": "FND-01",
+      "milestone": "M0 Foundation",
+      "weeks": 1,
+      "blocked_by": [],
+      "labels": [
+        "lang:all",
+        "area:devsecops"
+      ],
+      "steps": [
+        "Create ics on the CUI-authorized host with the Build plan layout.",
+        "Add CODEOWNERS per top-level directory.",
+        "Protect main: two approvals, signed commits, linear history.",
+        "Add the CTI banner and SECURITY.md.",
+        "Create labels and milestones."
+      ],
+      "done_when": "Unsigned or unreviewed pushes to main fail"
+    },
+    {
+      "id": "ICS-002",
+      "title": "Add CONTRIBUTING, task card and Definition of Done",
+      "plan_id": "FND-09",
+      "milestone": "M0 Foundation",
+      "weeks": 1,
+      "blocked_by": [
+        "ICS-001"
+      ],
+      "labels": [
+        "lang:all",
+        "area:devsecops"
+      ],
+      "steps": [
+        "Write CONTRIBUTING with the task card and Definition of Done.",
+        "Add issue and pull-request templates.",
+        "Document branch naming."
+      ],
+      "done_when": "Templates render on new issues and pull requests"
+    },
+    {
+      "id": "ICS-003",
+      "title": "Add AI-assist controls per DoWI 8430.01 §3.6",
+      "plan_id": "FND-08",
+      "milestone": "M0 Foundation",
+      "weeks": 1,
+      "blocked_by": [
+        "ICS-002"
+      ],
+      "labels": [
+        "lang:all",
+        "area:devsecops"
+      ],
+      "steps": [
+        "Add an ai-assisted checkbox to the pull-request template.",
+        "Require a second human approver when checked.",
+        "Log model, version and scope in docs/ai-usage.md."
+      ],
+      "done_when": "CI blocks merge until the checkbox is answered"
+    },
+    {
+      "id": "ICS-004",
+      "title": "Build C++ toolchain containers",
+      "plan_id": "FND-02",
+      "milestone": "M0 Foundation",
+      "weeks": 3,
+      "blocked_by": [
+        "ICS-001"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:devsecops"
+      ],
+      "steps": [
+        "Build images with GCC 13, Clang 17 and CUDA 12.",
+        "Add CMake presets for debug, release, asan and tsan.",
+        "Pin dependencies with a Conan 2 lockfile."
+      ],
+      "done_when": "A sample target builds bit-identically twice on both compilers"
+    },
+    {
+      "id": "ICS-005",
+      "title": "Encode the C++ Power-of-Ten profile",
+      "plan_id": "FND-03",
+      "milestone": "M0 Foundation",
+      "weeks": 3,
+      "blocked_by": [
+        "ICS-004"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:devsecops"
+      ],
+      "steps": [
+        "Write .clang-tidy with the rule-table checks.",
+        "Set -Wall -Wextra -Wpedantic -Wconversion -Werror.",
+        "Reject NOLINT in CI.",
+        "Add a malloc hook that fails tests on post-init allocation."
+      ],
+      "done_when": "CI fails on one seeded violation of each rule"
+    },
+    {
+      "id": "ICS-006",
+      "title": "Build the Python toolchain",
+      "plan_id": "FND-04",
+      "milestone": "M0 Foundation",
+      "weeks": 1,
+      "blocked_by": [
+        "ICS-001"
+      ],
+      "labels": [
+        "lang:python",
+        "area:devsecops"
+      ],
+      "steps": [
+        "Pin Python 3.12 and dependencies with uv.",
+        "Configure ruff, mypy --strict, pytest and hypothesis.",
+        "Add AST checks for recursion and function length."
+      ],
+      "done_when": "CI fails on an untyped or recursive function"
+    },
+    {
+      "id": "ICS-007",
+      "title": "Build the TypeScript toolchain",
+      "plan_id": "FND-05",
+      "milestone": "M0 Foundation",
+      "weeks": 1,
+      "blocked_by": [
+        "ICS-001"
+      ],
+      "labels": [
+        "lang:ts",
+        "area:devsecops"
+      ],
+      "steps": [
+        "Create a pnpm workspace with Vite and React 18.",
+        "Enable strict tsconfig.",
+        "Configure ESLint: no any, no non-null assertion, no floating promises, 50-line functions.",
+        "Add Vitest and Playwright."
+      ],
+      "done_when": "CI fails on any, !, var or a floating promise"
+    },
+    {
+      "id": "ICS-008",
+      "title": "Build CI test stages",
+      "plan_id": "FND-06",
+      "milestone": "M0 Foundation",
+      "weeks": 3,
+      "blocked_by": [
+        "ICS-004",
+        "ICS-005",
+        "ICS-006",
+        "ICS-007"
+      ],
+      "labels": [
+        "lang:all",
+        "area:devsecops"
+      ],
+      "steps": [
+        "Add build and unit stages for all languages.",
+        "Add ASan, UBSan and TSan builds.",
+        "Add libFuzzer runs per merge and nightly.",
+        "Add clang-tidy, cppcheck, CodeQL, ruff, mypy and ESLint."
+      ],
+      "done_when": "Seeded defects fail each stage; clean code passes"
+    },
+    {
+      "id": "ICS-009",
+      "title": "Build CI evidence stages",
+      "plan_id": "FND-06",
+      "milestone": "M0 Foundation",
+      "weeks": 3,
+      "blocked_by": [
+        "ICS-008"
+      ],
+      "labels": [
+        "lang:all",
+        "area:devsecops"
+      ],
+      "steps": [
+        "Generate CycloneDX SBOMs with Syft for Conan, uv and pnpm.",
+        "Sign artifacts with cosign.",
+        "Emit in-toto provenance.",
+        "Archive evidence per merge."
+      ],
+      "done_when": "Every merge publishes a signed SBOM and attestation"
+    },
+    {
+      "id": "ICS-010",
+      "title": "Open the dependency register per DoWI 8430.01 §3.5.i",
+      "plan_id": "FND-07",
+      "milestone": "M0 Foundation",
+      "weeks": 3,
+      "blocked_by": [
+        "ICS-009"
+      ],
+      "labels": [
+        "lang:all",
+        "area:devsecops"
+      ],
+      "steps": [
+        "List every direct dependency.",
+        "Record governance, sustainment, license and foreign-influence review.",
+        "Flag single-maintainer projects.",
+        "Fail CI on unregistered dependencies."
+      ],
+      "done_when": "CI rejects a new unregistered dependency"
+    },
+    {
+      "id": "ICS-011",
+      "title": "Set up protobuf tooling",
+      "plan_id": "PRO-01",
+      "milestone": "M0 Foundation",
+      "weeks": 2,
+      "blocked_by": [
+        "ICS-004",
+        "ICS-006",
+        "ICS-007"
+      ],
+      "labels": [
+        "lang:proto"
+      ],
+      "steps": [
+        "Add buf with lint and breaking-change checks.",
+        "Generate C++, Python and TypeScript code.",
+        "Publish generated packages in the monorepo."
+      ],
+      "done_when": "buf generate runs in CI for all three languages"
+    },
+    {
+      "id": "ICS-012",
+      "title": "Define ICS protobuf messages",
+      "plan_id": "PRO-01",
+      "milestone": "M0 Foundation",
+      "weeks": 4,
+      "blocked_by": [
+        "ICS-011"
+      ],
+      "labels": [
+        "lang:proto"
+      ],
+      "steps": [
+        "Define TimeQuality, PliRecord and PliEvent.",
+        "Define MountSample, CameraFrameMeta and TriggerEvent.",
+        "Define Track, Fragment, KillAssessment, Footprint and RunRecord.",
+        "Document every field with units."
+      ],
+      "done_when": "buf lint passes; all three language leads approve"
+    },
+    {
+      "id": "ICS-013",
+      "title": "Publish the run-record JSON Schema and DroneScore mapping",
+      "plan_id": "PRO-02",
+      "milestone": "M0 Foundation",
+      "weeks": 3,
+      "blocked_by": [
+        "ICS-012"
+      ],
+      "labels": [
+        "lang:proto"
+      ],
+      "steps": [
+        "Write the JSON Schema keyed to C4 MOP and KPP IDs.",
+        "Build 20 sample records.",
+        "Map fields to the DroneScore import."
+      ],
+      "done_when": "All 20 samples validate and import into DroneScore"
+    },
+    {
+      "id": "ICS-014",
+      "title": "Fix frame and time conventions",
+      "plan_id": "PRO-03",
+      "milestone": "M0 Foundation",
+      "weeks": 2,
+      "blocked_by": [
+        "ICS-012"
+      ],
+      "labels": [
+        "lang:cpp",
+        "lang:python"
+      ],
+      "steps": [
+        "Document WGS84, range ENU origin, UTC as int64 ns and ellipsoid heights.",
+        "Generate golden conversion vectors with GeographicLib."
+      ],
+      "done_when": "Golden vectors merged into golden/"
+    },
+    {
+      "id": "ICS-015",
+      "title": "Build common error and container types",
+      "plan_id": "CPP-01",
+      "milestone": "M1 Core services",
+      "weeks": 5,
+      "blocked_by": [
+        "ICS-005"
+      ],
+      "labels": [
+        "lang:cpp"
+      ],
+      "steps": [
+        "Wrap tl::expected with an ICS error enum.",
+        "Build StaticVector, RingBuffer and fixed pools.",
+        "Add assertion macros that CI counts."
+      ],
+      "done_when": "Full branch coverage; zero post-init allocations"
+    },
+    {
+      "id": "ICS-016",
+      "title": "Build common units, logging and config",
+      "plan_id": "CPP-01",
+      "milestone": "M1 Core services",
+      "weeks": 4,
+      "blocked_by": [
+        "ICS-015"
+      ],
+      "labels": [
+        "lang:cpp"
+      ],
+      "steps": [
+        "Add strong unit types for time, angle and length.",
+        "Wrap spdlog with structured fields.",
+        "Load TOML config with toml++ and schema checks."
+      ],
+      "done_when": "Invalid config fails fast and names the field"
+    },
+    {
+      "id": "ICS-017",
+      "title": "Build common frames",
+      "plan_id": "CPP-02",
+      "milestone": "M1 Core services",
+      "weeks": 3,
+      "blocked_by": [
+        "ICS-014",
+        "ICS-016"
+      ],
+      "labels": [
+        "lang:cpp"
+      ],
+      "steps": [
+        "Implement WGS84, ECEF and ENU transforms.",
+        "Convert MSL to ellipsoid with EGM96.",
+        "Test against golden vectors."
+      ],
+      "done_when": "Every golden vector matches within 1 mm"
+    },
+    {
+      "id": "ICS-018",
+      "title": "Stand up the SITL rig",
+      "plan_id": "INT-01",
+      "milestone": "M1 Core services",
+      "weeks": 4,
+      "blocked_by": [
+        "ICS-008"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:validation"
+      ],
+      "steps": [
+        "Containerize PX4 and ArduPilot SITL.",
+        "Script target and interceptor profiles.",
+        "Mirror MAVLink to an emulated TAP port."
+      ],
+      "done_when": "Nightly CI replays three scripted engagements"
+    },
+    {
+      "id": "ICS-019",
+      "title": "Build ics-timingd",
+      "plan_id": "CPP-03",
+      "milestone": "M1 Core services",
+      "weeks": 5,
+      "blocked_by": [
+        "ICS-016"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:timing"
+      ],
+      "steps": [
+        "Poll grandmaster and PTP state.",
+        "Detect GNSS loss and holdover.",
+        "Publish TimeQuality over gRPC."
+      ],
+      "done_when": "Holdover flagged within 1 s of GNSS loss on the bench"
+    },
+    {
+      "id": "ICS-020",
+      "title": "Capture pcap on TAP ports",
+      "plan_id": "CPP-05",
+      "milestone": "M1 Core services",
+      "weeks": 4,
+      "blocked_by": [
+        "ICS-016"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:pli"
+      ],
+      "steps": [
+        "Open TAP interfaces with libpcap.",
+        "Enable NIC hardware time stamps.",
+        "Rotate files and hash each on close."
+      ],
+      "done_when": "24 h capture with zero drops"
+    },
+    {
+      "id": "ICS-021",
+      "title": "Build the MAVLink adapter",
+      "plan_id": "CPP-06",
+      "milestone": "M1 Core services",
+      "weeks": 12,
+      "blocked_by": [
+        "ICS-017",
+        "ICS-018",
+        "ICS-020"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:pli"
+      ],
+      "steps": [
+        "Parse GLOBAL_POSITION_INT, GPS_RAW_INT, SYSTEM_TIME, ATTITUDE_QUATERNION, HEARTBEAT, COMMAND_LONG/ACK and STATUSTEXT.",
+        "Convert MSL to ellipsoid.",
+        "Emit PliRecord and PliEvent.",
+        "Add a libFuzzer target."
+      ],
+      "done_when": "SITL replays match truth; 1 h fuzz clean"
+    },
+    {
+      "id": "ICS-022",
+      "title": "Build the CoT adapter",
+      "plan_id": "CPP-07",
+      "milestone": "M1 Core services",
+      "weeks": 4,
+      "blocked_by": [
+        "ICS-017",
+        "ICS-020"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:pli"
+      ],
+      "steps": [
+        "Parse event and point with pugixml.",
+        "Map ce and le to σ.",
+        "Flag receipt time versus vehicle time.",
+        "Fuzz."
+      ],
+      "done_when": "Sample feeds parse; fuzz clean"
+    },
+    {
+      "id": "ICS-023",
+      "title": "Build the Lattice adapter",
+      "plan_id": "CPP-08",
+      "milestone": "M1 Core services",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-017"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:pli"
+      ],
+      "steps": [
+        "Subscribe to StreamEntities with a read-only token.",
+        "Filter location and kinematics components.",
+        "Emit PliRecord."
+      ],
+      "done_when": "Runs against the vendor sandbox"
+    },
+    {
+      "id": "ICS-024",
+      "title": "Build the SAPIENT adapter",
+      "plan_id": "CPP-09",
+      "milestone": "M1 Core services",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-017"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:pli"
+      ],
+      "steps": [
+        "Generate BSI Flex 335 v2.0 types.",
+        "Parse detection and track reports.",
+        "Fuzz."
+      ],
+      "done_when": "ICD sample messages parse; fuzz clean"
+    },
+    {
+      "id": "ICS-025",
+      "title": "Import ULog and DataFlash logs",
+      "plan_id": "CPP-10",
+      "milestone": "M1 Core services",
+      "weeks": 10,
+      "blocked_by": [
+        "ICS-017"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:pli"
+      ],
+      "steps": [
+        "Parse ULog with ulog_cpp.",
+        "Parse DataFlash.",
+        "Extract estimator states, raw GNSS and events.",
+        "Convert GNSS time to UTC."
+      ],
+      "done_when": "Full-rate states extracted from sample logs"
+    },
+    {
+      "id": "ICS-026",
+      "title": "Build time alignment",
+      "plan_id": "CPP-11",
+      "milestone": "M1 Core services",
+      "weeks": 8,
+      "blocked_by": [
+        "ICS-021",
+        "ICS-025"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:pli"
+      ],
+      "steps": [
+        "Fit boot-to-UTC offset and drift per sortie.",
+        "Compute link latency per source.",
+        "Report residual offsets."
+      ],
+      "done_when": "≤1 ms error with injected drift on SITL"
+    },
+    {
+      "id": "ICS-027",
+      "title": "Wrap the Phantom SDK",
+      "plan_id": "CPP-12",
+      "milestone": "M1 Core services",
+      "weeks": 10,
+      "blocked_by": [
+        "ICS-016"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:camera"
+      ],
+      "steps": [
+        "Configure resolution, rate and exposure.",
+        "Arm multi-cine segments and trigger.",
+        "Trim and offload over 10GbE.",
+        "Extract IRIG time per frame."
+      ],
+      "done_when": "Ten back-to-back segments offload with verified times"
+    },
+    {
+      "id": "ICS-028",
+      "title": "Wrap the FLIR X6980-HS SDK",
+      "plan_id": "CPP-13",
+      "milestone": "M1 Core services",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-016"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:camera"
+      ],
+      "steps": [
+        "Configure window, rate and integration time.",
+        "Arm and trigger.",
+        "Offload with IRIG time stamps."
+      ],
+      "done_when": "Same test as ICS-027"
+    },
+    {
+      "id": "ICS-029",
+      "title": "Build the strobe latency analyzer",
+      "plan_id": "CPP-04",
+      "milestone": "M1 Core services",
+      "weeks": 4,
+      "blocked_by": [
+        "ICS-019",
+        "ICS-027"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:timing"
+      ],
+      "steps": [
+        "Detect PPS strobe frames.",
+        "Compute per-camera offset to UTC.",
+        "Publish offsets to TimeQuality."
+      ],
+      "done_when": "Offsets within 5 µs on the bench"
+    },
+    {
+      "id": "ICS-030",
+      "title": "Deliver ics-plid",
+      "plan_id": "CPP-14",
+      "milestone": "M1 Core services",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-021",
+        "ICS-022",
+        "ICS-023",
+        "ICS-024",
+        "ICS-025",
+        "ICS-026"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:pli"
+      ],
+      "steps": [
+        "Wire all adapters into one service.",
+        "Store canonical PLI as Parquet.",
+        "Expose gRPC queries."
+      ],
+      "done_when": "SITL feed yields canonical PLI end to end"
+    },
+    {
+      "id": "ICS-031",
+      "title": "Deliver ics-camd",
+      "plan_id": "CPP-14",
+      "milestone": "M1 Core services",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-027",
+        "ICS-028"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:camera"
+      ],
+      "steps": [
+        "Manage every station camera.",
+        "Arm and offload on one command.",
+        "Record frame metadata."
+      ],
+      "done_when": "One command arms and offloads every camera"
+    },
+    {
+      "id": "ICS-032",
+      "title": "Build the encoder time-tagger firmware",
+      "plan_id": "FW-01",
+      "milestone": "M2 Station control",
+      "weeks": 12,
+      "blocked_by": [
+        "ICS-014"
+      ],
+      "labels": [
+        "lang:fw",
+        "area:mount",
+        "critical-path"
+      ],
+      "steps": [
+        "Select the MCU or FPGA and the encoder tap interface.",
+        "Discipline the clock to PPS and PTP.",
+        "Stream time-tagged angles.",
+        "Test with injected PPS."
+      ],
+      "done_when": "Time-tag error ≤50 µs (C18)"
+    },
+    {
+      "id": "ICS-033",
+      "title": "Build the PWI4 mount client",
+      "plan_id": "CPP-16",
+      "milestone": "M2 Station control",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-016"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:mount"
+      ],
+      "steps": [
+        "Implement status, goto and rate commands.",
+        "Enforce axis limits.",
+        "Retry with bounded backoff."
+      ],
+      "done_when": "Stable 20 to 50 Hz rate loop on a bench mount"
+    },
+    {
+      "id": "ICS-034",
+      "title": "Build the sun keep-out interlock",
+      "plan_id": "CPP-17",
+      "milestone": "M2 Station control",
+      "weeks": 5,
+      "blocked_by": [
+        "ICS-033"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:mount"
+      ],
+      "steps": [
+        "Compute sun position with NREL SPA.",
+        "Pre-empt any command entering the 15° cone.",
+        "Park the mount on ephemeris or clock fault."
+      ],
+      "done_when": "Randomized HIL commands never enter the cone"
+    },
+    {
+      "id": "ICS-035",
+      "title": "Fit the mount pointing model",
+      "plan_id": "PY-01",
+      "milestone": "M2 Station control",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-014",
+        "ICS-032"
+      ],
+      "labels": [
+        "lang:python",
+        "area:mount",
+        "critical-path"
+      ],
+      "steps": [
+        "Capture star calibration frames.",
+        "Fit TPOINT-style terms.",
+        "Export versioned coefficients."
+      ],
+      "done_when": "≤10 µrad RMS on held-out stars (C17)"
+    },
+    {
+      "id": "ICS-036",
+      "title": "Build the encoder module",
+      "plan_id": "CPP-15",
+      "milestone": "M2 Station control",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-032",
+        "ICS-035"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:mount",
+        "critical-path"
+      ],
+      "steps": [
+        "Ingest time-tagged angles.",
+        "Interpolate to frame times.",
+        "Apply the pointing model."
+      ],
+      "done_when": "≤5 µrad error at 0.1 rad/s on the bench"
+    },
+    {
+      "id": "ICS-037",
+      "title": "Build the cue extrapolator",
+      "plan_id": "CPP-18",
+      "milestone": "M2 Station control",
+      "weeks": 8,
+      "blocked_by": [
+        "ICS-026",
+        "ICS-033"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:mount"
+      ],
+      "steps": [
+        "Fuse PLI and radar in a constant-acceleration Kalman filter.",
+        "Convert to azimuth, elevation and rates.",
+        "Compensate latency."
+      ],
+      "done_when": "Pointing error <2 mrad on replayed tracks"
+    },
+    {
+      "id": "ICS-038",
+      "title": "Build the closed-loop tracker",
+      "plan_id": "CPP-19",
+      "milestone": "M2 Station control",
+      "weeks": 12,
+      "blocked_by": [
+        "ICS-033"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:mount"
+      ],
+      "steps": [
+        "Stream the tracking camera through Aravis.",
+        "Centroid the target at 100 Hz.",
+        "Close the loop to mount rates.",
+        "Add acquire and reacquire logic."
+      ],
+      "done_when": "Target stays in the central half of the narrow field at 500 m (C19)"
+    },
+    {
+      "id": "ICS-039",
+      "title": "Build the hand-off scheduler",
+      "plan_id": "CPP-20",
+      "milestone": "M2 Station control",
+      "weeks": 4,
+      "blocked_by": [
+        "ICS-037",
+        "ICS-038"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:mount"
+      ],
+      "steps": [
+        "Queue targets by predicted engagement time.",
+        "Re-point after each engagement.",
+        "Flag engagements less than 3 s apart."
+      ],
+      "done_when": "M-2 replay hands off within 3 s"
+    },
+    {
+      "id": "ICS-040",
+      "title": "Build the trigger controller",
+      "plan_id": "CPP-21",
+      "milestone": "M2 Station control",
+      "weeks": 8,
+      "blocked_by": [
+        "ICS-026",
+        "ICS-031"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:camera"
+      ],
+      "steps": [
+        "Predict closest approach from PLI.",
+        "Arm on the engage command.",
+        "Drive the BNC 577 over SCPI.",
+        "Log every event on UTC."
+      ],
+      "done_when": "Fires within 1 ms of prediction in replay"
+    },
+    {
+      "id": "ICS-041",
+      "title": "Deliver ics-mountd and the station console",
+      "plan_id": "CPP-22",
+      "milestone": "M2 Station control",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-034",
+        "ICS-036",
+        "ICS-037",
+        "ICS-038",
+        "ICS-039"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:mount"
+      ],
+      "steps": [
+        "Package control, interlock and tracking into one service per station.",
+        "Add a station console CLI for operator commands."
+      ],
+      "done_when": "Three stations track one target from one cue"
+    },
+    {
+      "id": "ICS-042",
+      "title": "Fit camera intrinsics and boresight",
+      "plan_id": "PY-02",
+      "milestone": "M3 Python models",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-014"
+      ],
+      "labels": [
+        "lang:python",
+        "area:registration"
+      ],
+      "steps": [
+        "Capture calibration targets.",
+        "Fit Brown-Conrady distortion.",
+        "Fit narrow, wide and MWIR boresight offsets to the mount.",
+        "Export parameters."
+      ],
+      "done_when": "≤0.5 px reprojection on held-out points (C3)"
+    },
+    {
+      "id": "ICS-043",
+      "title": "Model refraction and turbulence",
+      "plan_id": "PY-03",
+      "milestone": "M3 Python models",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-042"
+      ],
+      "labels": [
+        "lang:python",
+        "area:registration"
+      ],
+      "steps": [
+        "Compute terrestrial refraction from met profiles.",
+        "Estimate turbulence from image jitter.",
+        "Export correction tables."
+      ],
+      "done_when": "Reduces RTK residuals on V2 data"
+    },
+    {
+      "id": "ICS-044",
+      "title": "Write the 7-state ballistic reference",
+      "plan_id": "PY-04",
+      "milestone": "M3 Python models",
+      "weeks": 5,
+      "blocked_by": [
+        "ICS-014"
+      ],
+      "labels": [
+        "lang:python",
+        "area:estimation"
+      ],
+      "steps": [
+        "Implement the point-mass drag model.",
+        "Fit initial state and ρ/β.",
+        "Publish golden datasets."
+      ],
+      "done_when": "Recovers synthetic truth; golden files merged"
+    },
+    {
+      "id": "ICS-045",
+      "title": "Write lift and flutter references",
+      "plan_id": "PY-04",
+      "milestone": "M3 Python models",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-044"
+      ],
+      "labels": [
+        "lang:python",
+        "area:estimation"
+      ],
+      "steps": [
+        "Add lift and velocity-dependent drag models.",
+        "Add model selection by residual.",
+        "Publish golden files."
+      ],
+      "done_when": "Recovers synthetic parameters within tolerance"
+    },
+    {
+      "id": "ICS-046",
+      "title": "Write IMM and closest-approach references",
+      "plan_id": "PY-04",
+      "milestone": "M3 Python models",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-044"
+      ],
+      "labels": [
+        "lang:python",
+        "area:estimation"
+      ],
+      "steps": [
+        "Implement IMM with constant-velocity, constant-acceleration and turn models.",
+        "Solve closest approach and contact time.",
+        "Publish golden files."
+      ],
+      "done_when": "Miss distance within 1 mm on synthetic truth"
+    },
+    {
+      "id": "ICS-047",
+      "title": "Build the synthetic engagement generator",
+      "plan_id": "PY-08",
+      "milestone": "M3 Python models",
+      "weeks": 12,
+      "blocked_by": [
+        "ICS-012"
+      ],
+      "labels": [
+        "lang:python",
+        "area:validation"
+      ],
+      "steps": [
+        "Render sky backgrounds with noise and turbulence.",
+        "Insert drones, interceptor and debris at known truth.",
+        "Write cine-compatible frames with truth files."
+      ],
+      "done_when": "200-sequence regression set runs in CI"
+    },
+    {
+      "id": "ICS-048",
+      "title": "Write the reference detector",
+      "plan_id": null,
+      "milestone": "M3 Python models",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-047"
+      ],
+      "labels": [
+        "lang:python",
+        "area:detection",
+        "path-b"
+      ],
+      "steps": [
+        "Model the sky background on moving frames.",
+        "Detect negative- and positive-contrast blobs.",
+        "Measure sub-pixel centroid and area.",
+        "Publish golden outputs."
+      ],
+      "done_when": "≥95% recall at ≤1 false detection per frame on synthetic data"
+    },
+    {
+      "id": "ICS-049",
+      "title": "Write the reference debris association",
+      "plan_id": null,
+      "milestone": "M3 Python models",
+      "weeks": 10,
+      "blocked_by": [
+        "ICS-047",
+        "ICS-048"
+      ],
+      "labels": [
+        "lang:python",
+        "area:association",
+        "path-b"
+      ],
+      "steps": [
+        "Build 2D tracklets.",
+        "Match across stations by line-of-sight gating.",
+        "Manage track hypotheses.",
+        "Publish golden outputs."
+      ],
+      "done_when": "≥90% correct associations on synthetic debris clouds"
+    },
+    {
+      "id": "ICS-050",
+      "title": "Build drag-table fitting tools",
+      "plan_id": "PY-05",
+      "milestone": "M3 Python models",
+      "weeks": 4,
+      "blocked_by": [
+        "ICS-044"
+      ],
+      "labels": [
+        "lang:python",
+        "area:estimation"
+      ],
+      "steps": [
+        "Ingest recovery weights and tracks.",
+        "Fit Cd by material class.",
+        "Hold out half of every drop set."
+      ],
+      "done_when": "Runs on synthetic drops; real fit follows ICS-095"
+    },
+    {
+      "id": "ICS-051",
+      "title": "Write the footprint Monte Carlo reference",
+      "plan_id": "PY-06",
+      "milestone": "M3 Python models",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-044"
+      ],
+      "labels": [
+        "lang:python",
+        "area:products"
+      ],
+      "steps": [
+        "Ingest wind profiles to 1,000 m.",
+        "Propagate fragments with sampled uncertainty.",
+        "Produce 50, 90 and 99% regions."
+      ],
+      "done_when": "Coverage test passes on synthetic truth"
+    },
+    {
+      "id": "ICS-052",
+      "title": "Study kill-class thresholds",
+      "plan_id": "PY-07",
+      "milestone": "M3 Python models",
+      "weeks": 4,
+      "blocked_by": [
+        "ICS-044"
+      ],
+      "labels": [
+        "lang:python",
+        "area:products"
+      ],
+      "steps": [
+        "Build ROC curves for N, m, T and the residual gate.",
+        "Recommend thresholds.",
+        "Freeze them for Section 5.2 sign-off."
+      ],
+      "done_when": "Thresholds signed before scoring runs"
+    },
+    {
+      "id": "ICS-053",
+      "title": "Train the segmentation model",
+      "plan_id": "PY-09",
+      "milestone": "M3 Python models",
+      "weeks": 10,
+      "blocked_by": [
+        "ICS-047"
+      ],
+      "labels": [
+        "lang:python",
+        "area:detection"
+      ],
+      "steps": [
+        "Label range and synthetic imagery.",
+        "Train and benchmark.",
+        "Export ONNX with a model card (DoWI 8430.01 §3.6.e)."
+      ],
+      "done_when": "IoU ≥0.8; model card published"
+    },
+    {
+      "id": "ICS-054",
+      "title": "Propagate uncertainty",
+      "plan_id": "PY-10",
+      "milestone": "M3 Python models",
+      "weeks": 5,
+      "blocked_by": [
+        "ICS-035",
+        "ICS-042",
+        "ICS-043"
+      ],
+      "labels": [
+        "lang:python",
+        "area:validation"
+      ],
+      "steps": [
+        "Sample every error source.",
+        "Predict σ versus slant range.",
+        "Compare with Section 4.2."
+      ],
+      "done_when": "Within 20% of the Section 4.2 table"
+    },
+    {
+      "id": "ICS-055",
+      "title": "Build the statistics package",
+      "plan_id": "PY-11",
+      "milestone": "M3 Python models",
+      "weeks": 5,
+      "blocked_by": [
+        "ICS-013"
+      ],
+      "labels": [
+        "lang:python",
+        "area:validation"
+      ],
+      "steps": [
+        "Compute Clopper-Pearson Pk.",
+        "Summarize miss distance and timeline gates.",
+        "Compute MLCOA versus MDCOA deltas."
+      ],
+      "done_when": "Reproduces hand-worked examples"
+    },
+    {
+      "id": "ICS-056",
+      "title": "Build the validation scorer",
+      "plan_id": "PY-12",
+      "milestone": "M3 Python models",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-055"
+      ],
+      "labels": [
+        "lang:python",
+        "area:validation"
+      ],
+      "steps": [
+        "Load V0 to V5 data.",
+        "Compute C1 to C19.",
+        "Emit the accreditation table."
+      ],
+      "done_when": "One command produces the table"
+    },
+    {
+      "id": "ICS-057",
+      "title": "Build the debris source-term model",
+      "plan_id": "PY-13",
+      "milestone": "M3 Python models",
+      "weeks": 4,
+      "blocked_by": [
+        "ICS-050"
+      ],
+      "labels": [
+        "lang:python",
+        "area:products"
+      ],
+      "steps": [
+        "Parameterize by closing speed, geometry and target class.",
+        "Export M&S tables."
+      ],
+      "done_when": "M&S Analyst accepts the tables"
+    },
+    {
+      "id": "ICS-058",
+      "title": "Build the camera model",
+      "plan_id": "CPP-23",
+      "milestone": "M4 Algorithms",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-042"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:registration",
+        "path-b"
+      ],
+      "steps": [
+        "Load intrinsics and distortion.",
+        "Undistort and project points.",
+        "Test parity with ICS-042."
+      ],
+      "done_when": "Parity within 0.01 px"
+    },
+    {
+      "id": "ICS-059",
+      "title": "Build per-frame lines of sight",
+      "plan_id": "CPP-23",
+      "milestone": "M4 Algorithms",
+      "weeks": 8,
+      "blocked_by": [
+        "ICS-036",
+        "ICS-058"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:registration",
+        "critical-path"
+      ],
+      "steps": [
+        "Combine encoder angle, pointing model and boresight per frame.",
+        "Output unit vectors in range ENU."
+      ],
+      "done_when": "Sky-fiducial error meets C4 and C5 on V2 data"
+    },
+    {
+      "id": "ICS-060",
+      "title": "Apply refraction corrections",
+      "plan_id": "CPP-23",
+      "milestone": "M4 Algorithms",
+      "weeks": 4,
+      "blocked_by": [
+        "ICS-043",
+        "ICS-059"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:registration"
+      ],
+      "steps": [
+        "Load the ICS-043 tables.",
+        "Correct each line of sight by elevation and range."
+      ],
+      "done_when": "Parity with ICS-043"
+    },
+    {
+      "id": "ICS-061",
+      "title": "Build multi-station triangulation",
+      "plan_id": "CPP-23",
+      "milestone": "M4 Algorithms",
+      "weeks": 8,
+      "blocked_by": [
+        "ICS-059"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:registration",
+        "path-b"
+      ],
+      "steps": [
+        "Solve least-squares intersection with covariance.",
+        "Reject pairs outside 40 to 140° intersection."
+      ],
+      "done_when": "Matches RTK within C4 and C5"
+    },
+    {
+      "id": "ICS-062",
+      "title": "Build GPU frame ingest",
+      "plan_id": "CPP-24",
+      "milestone": "M4 Algorithms",
+      "weeks": 8,
+      "blocked_by": [
+        "ICS-027"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:detection",
+        "path-b"
+      ],
+      "steps": [
+        "Decode cine frames into device memory.",
+        "Apply dark and flat correction.",
+        "Stream frame batches."
+      ],
+      "done_when": "A 1.5 s, 5,000 fps window processes in ≤60 s"
+    },
+    {
+      "id": "ICS-063",
+      "title": "Build sky-background detection on moving frames",
+      "plan_id": "CPP-24",
+      "milestone": "M4 Algorithms",
+      "weeks": 14,
+      "blocked_by": [
+        "ICS-048",
+        "ICS-062"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:detection",
+        "path-b"
+      ],
+      "steps": [
+        "Model background per frame.",
+        "Detect negative and positive contrast.",
+        "Test parity with ICS-048."
+      ],
+      "done_when": "≥95% recall at ≤1 false detection per frame"
+    },
+    {
+      "id": "ICS-064",
+      "title": "Measure blobs",
+      "plan_id": "CPP-24",
+      "milestone": "M4 Algorithms",
+      "weeks": 8,
+      "blocked_by": [
+        "ICS-063"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:detection",
+        "path-b"
+      ],
+      "steps": [
+        "Label connected components on the GPU.",
+        "Compute sub-pixel centroids and projected areas."
+      ],
+      "done_when": "Centroid error ≤0.3 px on synthetic truth"
+    },
+    {
+      "id": "ICS-065",
+      "title": "Build MWIR hot-object detection",
+      "plan_id": "CPP-24",
+      "milestone": "M4 Algorithms",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-062"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:detection"
+      ],
+      "steps": [
+        "Detect hot objects.",
+        "Reuse blob measurement."
+      ],
+      "done_when": "≥90% recall on the night synthetic set"
+    },
+    {
+      "id": "ICS-066",
+      "title": "Run segmentation through TensorRT",
+      "plan_id": "CPP-25",
+      "milestone": "M4 Algorithms",
+      "weeks": 5,
+      "blocked_by": [
+        "ICS-053",
+        "ICS-062"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:detection"
+      ],
+      "steps": [
+        "Build a TensorRT engine from ONNX.",
+        "Run inference per frame."
+      ],
+      "done_when": "ONNX parity; ≤5 ms per frame"
+    },
+    {
+      "id": "ICS-067",
+      "title": "Build the IMM two-body tracker",
+      "plan_id": "CPP-26",
+      "milestone": "M4 Algorithms",
+      "weeks": 10,
+      "blocked_by": [
+        "ICS-046",
+        "ICS-061"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:estimation",
+        "critical-path"
+      ],
+      "steps": [
+        "Port ICS-046.",
+        "Seed tracks from PLI.",
+        "Run parity tests."
+      ],
+      "done_when": "Matches golden files"
+    },
+    {
+      "id": "ICS-068",
+      "title": "Solve closest approach and contact time",
+      "plan_id": "CPP-26",
+      "milestone": "M4 Algorithms",
+      "weeks": 5,
+      "blocked_by": [
+        "ICS-067"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:estimation"
+      ],
+      "steps": [
+        "Port the solver.",
+        "Use same-frame relative measurements for miss distance."
+      ],
+      "done_when": "Meets C7, C8 and C16"
+    },
+    {
+      "id": "ICS-069",
+      "title": "Build 2D tracklets",
+      "plan_id": "CPP-27",
+      "milestone": "M4 Algorithms",
+      "weeks": 12,
+      "blocked_by": [
+        "ICS-064"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:association",
+        "path-b"
+      ],
+      "steps": [
+        "Gate detections frame to frame.",
+        "Assign with the Hungarian algorithm.",
+        "Handle splits and merges."
+      ],
+      "done_when": "Parity with ICS-049"
+    },
+    {
+      "id": "ICS-070",
+      "title": "Match tracklets across stations",
+      "plan_id": "CPP-27",
+      "milestone": "M4 Algorithms",
+      "weeks": 12,
+      "blocked_by": [
+        "ICS-061",
+        "ICS-069"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:association",
+        "path-b"
+      ],
+      "steps": [
+        "Gate by line-of-sight distance.",
+        "Score candidate pairs."
+      ],
+      "done_when": "≥95% correct matches on synthetic data"
+    },
+    {
+      "id": "ICS-071",
+      "title": "Manage 3D track hypotheses",
+      "plan_id": "CPP-27",
+      "milestone": "M4 Algorithms",
+      "weeks": 20,
+      "blocked_by": [
+        "ICS-070"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:association",
+        "path-b"
+      ],
+      "steps": [
+        "Build track-oriented multiple-hypothesis tracking with a bounded hypothesis count.",
+        "Prune and merge.",
+        "Emit 3D tracks."
+      ],
+      "done_when": "Meets C9 on V3 data"
+    },
+    {
+      "id": "ICS-072",
+      "title": "Score and prune tracks",
+      "plan_id": "CPP-27",
+      "milestone": "M4 Algorithms",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-071"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:association",
+        "path-b"
+      ],
+      "steps": [
+        "Compute median residual per track.",
+        "Apply the 10 cm gate.",
+        "Tag track quality."
+      ],
+      "done_when": "Quality flags match ICS-049"
+    },
+    {
+      "id": "ICS-073",
+      "title": "Fit the 7-state model",
+      "plan_id": "CPP-28",
+      "milestone": "M4 Algorithms",
+      "weeks": 8,
+      "blocked_by": [
+        "ICS-044",
+        "ICS-072"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:estimation",
+        "path-b"
+      ],
+      "steps": [
+        "Port the batch fit to Ceres with covariance.",
+        "Run parity tests."
+      ],
+      "done_when": "Parity within 1e-6 relative"
+    },
+    {
+      "id": "ICS-074",
+      "title": "Fit lift and flutter models",
+      "plan_id": "CPP-28",
+      "milestone": "M4 Algorithms",
+      "weeks": 8,
+      "blocked_by": [
+        "ICS-045",
+        "ICS-073"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:estimation",
+        "path-b"
+      ],
+      "steps": [
+        "Port the models and model selection.",
+        "Run parity tests."
+      ],
+      "done_when": "Parity with ICS-045"
+    },
+    {
+      "id": "ICS-075",
+      "title": "Estimate fragment mass",
+      "plan_id": "CPP-28",
+      "milestone": "M4 Algorithms",
+      "weeks": 5,
+      "blocked_by": [
+        "ICS-050",
+        "ICS-073"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:estimation",
+        "path-b"
+      ],
+      "steps": [
+        "Combine β, projected area and the Cd table.",
+        "Propagate uncertainty."
+      ],
+      "done_when": "Meets C10"
+    },
+    {
+      "id": "ICS-076",
+      "title": "Build the kill classifier",
+      "plan_id": "CPP-29",
+      "milestone": "M4 Algorithms",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-052",
+        "ICS-068",
+        "ICS-073"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:products"
+      ],
+      "steps": [
+        "Run the ballistic-fit test on the target body.",
+        "Count breakup pieces.",
+        "Check mission denial."
+      ],
+      "done_when": "Meets C12"
+    },
+    {
+      "id": "ICS-077",
+      "title": "Port the footprint Monte Carlo",
+      "plan_id": "CPP-30",
+      "milestone": "M4 Algorithms",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-051"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:products"
+      ],
+      "steps": [
+        "Port ICS-051.",
+        "Run parity tests."
+      ],
+      "done_when": "Parity; meets C11"
+    },
+    {
+      "id": "ICS-078",
+      "title": "Deliver ics-pipeline",
+      "plan_id": "CPP-31",
+      "milestone": "M4 Algorithms",
+      "weeks": 8,
+      "blocked_by": [
+        "ICS-058",
+        "ICS-059",
+        "ICS-060",
+        "ICS-061",
+        "ICS-062",
+        "ICS-063",
+        "ICS-064",
+        "ICS-065",
+        "ICS-066",
+        "ICS-067",
+        "ICS-068",
+        "ICS-069",
+        "ICS-070",
+        "ICS-071",
+        "ICS-072",
+        "ICS-073",
+        "ICS-074",
+        "ICS-075",
+        "ICS-076",
+        "ICS-077"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:products"
+      ],
+      "steps": [
+        "Orchestrate stages with checkpoints.",
+        "Retry with bounded backoff."
+      ],
+      "done_when": "One run processes in ≤10 minutes"
+    },
+    {
+      "id": "ICS-079",
+      "title": "Build run records and provenance",
+      "plan_id": "CPP-32",
+      "milestone": "M4 Algorithms",
+      "weeks": 8,
+      "blocked_by": [
+        "ICS-013",
+        "ICS-078"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:products"
+      ],
+      "steps": [
+        "Build run records.",
+        "Write SHA-256 manifests.",
+        "Emit in-toto attestations adapted from verdict."
+      ],
+      "done_when": "Any byte change breaks verification"
+    },
+    {
+      "id": "ICS-080",
+      "title": "Build the DroneScore export",
+      "plan_id": "CPP-33",
+      "milestone": "M4 Algorithms",
+      "weeks": 3,
+      "blocked_by": [
+        "ICS-079"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:products"
+      ],
+      "steps": [
+        "Map run records to the DroneScore import.",
+        "Retry with bounded backoff."
+      ],
+      "done_when": "50 sample runs import cleanly"
+    },
+    {
+      "id": "ICS-081",
+      "title": "Deliver ics-api",
+      "plan_id": "CPP-34",
+      "milestone": "M4 Algorithms",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-012",
+        "ICS-079"
+      ],
+      "labels": [
+        "lang:cpp",
+        "area:products"
+      ],
+      "steps": [
+        "Serve read-only gRPC queries.",
+        "Configure Envoy gRPC-Web."
+      ],
+      "done_when": "UI contract tests pass"
+    },
+    {
+      "id": "ICS-082",
+      "title": "Scaffold the web app",
+      "plan_id": "UI-01",
+      "milestone": "M5 Front end",
+      "weeks": 4,
+      "blocked_by": [
+        "ICS-007"
+      ],
+      "labels": [
+        "lang:ts",
+        "area:ui"
+      ],
+      "steps": [
+        "Create routes, layout and design tokens.",
+        "Put CAC/PKI authentication at the reverse proxy.",
+        "Add axe accessibility checks."
+      ],
+      "done_when": "Lint, type and accessibility checks pass"
+    },
+    {
+      "id": "ICS-083",
+      "title": "Generate the typed API client",
+      "plan_id": "UI-02",
+      "milestone": "M5 Front end",
+      "weeks": 4,
+      "blocked_by": [
+        "ICS-081",
+        "ICS-082"
+      ],
+      "labels": [
+        "lang:ts",
+        "area:ui"
+      ],
+      "steps": [
+        "Generate protobuf-es types with Connect gRPC-Web.",
+        "Validate responses with zod at the boundary.",
+        "Retry with bounded backoff."
+      ],
+      "done_when": "Contract tests pass; no untyped data reaches components"
+    },
+    {
+      "id": "ICS-084",
+      "title": "Build the range status view",
+      "plan_id": "UI-03",
+      "milestone": "M5 Front end",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-083"
+      ],
+      "labels": [
+        "lang:ts",
+        "area:ui"
+      ],
+      "steps": [
+        "Show stations, time quality, GNSS and holdover.",
+        "Show mount pointing, sun cone and trigger state.",
+        "Stream server-pushed updates."
+      ],
+      "done_when": "≤1 s display latency"
+    },
+    {
+      "id": "ICS-085",
+      "title": "Build the engagement timeline view",
+      "plan_id": "UI-04",
+      "milestone": "M5 Front end",
+      "weeks": 4,
+      "blocked_by": [
+        "ICS-083"
+      ],
+      "labels": [
+        "lang:ts",
+        "area:ui"
+      ],
+      "steps": [
+        "Plot C4 time gates per run.",
+        "Compare runs side by side."
+      ],
+      "done_when": "Matches ICS-055 output on sample runs"
+    },
+    {
+      "id": "ICS-086",
+      "title": "Build the run quick-look",
+      "plan_id": "UI-05",
+      "milestone": "M5 Front end",
+      "weeks": 6,
+      "blocked_by": [
+        "ICS-083"
+      ],
+      "labels": [
+        "lang:ts",
+        "area:ui"
+      ],
+      "steps": [
+        "Show kill class, miss distance ±σ and intercept point.",
+        "Show coverage and reduced-truth flags."
+      ],
+      "done_when": "Available within 15 minutes of each run"
+    },
+    {
+      "id": "ICS-087",
+      "title": "Build the 3D engagement viewer",
+      "plan_id": "UI-06",
+      "milestone": "M5 Front end",
+      "weeks": 8,
+      "blocked_by": [
+        "ICS-083"
+      ],
+      "labels": [
+        "lang:ts",
+        "area:ui"
+      ],
+      "steps": [
+        "Render stations, trajectories and debris in three.js.",
+        "Add time scrubbing."
+      ],
+      "done_when": "5,000 tracks render at ≥30 fps"
+    },
+    {
+      "id": "ICS-088",
+      "title": "Build the footprint map",
+      "plan_id": "UI-07",
+      "milestone": "M5 Front end",
+      "weeks": 5,
+      "blocked_by": [
+        "ICS-083"
+      ],
+      "labels": [
+        "lang:ts",
+        "area:ui"
+      ],
+      "steps": [
+        "Render offline tiles in MapLibre.",
+        "Draw 50, 90 and 99% polygons and keep-out areas."
+      ],
+      "done_when": "Zero external network calls"
+    },
+    {
+      "id": "ICS-089",
+      "title": "Build imagery review",
+      "plan_id": "UI-08",
+      "milestone": "M5 Front end",
+      "weeks": 8,
+      "blocked_by": [
+        "ICS-083"
+      ],
+      "labels": [
+        "lang:ts",
+        "area:ui"
+      ],
+      "steps": [
+        "Scrub server-transcoded clips frame by frame.",
+        "Overlay tracks and detections."
+      ],
+      "done_when": "Overlays align to the frame"
+    },
+    {
+      "id": "ICS-090",
+      "title": "Build the evaluator workflow",
+      "plan_id": "UI-09",
+      "milestone": "M5 Front end",
+      "weeks": 8,
+      "blocked_by": [
+        "ICS-086"
+      ],
+      "labels": [
+        "lang:ts",
+        "area:ui"
+      ],
+      "steps": [
+        "Capture Section 5.2 sign-off.",
+        "Adjudicate no-tests.",
+        "Override kill class with a required reason.",
+        "Keep a full audit trail."
+      ],
+      "done_when": "Every override stores user, time and reason"
+    },
+    {
+      "id": "ICS-091",
+      "title": "Build the validation dashboard",
+      "plan_id": "UI-10",
+      "milestone": "M5 Front end",
+      "weeks": 4,
+      "blocked_by": [
+        "ICS-056",
+        "ICS-083"
+      ],
+      "labels": [
+        "lang:ts",
+        "area:ui"
+      ],
+      "steps": [
+        "Show C1 to C19 status from ICS-056.",
+        "Link each result to its evidence."
+      ],
+      "done_when": "Pass or fail shown per criterion with evidence links"
+    },
+    {
+      "id": "ICS-092",
+      "title": "Stand up the HIL bench",
+      "plan_id": "INT-02",
+      "milestone": "M6 Integration and release",
+      "weeks": 8,
+      "blocked_by": [
+        "ICS-018",
+        "ICS-047",
+        "ICS-078"
+      ],
+      "labels": [
+        "lang:all",
+        "area:validation"
+      ],
+      "steps": [
+        "Replay PLI and synthetic imagery through every service.",
+        "Run the bench nightly in CI."
+      ],
+      "done_when": "Nightly CI produces a full run record"
+    },
+    {
+      "id": "ICS-093",
+      "title": "Shake down one station in the field: V0 and V1",
+      "plan_id": "INT-03",
+      "milestone": "M6 Integration and release",
+      "weeks": 10,
+      "blocked_by": [
+        "ICS-029",
+        "ICS-041"
+      ],
+      "labels": [
+        "lang:all",
+        "area:validation"
+      ],
+      "steps": [
+        "Emplace and survey one station.",
+        "Run star calibration and PPS injection.",
+        "Run strobe timing checks.",
+        "Test the sun interlock."
+      ],
+      "done_when": "C1, C2, C17 and C18 pass"
+    },
+    {
+      "id": "ICS-094",
+      "title": "Fly the three-station envelope campaign: V2",
+      "plan_id": "INT-04",
+      "milestone": "M6 Integration and release",
+      "weeks": 16,
+      "blocked_by": [
+        "ICS-093"
+      ],
+      "labels": [
+        "lang:all",
+        "area:validation",
+        "critical-path"
+      ],
+      "steps": [
+        "Emplace all stations per Section 4.7.",
+        "Fly the sky-fiducial drone and dumbbell across the envelope, day and night.",
+        "Score with ICS-056."
+      ],
+      "done_when": "C3 to C6, C14 to C16 and C19 pass"
+    },
+    {
+      "id": "ICS-095",
+      "title": "Run debris drops and suspended-target strikes: V3 and V4",
+      "plan_id": "INT-05",
+      "milestone": "M6 Integration and release",
+      "weeks": 12,
+      "blocked_by": [
+        "ICS-094"
+      ],
+      "labels": [
+        "lang:all",
+        "area:validation"
+      ],
+      "steps": [
+        "Drop tagged components from 100, 300 and 1,000 m.",
+        "Fit the drag table with ICS-050 on half the drops.",
+        "Run suspended-target strikes."
+      ],
+      "done_when": "C7 to C12 pass"
+    },
+    {
+      "id": "ICS-096",
+      "title": "Run live-run concurrence and assemble accreditation: V5",
+      "plan_id": "INT-06",
+      "milestone": "M6 Integration and release",
+      "weeks": 16,
+      "blocked_by": [
+        "ICS-095",
+        "ICS-056"
+      ],
+      "labels": [
+        "lang:all",
+        "area:validation",
+        "critical-path"
+      ],
+      "steps": [
+        "Score the first live runs with all stations and truth pods.",
+        "Assemble the Section 6.4 package."
+      ],
+      "done_when": "Evaluator and M&S Analyst sign"
+    },
+    {
+      "id": "ICS-097",
+      "title": "Release with the DoWI 8430.01 evidence package",
+      "plan_id": "INT-07",
+      "milestone": "M6 Integration and release",
+      "weeks": 8,
+      "blocked_by": [
+        "ICS-096"
+      ],
+      "labels": [
+        "lang:all",
+        "area:validation"
+      ],
+      "steps": [
+        "Publish signed SBOM and provenance.",
+        "Complete penetration testing and secure-code review.",
+        "Submit to the Authorizing Official."
+      ],
+      "done_when": "AO accepts the evidence package"
+    }
+  ]
+}
