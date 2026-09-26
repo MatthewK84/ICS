@@ -8,6 +8,7 @@ Start here:
 
 - [Build plan](docs/build-plan.md): phases, language boundaries, coding standards, task card and Definition of Done.
 - [GitHub issues (Path B)](docs/github-issues-path-b.md): the 97 issues, ICS-001 through ICS-097, by milestone.
+- [Contributing](CONTRIBUTING.md): the workflow, task card, Definition of Done, branch naming and review rules.
 - [Repository protection](docs/repository-protection.md): the rules on `main` and how changes get merged.
 
 Work the issues in numeric order within each milestone. Open each one by completing its task card, and close it only when its "Done when" test passes and the Definition of Done checklist is complete. Every change reaches `main` through a pull request.
