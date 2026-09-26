@@ -1,0 +1,44 @@
+# Code owners for ICS, one rule per top-level directory (ICS-001).
+#
+# Every path is owned by @MatthewK84 until the team is staffed. The comment
+# above each rule names the lead role from docs/build-plan.md ("Schedule,
+# staffing and critical path"); replace the owner with that person or team
+# as they join. Later rules take precedence, so the catch-all comes first.
+
+# Architect: anything not matched below.
+*               @MatthewK84
+
+# Architect: protobuf contracts.
+/proto/         @MatthewK84
+
+# Architect: run-record JSON Schema.
+/schemas/       @MatthewK84
+
+# Modeling engineer: cross-language golden vectors.
+/golden/        @MatthewK84
+
+# Systems engineer, with module owners to follow: Controls engineer for
+# mount, encoder, tracker and trigger; CV and estimation engineers for
+# registration through footprint.
+/cpp/           @MatthewK84
+
+# Controls engineer: encoder time-tagger firmware.
+/firmware/      @MatthewK84
+
+# Modeling engineer: reference models, calibration, synthetic data, statistics.
+/python/        @MatthewK84
+
+# Front-end engineer: operator and evaluator interface.
+/web/           @MatthewK84
+
+# DevSecOps: containers, Envoy, systemd units, infrastructure as code.
+/deploy/        @MatthewK84
+
+# Architect: build plan, issue index, repository guides.
+/docs/          @MatthewK84
+
+# Architect: task manifest.
+/planning/      @MatthewK84
+
+# DevSecOps: workflows, scripts, rulesets and this file.
+/.github/       @MatthewK84
