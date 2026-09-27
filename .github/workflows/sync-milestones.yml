@@ -9,6 +9,7 @@ on:
       - claude/upbeat-galileo-0edn9e
     paths:
       - planning/ics-tasks.json
+      - .github/scripts/gh_api.py
       - .github/scripts/sync_milestones.py
       - .github/scripts/test_sync_milestones.py
       - .github/workflows/sync-milestones.yml
