@@ -10,6 +10,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(ICS_POLICY_SEEDS "Add the seeded Power-of-Ten violations; for cpp/policy/check-policy.sh only" OFF)
 
 include(cmake/Reproducible.cmake)
+# Generated protobuf code (ICS-011) is added before the ICS warning flags, like
+# a dependency; see proto/CMakeLists.txt.
+add_subdirectory(proto)
 include(cmake/Warnings.cmake)
 
 enable_testing()
@@ -17,6 +20,7 @@ include(cmake/Testing.cmake)
 include(cmake/Fuzzing.cmake)
 add_subdirectory(testing/alloc_guard)
 add_subdirectory(toolchain_check)
+add_subdirectory(proto/test)
 
 if(ICS_POLICY_SEEDS)
   add_subdirectory(policy/seeded)

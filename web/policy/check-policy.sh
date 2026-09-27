@@ -43,7 +43,7 @@ fail() {
 find_suppressions() {
   grep -rnHE --include='*.ts' --include='*.tsx' --include='*.js' --include='*.mjs' --include='*.cjs' \
     --include='*.html' --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=coverage \
-    --exclude-dir=playwright-report --exclude-dir=test-results --exclude-dir=seeded \
+    --exclude-dir=playwright-report --exclude-dir=test-results --exclude-dir=seeded --exclude-dir=gen \
     -e "${SUPPRESSION}" "$@" || true
 }
 

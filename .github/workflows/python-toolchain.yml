@@ -61,7 +61,7 @@ jobs:
         run: uv run --locked mypy .
 
       - name: Power-of-Ten AST checks
-        run: uv run --locked python -m ics_lint . --exclude policy/seeded
+        run: uv run --locked python -m ics_lint . --exclude policy/seeded --exclude gen
 
       - name: Tests (pytest, hypothesis, coverage)
         run: uv run --locked pytest

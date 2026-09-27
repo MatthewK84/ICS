@@ -38,7 +38,10 @@ concurrency:
 
 env:
   IMAGE: ghcr.io/matthewk84/ics-cpp
-  RUN: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v conan-home:/opt/conan-home ics-cpp:ci
+  # Conan's package cache lives on the runner at /tmp/conan-home, so it can be
+  # cached between runs: protobuf and abseil build from source for each
+  # compiler and build type (ICS-011).
+  RUN: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home ics-cpp:ci
 
 jobs:
   toolchain:
@@ -57,6 +60,13 @@ jobs:
 
       - name: Build the ics-cpp image
         run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
+
+      - name: Restore the Conan package cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/conan-home
+          key: conan-cpp-toolchain-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
+          restore-keys: conan-cpp-toolchain-
 
       - name: Require the Conan lockfile
         run: |
@@ -82,6 +92,9 @@ jobs:
 
       - name: Power-of-Ten policy (clang-tidy, cppcheck, warnings)
         run: ${RUN} cpp/policy/check-policy.sh
+
+      - name: Trim the Conan package cache before it is saved
+        run: ${RUN} conan cache clean "*" --source --build --download --temp
 
       - name: Install Syft and cosign
         run: |

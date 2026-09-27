@@ -5,7 +5,9 @@ name = "ics-python"
 version = "0.1.0"
 description = "ICS reference models, synthetic data and analysis"
 requires-python = "==3.12.*"
-dependencies = []
+# The protobuf runtime must be at least as new as the protoc that generated
+# gen/ (proto/tools.txt, 35.0 = protobuf 7.35); upgrade them together.
+dependencies = ["protobuf==7.35.1"]
 
 [dependency-groups]
 dev = [
@@ -14,6 +16,8 @@ dev = [
   "pytest==9.1.1",
   "pytest-cov==7.1.0",
   "ruff==0.16.9",
+  # Type stubs for the protobuf runtime, which ships none; used by mypy.
+  "types-protobuf==7.35.1.20260906",
 ]
 
 [tool.uv]
@@ -29,7 +33,8 @@ python-downloads = "never"
 [tool.ruff]
 line-length = 120
 target-version = "py312"
-extend-exclude = ["policy/seeded"]
+# gen/ is generated from proto/ by buf (ICS-011) and never edited by hand.
+extend-exclude = ["policy/seeded", "gen"]
 
 [tool.ruff.lint]
 # Bandit's checks come from ruff's S rules.
@@ -48,18 +53,27 @@ select = [
 python_version = "3.12"
 strict = true
 warn_unreachable = true
-exclude = ["^policy/seeded/"]
+exclude = ["^policy/seeded/", "^gen/"]
+# gen/ holds the protobuf modules generated from proto/ (ICS-011), imported as
+# ics.<package>. Like third-party code, mypy reads their .pyi stubs to check
+# the code that uses them, but does not report on the generated stubs.
+mypy_path = "gen"
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = ["ics.*"]
+ignore_errors = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = [".", "gen"]
 addopts = ["--strict-config", "--strict-markers", "-p", "no:cacheprovider", "--cov", "--cov-report=term-missing"]
 filterwarnings = ["error"]
 
 [tool.coverage.run]
 branch = true
 source = ["."]
-omit = ["tests/*", "policy/*"]
+omit = ["tests/*", "policy/*", "gen/*"]
 
 [tool.coverage.report]
 fail_under = 90

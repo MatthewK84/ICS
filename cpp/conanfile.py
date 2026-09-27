@@ -15,6 +15,9 @@ class IcsConan(ConanFile):
 
     def requirements(self) -> None:
         self.requires("gtest/1.15.0")
+        # The runtime for the generated messages in cpp/proto (ICS-011); its
+        # version must match the protoc in proto/tools.txt (35.0).
+        self.requires("protobuf/7.35.0")
 
     def generate(self) -> None:
         CMakeDeps(self).generate()

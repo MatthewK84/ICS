@@ -53,7 +53,7 @@ For `ics-cuda`, use `cuda-toolchain.yml` in the identity.
 ## Scripts
 
 - [`tools.txt`](tools.txt) pins Syft and cosign by version and sha256.
-- [`install-tools.sh BIN_DIR`](install-tools.sh) downloads and installs them, and refuses any download whose checksum does not match. To upgrade a tool, change its line: the new version, the checksum from the release's checksums file, and the URL.
+- [`install-tools.sh BIN_DIR [PINS]`](install-tools.sh) downloads and installs them, and refuses any download whose checksum does not match. Given another pins file, such as [`proto/tools.txt`](../../proto/tools.txt), it installs those tools instead. To upgrade a tool, change its line: the new version, the checksum from the release's checksums file, and the URL.
 - [`source-evidence.sh OUT_DIR`](source-evidence.sh) builds, signs and verifies the per-merge evidence.
 - [`image-sbom.sh LOCAL_IMAGE NAME OUT_FILE`](image-sbom.sh) writes and checks an image's SBOM. It runs on pull requests too.
 - [`attest-image.sh IMAGE TAG SBOM`](attest-image.sh) signs a pushed image by digest, attaches its SBOM and provenance, and verifies all three.

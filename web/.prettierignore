@@ -3,6 +3,8 @@ pnpm-lock.yaml
 **/coverage/
 **/playwright-report/
 **/test-results/
+# Generated from proto/ by buf (ICS-011); proto/check-proto.sh keeps it in step.
+packages/ics-proto/src/gen/
 # Markdown follows the repository's documentation style (compact tables), not
 # Prettier's; Prettier formats the code.
 *.md

@@ -1,0 +1,18 @@
+# The ICS protobuf module (ICS-011): every .proto file under proto/.
+# Lint: buf's STANDARD rules plus COMMENTS, so every message, field and enum
+# value is documented (with its units, per proto/README.md).
+# Breaking: FILE, the strictest set, which also rejects renames and moves that
+# would break generated code. proto/check-proto.sh runs both in CI.
+version: v2
+modules:
+  - path: .
+    # The seeded lint violation is checked only by check-proto.sh.
+    excludes:
+      - policy
+lint:
+  use:
+    - STANDARD
+    - COMMENTS
+breaking:
+  use:
+    - FILE

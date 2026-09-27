@@ -13,7 +13,7 @@ Rules (enforced in CI by [ICS-007](https://github.com/MatthewK84/ICS/issues/7)):
 
 ## Toolchain
 
-`web/` is a pnpm workspace: `apps/ics-web` is the application (a minimal Vite and React 18 page until [ICS-082](https://github.com/MatthewK84/ICS/issues/82) scaffolds the real one), and `packages/eslint-plugin-ics` holds ICS's own lint rules. Every version is pinned exactly and locked in [`pnpm-lock.yaml`](pnpm-lock.yaml); pnpm itself is pinned, with its checksum, in `package.json`, and pnpm refuses any Node.js version but 24.20.0.
+`web/` is a pnpm workspace: `apps/ics-web` is the application (a minimal Vite and React 18 page until [ICS-082](https://github.com/MatthewK84/ICS/issues/82) scaffolds the real one), `packages/eslint-plugin-ics` holds ICS's own lint rules, and `packages/ics-proto` (`@ics/proto`) holds the TypeScript messages generated from [`proto/`](../proto/README.md), with their runtime functions. Its `src/gen/` is generated and committed, never edited, so ESLint, Prettier and the suppression scan skip it; the TypeScript compiler still checks it. Every version is pinned exactly and locked in [`pnpm-lock.yaml`](pnpm-lock.yaml); pnpm itself is pinned, with its checksum, in `package.json`, and pnpm refuses any Node.js version but 24.20.0.
 
 CI runs everything in Microsoft's Playwright image, pinned by digest, which carries Node.js 24.20.0 and the matching browsers. To work the same way locally:
 

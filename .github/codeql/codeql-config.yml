@@ -1,5 +1,6 @@
 # CodeQL settings for the ICS code (ICS-008): the security-and-quality
-# queries, with the seeded violations left out; they exist to fail.
+# queries, with the seeded violations left out; they exist to fail. Code
+# generated from proto/ (ICS-011) is left out too: it is not ICS-authored.
 name: ICS CodeQL
 queries:
   - uses: security-and-quality
@@ -10,3 +11,6 @@ paths-ignore:
   - "**/node_modules/**"
   - "**/dist/**"
   - "**/build/**"
+  - cpp/proto/gen/**
+  - python/gen/**
+  - web/packages/ics-proto/src/gen/**

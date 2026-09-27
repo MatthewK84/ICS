@@ -90,6 +90,20 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Restore the Conan package cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /opt/conan-home
+          key: conan-codeql-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
+          restore-keys: conan-codeql-
+
+      # Before CodeQL starts tracing, so dependencies Conan builds from source
+      # (protobuf, abseil) are not analyzed as ICS code.
+      - name: Install the Conan dependencies
+        run: |
+          deploy/toolchain/conan-install.sh gcc-debug
+          conan cache clean "*" --source --build --download --temp
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
@@ -99,7 +113,6 @@ jobs:
 
       - name: Build (traced by CodeQL)
         run: |
-          deploy/toolchain/conan-install.sh gcc-debug
           cd cpp
           cmake --preset gcc-debug
           cmake --build --preset gcc-debug
