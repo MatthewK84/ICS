@@ -69,9 +69,11 @@ jobs:
             set -euo pipefail
             for preset in gcc-asan gcc-tsan clang-asan clang-tsan; do
               deploy/toolchain/conan-install.sh "${preset}" >/dev/null
-              (cd cpp && cmake --preset "${preset}" >/dev/null)
-              cmake --build --preset "${preset}" --target toolchain_check_test >/dev/null
-              ctest --preset "${preset}"
+              # Presets resolve from cpp/, where CMakePresets.json lives.
+              (cd cpp \
+                && cmake --preset "${preset}" >/dev/null \
+                && cmake --build --preset "${preset}" --target toolchain_check_test >/dev/null \
+                && ctest --preset "${preset}")
             done'
 
       - name: Publish the image
