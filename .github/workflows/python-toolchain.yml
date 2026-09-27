@@ -1,0 +1,70 @@
+name: Python toolchain
+
+# Enforces the Python Power-of-Ten profile (ICS-006): ruff, mypy --strict,
+# the AST checks for recursion, function length and module-level state, and
+# pytest with hypothesis and a 90% coverage floor, all from python/uv.lock.
+# The policy step rejects suppressions and proves each check still fires on a
+# seeded violation.
+
+on:
+  pull_request:
+    paths:
+      - python/**
+      - .github/workflows/python-toolchain.yml
+  push:
+    branches: [main]
+    paths:
+      - python/**
+      - .github/workflows/python-toolchain.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: python-toolchain-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Python checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      # uv comes from a hash-pinned requirements file; only uv itself goes on
+      # the PATH, so it finds the system Python 3.12.
+      - name: Install uv
+        run: |
+          python3.12 -m venv "${RUNNER_TEMP}/uv-venv"
+          "${RUNNER_TEMP}/uv-venv/bin/pip" install --quiet --require-hashes --no-deps -r requirements-uv.txt
+          mkdir -p "${RUNNER_TEMP}/bin"
+          ln -s "${RUNNER_TEMP}/uv-venv/bin/uv" "${RUNNER_TEMP}/bin/uv"
+          echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
+
+      - name: Install locked dependencies
+        run: uv sync --locked
+
+      - name: Lint and format (ruff)
+        run: |
+          uv run --locked ruff check .
+          uv run --locked ruff format --check .
+
+      - name: Type check (mypy --strict)
+        run: uv run --locked mypy .
+
+      - name: Power-of-Ten AST checks
+        run: uv run --locked python -m ics_lint . --exclude policy/seeded
+
+      - name: Tests (pytest, hypothesis, coverage)
+        run: uv run --locked pytest
+
+      - name: Power-of-Ten policy
+        run: policy/check-policy.sh

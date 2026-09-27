@@ -1,8 +1,11 @@
 # Build output
 cpp/build/
 
-# Python caches
+# Python environment and caches
+python/.venv/
 __pycache__/
 .mypy_cache/
 .ruff_cache/
+.pytest_cache/
+.hypothesis/
 .coverage

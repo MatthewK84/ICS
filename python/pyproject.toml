@@ -1,0 +1,65 @@
+# ICS Python: reference models, synthetic data, statistics and validation
+# scoring (see README.md). Toolchain and coding rules: ICS-006.
+[project]
+name = "ics-python"
+version = "0.1.0"
+description = "ICS reference models, synthetic data and analysis"
+requires-python = "==3.12.*"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "hypothesis==6.168.2",
+  "mypy==2.3.1",
+  "pytest==9.1.1",
+  "pytest-cov==7.1.0",
+  "ruff==0.16.9",
+]
+
+[tool.uv]
+# Not an installable package: nothing is built, so everything installed comes
+# from uv.lock. The tools run from python/, which puts its packages on the path.
+package = false
+required-version = "==0.12.19"
+# Python 3.12 comes from the operating system (Ubuntu 24.04 ships 3.12.3), and
+# uv never downloads an interpreter.
+python-preference = "only-system"
+python-downloads = "never"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["policy/seeded"]
+
+[tool.ruff.lint]
+# Bandit's checks come from ruff's S rules.
+select = [
+  "A", "ANN", "ARG", "B", "BLE", "C4", "C90", "E", "F", "I", "N", "PL", "PT",
+  "PTH", "RET", "RUF", "S", "SIM", "T20", "TRY", "UP", "W",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# pytest rewrites plain assert statements; bandit's S101 would flag them. This
+# is the only exception to the rule set; policy/check-policy.sh rejects inline
+# suppressions and any other ruff or mypy configuration file.
+"tests/**" = ["S101"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+exclude = ["^policy/seeded/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = ["--strict-config", "--strict-markers", "-p", "no:cacheprovider", "--cov", "--cov-report=term-missing"]
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+branch = true
+source = ["."]
+omit = ["tests/*", "policy/*"]
+
+[tool.coverage.report]
+fail_under = 90
