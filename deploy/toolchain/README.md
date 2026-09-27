@@ -10,7 +10,7 @@ Pinned build environments for ICS C++ code (ICS-004). CI builds both images and 
 ## How the images are pinned
 
 - **Base images** are pinned by digest in [`Dockerfile.cpp`](Dockerfile.cpp) and [`Dockerfile.cuda`](Dockerfile.cuda).
-- **Ubuntu packages** come from Ubuntu's snapshot service at the date in `UBUNTU_SNAPSHOT`, so a rebuild installs the same versions. Each image lists them in `/usr/local/share/ics-toolchain-packages.txt`.
+- **Ubuntu packages** are listed in [`apt-packages.txt`](apt-packages.txt), each with an entry in the [dependency register](../../docs/dependency-register.md). They come from Ubuntu's snapshot service at the date in `UBUNTU_SNAPSHOT`, so a rebuild installs the same versions. Each image lists them in `/usr/local/share/ics-toolchain-packages.txt`.
 - **Conan** and its Python dependencies are installed from [`requirements-conan.txt`](requirements-conan.txt), with every file hash-pinned. Conan ships only as source, so its build tool is pinned the same way in [`requirements-build.txt`](requirements-build.txt).
 
 To move to newer packages, change `UBUNTU_SNAPSHOT` (any `YYYYMMDDTHHMMSSZ` date that [snapshot.ubuntu.com](https://snapshot.ubuntu.com) serves). To upgrade Conan, edit `requirements-conan.in` and regenerate:

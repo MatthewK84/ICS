@@ -3,8 +3,8 @@
 #
 # Usage: install-toolchain.sh SNAPSHOT_ID
 #
-# Every Ubuntu package comes from snapshot.ubuntu.com at SNAPSHOT_ID, so a
-# rebuild installs the same package versions. Conan is installed into
+# Every Ubuntu package listed in apt-packages.txt comes from snapshot.ubuntu.com
+# at SNAPSHOT_ID, so a rebuild installs the same package versions. Conan is installed into
 # /opt/conan from a hash-pinned requirements file. If the build passes a
 # BuildKit secret named extra_ca (a PEM bundle), it is trusted for apt, pip and
 # the finished image; use it behind TLS-inspecting proxies.
@@ -16,15 +16,12 @@ readonly EXTRA_CA_SECRET="/run/secrets/extra_ca"
 readonly EXTRA_CA_COPY="/tmp/ics-extra-ca.pem"
 readonly SYSTEM_CA="/etc/ssl/certs/ca-certificates.crt"
 readonly HERE="$(cd "$(dirname "$0")" && pwd)"
-readonly PACKAGES=(
-  ca-certificates
-  gcc-13 g++-13
-  clang-17 clang-tidy-17 lld-17 llvm-17 libclang-rt-17-dev
-  cmake ninja-build
-  cppcheck
-  python3 python3-venv
-  git
-)
+mapfile -t PACKAGES < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "${HERE}/apt-packages.txt")
+readonly PACKAGES
+if ((${#PACKAGES[@]} == 0)); then
+  echo "error: no packages listed in ${HERE}/apt-packages.txt" >&2
+  exit 1
+fi
 export DEBIAN_FRONTEND=noninteractive
 
 bootstrap_ca_bundle() {

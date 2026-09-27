@@ -2,7 +2,7 @@
 
 Every dependency is pinned in conan.lock. Add one with `conan lock add` or by
 regenerating the lockfile (see cpp/README.md), and record it in the dependency
-register (ICS-010).
+register (docs/dependency-register.toml).
 """
 
 from conan import ConanFile

@@ -1,0 +1,17 @@
+# Ubuntu packages installed into the ics-cpp and ics-cuda images (ICS-004), one
+# per line. install-toolchain.sh installs them from the Ubuntu snapshot, and
+# every package here needs an entry in docs/dependency-register.toml (ICS-010).
+ca-certificates
+gcc-13
+g++-13
+clang-17
+clang-tidy-17
+lld-17
+llvm-17
+libclang-rt-17-dev
+cmake
+ninja-build
+cppcheck
+python3
+python3-venv
+git

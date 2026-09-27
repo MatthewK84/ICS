@@ -36,7 +36,7 @@ uv run --locked pytest                               # hypothesis, coverage of a
 policy/check-policy.sh
 ```
 
-To add or upgrade a dependency, change `pyproject.toml`, run `uv lock`, and record the dependency in the register (ICS-010).
+To add or upgrade a dependency, change `pyproject.toml`, run `uv lock`, and record the dependency in the [dependency register](../docs/dependency-register.md).
 
 ## Power-of-Ten checks
 

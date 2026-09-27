@@ -1,0 +1,35 @@
+name: Dependency register
+
+# Every direct dependency must have a reviewed entry in the dependency register
+# (ICS-010, DoWI 8430.01 §3.5.i; docs/dependency-register.md). The check reads
+# every manifest in the repository and fails on an unregistered dependency, an
+# incomplete entry or a stale one, and lists single-maintainer projects. It
+# then proves it still rejects a new unregistered dependency. It runs on every
+# pull request, because any file can add a dependency.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-register-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  register:
+    name: Dependency register
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Check the register and its seeded dependencies
+        run: .github/scripts/check_dependency_register.sh
