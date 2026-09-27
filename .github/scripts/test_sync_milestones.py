@@ -2,27 +2,16 @@
 
 from __future__ import annotations
 
-import email.message
-import io
-import time
 import unittest
-import urllib.error
 from pathlib import Path
-from unittest import mock
 
+import gh_api as gh
 import sync_milestones as sm
 
 MANIFEST_PATH: Path = Path(__file__).resolve().parents[2] / "planning" / "ics-tasks.json"
 
 
-def http_error(code: int, headers: dict[str, str] | None = None) -> urllib.error.HTTPError:
-    message = email.message.Message()
-    for key, value in (headers or {}).items():
-        message[key] = value
-    return urllib.error.HTTPError("https://api.github.com/x", code, "error", message, io.BytesIO(b"{}"))
-
-
-def small_manifest() -> sm.JsonObject:
+def small_manifest() -> gh.JsonObject:
     return {
         "milestones": [
             {"title": "M0 Foundation", "description": "first"},
@@ -42,15 +31,15 @@ class ManifestTests(unittest.TestCase):
         self.assertEqual(manifest.task_milestones["ICS-015"], "M1 Core services")
 
     def test_rejects_unknown_milestone(self) -> None:
-        data: sm.JsonObject = small_manifest()
+        data: gh.JsonObject = small_manifest()
         data["tasks"] = [{"id": "ICS-001", "milestone": "M9 Nowhere"}]
-        with self.assertRaises(sm.SyncError):
+        with self.assertRaises(gh.ScriptError):
             sm.parse_manifest(data)
 
     def test_rejects_duplicate_task(self) -> None:
-        data: sm.JsonObject = small_manifest()
+        data: gh.JsonObject = small_manifest()
         data["tasks"] = [{"id": "ICS-001", "milestone": "M0 Foundation"}] * 2
-        with self.assertRaises(sm.SyncError):
+        with self.assertRaises(gh.ScriptError):
             sm.parse_manifest(data)
 
     def test_repository_manifest_covers_all_97_tasks(self) -> None:
@@ -87,43 +76,6 @@ class PlanningTests(unittest.TestCase):
         self.assertIsNone(sm.to_issue_ref({"number": 4, "title": "Unrelated"}))
         ref: sm.IssueRef | None = sm.to_issue_ref({"number": 5, "title": "ICS-005 x", "milestone": {"title": "M0 Foundation"}})
         self.assertEqual(ref, sm.IssueRef(5, "ICS-005", "M0 Foundation"))
-
-
-class RetryTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.config = sm.ApiConfig("token", "owner/repo")
-        patcher = mock.patch.object(time, "sleep")
-        self.sleep = patcher.start()
-        self.addCleanup(patcher.stop)
-
-    def test_classifies_retryable_errors(self) -> None:
-        self.assertTrue(sm.is_retryable(http_error(502)))
-        self.assertTrue(sm.is_retryable(http_error(403, {"retry-after": "5"})))
-        self.assertFalse(sm.is_retryable(http_error(403)))
-        self.assertFalse(sm.is_retryable(http_error(422)))
-
-    def test_retries_then_succeeds(self) -> None:
-        with mock.patch.object(sm, "send_once", side_effect=[http_error(503), {"ok": True}]):
-            self.assertEqual(sm.api_request(self.config, "GET", "/x"), {"ok": True})
-        self.assertEqual(self.sleep.call_count, 1)
-
-    def test_gives_up_after_bounded_attempts(self) -> None:
-        failures: list[urllib.error.HTTPError] = [http_error(500)] * sm.MAX_ATTEMPTS
-        with mock.patch.object(sm, "send_once", side_effect=failures), self.assertRaises(sm.SyncError):
-            sm.api_request(self.config, "GET", "/x")
-        self.assertEqual(self.sleep.call_count, sm.MAX_ATTEMPTS - 1)
-
-    def test_fails_fast_on_client_error(self) -> None:
-        with mock.patch.object(sm, "send_once", side_effect=[http_error(422)]), self.assertRaises(sm.SyncError):
-            sm.api_request(self.config, "POST", "/x", {"title": "t"})
-        self.sleep.assert_not_called()
-
-    def test_fetch_all_follows_pages(self) -> None:
-        full_page: list[sm.JsonObject] = [{"n": index} for index in range(sm.PAGE_SIZE)]
-        with mock.patch.object(sm, "api_request", side_effect=[full_page, [{"n": -1}]]) as request:
-            items: list[sm.JsonObject] = sm.fetch_all(self.config, "/items?state=all")
-        self.assertEqual(len(items), sm.PAGE_SIZE + 1)
-        self.assertIn("state=all&per_page=100&page=2", request.call_args_list[1].args[2])
 
 
 if __name__ == "__main__":

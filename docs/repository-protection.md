@@ -11,6 +11,7 @@
 | Approval after the latest push | New commits dismiss earlier approvals; the last push must be approved by someone other than its author. |
 | Resolved conversations | Every review thread must be resolved before merging. |
 | Squash merge only | The only allowed merge method. |
+| Required checks | "AI-assist declaration" and "AI-assist human review" must pass; see [ai-usage.md](ai-usage.md). |
 | Signed commits | Every commit on `main` must carry a verified signature. |
 | Linear history | No merge commits on `main`. |
 | No force-push, no deletion | `main` cannot be rewritten or deleted. |
@@ -26,7 +27,7 @@ The repository admin role may bypass these rules **only when merging a pull requ
 1. Download [`main-protection.json`](../.github/rulesets/main-protection.json) from the branch you are applying.
 2. On GitHub, open **Settings → Rules → Rulesets**.
 3. First time: choose **New ruleset → Import a ruleset** and select the file. To update: open **Protect main**, delete it, and import the new file.
-4. Check that the ruleset shows **Active**, targets the default branch, and lists **Repository admin** under bypass with **For pull requests only**.
+4. Check that the ruleset shows **Active**, targets the default branch, lists **Repository admin** under bypass with **For pull requests only**, and requires the status checks "AI-assist declaration" and "AI-assist human review" from GitHub Actions.
 5. Confirm it works: a direct push to `main` must fail with a "Repository rule violations found" error.
 
 ## Related repository settings

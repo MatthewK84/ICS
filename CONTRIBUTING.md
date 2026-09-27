@@ -12,7 +12,7 @@ ICS is a public repository built from publicly available information. Read [SECU
 2. **Complete the task card** in the issue body (see [Task card](#task-card)). Do not implement anything yet.
 3. **Get the card approved.** The code owner for the area the issue touches (see [`.github/CODEOWNERS`](.github/CODEOWNERS)) approves it by commenting "Approved" on the issue. Record the date in the card's heading: `### Task card (approved YYYY-MM-DD)`. If a finding during the work breaks an assumption or the plan, stop and get the change approved before continuing.
 4. **Branch** from `main` (see [Branches and commits](#branches-and-commits)).
-5. **Open one pull request for the issue** from the pull-request template, and fill in its summary, close-out, test plan and Definition of Done.
+5. **Open one pull request for the issue** from the pull-request template, and fill in its summary, AI assistance, close-out, test plan and Definition of Done.
 6. **Review and merge** (see [Pull requests and review](#pull-requests-and-review)).
 7. **Close the issue** only when its "Done when" test passes and every Definition of Done item is checked. Copy the pull request's close-out into the task card first.
 
@@ -59,8 +59,13 @@ An item that cannot apply to a change is checked and marked N/A with the reason,
   - approval after the latest push;
   - every review thread resolved;
   - **Squash and merge** only, signed commits and linear history.
+  - the "AI-assist declaration" and "AI-assist human review" checks passing (see [AI-assisted changes](#ai-assisted-changes)).
 - **Addressing review:** push fixes to the same branch, reply on each thread, and re-request review from anyone who asked for changes.
 - **While the team is one person,** the repository admin may merge a pull request by bypassing the approval rules. Direct pushes to `main` are blocked for everyone.
+
+## AI-assisted changes
+
+Every pull request ticks exactly one box under "AI assistance": **No AI assistance** or **AI-assisted**. An AI-assisted pull request also names the tool, the model and version, and the scope of what the tool did, and needs approval from two people other than its author. Two required checks enforce this, and the `ai-assisted` label follows the answer. The rules, the approved-tool register and the log are in [docs/ai-usage.md](docs/ai-usage.md).
 
 ## Blockers
 

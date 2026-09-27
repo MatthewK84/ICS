@@ -6,6 +6,17 @@ Closes #
 
 <!-- What changed and why, in a few bullets. -->
 
+## AI assistance
+
+<!-- Tick exactly one box. If AI-assisted, fill in all three fields; the "AI-assist declaration" check blocks merge until this is answered. See docs/ai-usage.md. -->
+
+- [ ] No AI assistance
+- [ ] AI-assisted
+
+- **Tool:** <!-- for example, Claude Code -->
+- **Model and version:** <!-- the model name and version the tool used -->
+- **Scope:** <!-- what the tool wrote or changed, and what a human wrote -->
+
 ## Close-out
 
 - **Assumptions:** which held and which broke.

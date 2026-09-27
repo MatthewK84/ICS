@@ -13,30 +13,25 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sys
 import time
-import urllib.error
-import urllib.request
 from dataclasses import dataclass
 
-API_URL: str = "https://api.github.com"
-PAGE_SIZE: int = 100
-MAX_PAGES: int = 50
-MAX_ATTEMPTS: int = 4
-BACKOFF_SECONDS: float = 2.0
+from gh_api import (
+    ApiConfig,
+    JsonObject,
+    api_request,
+    fetch_all,
+    read_config,
+    require_int,
+    require_objects,
+    require_str,
+)
+from gh_api import ScriptError as SyncError
+
 WRITE_PAUSE_SECONDS: float = 1.0
-REQUEST_TIMEOUT_SECONDS: float = 30.0
-RETRYABLE_STATUSES: frozenset[int] = frozenset({429, 500, 502, 503, 504})
-FORBIDDEN_STATUS: int = 403
 ICS_TITLE: re.Pattern[str] = re.compile(r"^(ICS-\d{3})\b")
-
-JsonObject = dict[str, object]
-
-
-class SyncError(Exception):
-    """Raised for any failure that should stop the sync with a clear message."""
 
 
 @dataclass(frozen=True)
@@ -63,39 +58,6 @@ class Assignment:
     issue_number: int
     ics_id: str
     milestone_title: str
-
-
-@dataclass(frozen=True)
-class ApiConfig:
-    token: str
-    repo: str
-    base_url: str = API_URL
-
-
-def require_str(data: JsonObject, key: str, where: str) -> str:
-    value: object = data.get(key)
-    if not isinstance(value, str) or not value:
-        raise SyncError(f"{where}: '{key}' must be a non-empty string")
-    return value
-
-
-def require_int(data: JsonObject, key: str, where: str) -> int:
-    value: object = data.get(key)
-    if not isinstance(value, int) or isinstance(value, bool):
-        raise SyncError(f"{where}: '{key}' must be an integer")
-    return value
-
-
-def require_objects(data: JsonObject, key: str, where: str) -> list[JsonObject]:
-    value: object = data.get(key)
-    if not isinstance(value, list):
-        raise SyncError(f"{where}: '{key}' must be a list")
-    items: list[JsonObject] = []
-    for item in value:
-        if not isinstance(item, dict):
-            raise SyncError(f"{where}: every entry in '{key}' must be an object")
-        items.append(item)
-    return items
 
 
 def parse_manifest(data: JsonObject) -> Manifest:
@@ -145,72 +107,6 @@ def plan_assignments(issues: list[IssueRef], task_milestones: dict[str, str]) ->
 
 def missing_milestones(specs: tuple[MilestoneSpec, ...], existing: dict[str, int]) -> list[MilestoneSpec]:
     return [spec for spec in specs if spec.title not in existing]
-
-
-def build_request(config: ApiConfig, method: str, path: str, payload: JsonObject | None) -> urllib.request.Request:
-    body: bytes | None = None if payload is None else json.dumps(payload).encode("utf-8")
-    request = urllib.request.Request(f"{config.base_url}{path}", data=body, method=method)
-    request.add_header("Accept", "application/vnd.github+json")
-    request.add_header("Authorization", f"Bearer {config.token}")
-    request.add_header("X-GitHub-Api-Version", "2022-11-28")
-    if body is not None:
-        request.add_header("Content-Type", "application/json")
-    return request
-
-
-def is_retryable(error: urllib.error.HTTPError) -> bool:
-    if error.code in RETRYABLE_STATUSES:
-        return True
-    rate_limited: bool = error.headers.get("x-ratelimit-remaining") == "0"
-    return error.code == FORBIDDEN_STATUS and (rate_limited or error.headers.get("retry-after") is not None)
-
-
-def retry_delay(error: urllib.error.HTTPError | None, attempt: int) -> float:
-    fallback: float = BACKOFF_SECONDS * (2**attempt)
-    if error is None:
-        return fallback
-    header: str | None = error.headers.get("retry-after")
-    if header is not None and header.isdigit():
-        return max(float(header), fallback)
-    return fallback
-
-
-def send_once(request: urllib.request.Request) -> object:
-    with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-        raw: bytes = response.read()
-    return json.loads(raw) if raw else None
-
-
-def api_request(config: ApiConfig, method: str, path: str, payload: JsonObject | None = None) -> object:
-    last_error: str = "no attempt made"
-    for attempt in range(MAX_ATTEMPTS):
-        http_error: urllib.error.HTTPError | None = None
-        try:
-            return send_once(build_request(config, method, path, payload))
-        except urllib.error.HTTPError as error:
-            if not is_retryable(error):
-                detail: str = error.read().decode("utf-8", errors="replace")
-                raise SyncError(f"{method} {path} failed with {error.code}: {detail}") from error
-            http_error = error
-            last_error = f"HTTP {error.code}"
-        except urllib.error.URLError as error:
-            last_error = f"network error: {error.reason}"
-        if attempt + 1 < MAX_ATTEMPTS:
-            time.sleep(retry_delay(http_error, attempt))
-    raise SyncError(f"{method} {path} failed after {MAX_ATTEMPTS} attempts: {last_error}")
-
-
-def fetch_all(config: ApiConfig, path: str) -> list[JsonObject]:
-    items: list[JsonObject] = []
-    for page in range(1, MAX_PAGES + 1):
-        separator: str = "&" if "?" in path else "?"
-        result: object = api_request(config, "GET", f"{path}{separator}per_page={PAGE_SIZE}&page={page}")
-        if not isinstance(result, list):
-            raise SyncError(f"GET {path}: expected a list")
-        items.extend(entry for entry in result if isinstance(entry, dict))
-        if len(result) < PAGE_SIZE:
-            return items
-    raise SyncError(f"GET {path}: more than {MAX_PAGES} pages")
 
 
 def existing_milestones(config: ApiConfig) -> dict[str, int]:
@@ -282,14 +178,6 @@ def report_unmatched(manifest: Manifest, issues: list[IssueRef]) -> None:
     missing: list[str] = sorted(set(manifest.task_milestones) - found)
     if missing:
         print(f"::warning::no issue found for {len(missing)} task(s): {', '.join(missing)}")
-
-
-def read_config() -> ApiConfig:
-    token: str = os.environ.get("GITHUB_TOKEN", "")
-    repo: str = os.environ.get("GITHUB_REPOSITORY", "")
-    if not token or not repo:
-        raise SyncError("GITHUB_TOKEN and GITHUB_REPOSITORY must be set")
-    return ApiConfig(token, repo)
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
