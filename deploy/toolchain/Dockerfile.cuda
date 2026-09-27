@@ -1,0 +1,17 @@
+# syntax=docker/dockerfile:1.7
+# ICS CUDA toolchain: CUDA 12.9 with GCC 13, Clang 17, CMake, Ninja and Conan on Ubuntu 24.04 (ICS-004).
+# Build from the repository root:
+#   docker build -f deploy/toolchain/Dockerfile.cuda -t ics-cuda .
+# Behind a TLS-inspecting proxy, add: --secret id=extra_ca,src=<ca-bundle.pem>
+FROM nvidia/cuda:12.9.1-devel-ubuntu24.04@sha256:020bc241a628776338f4d4053fed4c38f6f7f3d7eb5919fecb8de313bb8ba47c
+
+ARG UBUNTU_SNAPSHOT=20260926T000000Z
+COPY deploy/toolchain/install-toolchain.sh deploy/toolchain/requirements-build.txt deploy/toolchain/requirements-conan.txt /tmp/toolchain/
+RUN --mount=type=secret,id=extra_ca,required=false \
+    bash /tmp/toolchain/install-toolchain.sh "${UBUNTU_SNAPSHOT}" && rm -rf /tmp/toolchain
+
+ENV CONAN_HOME=/opt/conan-home \
+    SOURCE_DATE_EPOCH=0
+LABEL org.opencontainers.image.source="https://github.com/MatthewK84/ICS" \
+      org.opencontainers.image.description="ICS CUDA toolchain: CUDA 12.9, GCC 13, Clang 17, CMake, Ninja, Conan 2"
+WORKDIR /work

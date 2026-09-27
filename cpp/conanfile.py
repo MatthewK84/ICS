@@ -1,0 +1,23 @@
+"""Conan 2 dependencies for the ICS C++ build (ICS-004).
+
+Every dependency is pinned in conan.lock. Add one with `conan lock add` or by
+regenerating the lockfile (see cpp/README.md), and record it in the dependency
+register (ICS-010).
+"""
+
+from conan import ConanFile
+from conan.tools.cmake import CMakeDeps, CMakeToolchain
+
+
+class IcsConan(ConanFile):
+    name = "ics"
+    settings = "os", "arch", "compiler", "build_type"
+
+    def requirements(self) -> None:
+        self.requires("gtest/1.15.0")
+
+    def generate(self) -> None:
+        CMakeDeps(self).generate()
+        toolchain = CMakeToolchain(self)
+        toolchain.user_presets_path = False
+        toolchain.generate()

@@ -23,4 +23,20 @@ Rules (enforced in CI by [ICS-005](https://github.com/MatthewK84/ICS/issues/5) a
 - Mount motion, the sun interlock and triggering live only here, never in the web UI.
 - Python parameter files and ONNX models are loaded at startup, and their SHA-256 hashes go into every run record.
 
-First issues: [ICS-004](https://github.com/MatthewK84/ICS/issues/4) (toolchain), [ICS-015](https://github.com/MatthewK84/ICS/issues/15) (common).
+## Build
+
+Build inside the `ics-cpp` image (see [deploy/toolchain](../deploy/toolchain/README.md)). Each preset in [`CMakePresets.json`](CMakePresets.json) pairs a compiler, `gcc` or `clang`, with a variant, `debug`, `release`, `asan` or `tsan`:
+
+```sh
+deploy/toolchain/conan-install.sh gcc-release   # dependencies from cpp/conan.lock
+cd cpp
+cmake --preset gcc-release
+cmake --build --preset gcc-release
+ctest --preset gcc-release
+```
+
+Builds are reproducible: `deploy/toolchain/check-reproducible.sh gcc` (or `clang`) builds the `toolchain_check` sample twice and requires byte-identical outputs. The flags that make this work are in [`cmake/Reproducible.cmake`](cmake/Reproducible.cmake).
+
+Dependencies are pinned in `conan.lock`. After changing `conanfile.py`, regenerate it with `conan lock create cpp --profile:all cpp/conan/profiles/gcc13 --lockfile-out cpp/conan.lock` and record the new dependency in the register (ICS-010).
+
+Next issue: [ICS-005](https://github.com/MatthewK84/ICS/issues/5) (C++ coding rules in CI), then [ICS-015](https://github.com/MatthewK84/ICS/issues/15) (common).
