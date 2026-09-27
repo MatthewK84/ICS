@@ -19,7 +19,7 @@ readonly HERE="$(cd "$(dirname "$0")" && pwd)"
 readonly PACKAGES=(
   ca-certificates
   gcc-13 g++-13
-  clang-17 lld-17 llvm-17 libclang-rt-17-dev
+  clang-17 clang-tidy-17 lld-17 llvm-17 libclang-rt-17-dev
   cmake ninja-build
   python3 python3-venv
   git
@@ -89,6 +89,7 @@ install_conan() {
 report_versions() {
   gcc-13 --version | head -n 1
   clang-17 --version | head -n 1
+  clang-tidy-17 --version | grep -m 1 'LLVM version'
   cmake --version | head -n 1
   echo "ninja $(ninja --version)"
   conan --version

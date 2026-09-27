@@ -1,0 +1,27 @@
+# ICS C++ Power-of-Ten profile (ICS-005). Each check enforces a C++ rule from
+# the coding-standards table in docs/build-plan.md, and every finding is an
+# error. cpp/policy/check-policy.sh rejects suppression comments and any other
+# .clang-tidy file, and proves each check fires on a seeded violation.
+#
+#   No goto                         cppcoreguidelines-avoid-goto
+#   No recursion                    misc-no-recursion
+#   Functions of 50 lines or fewer  readability-function-size
+#   No owning raw pointers          cppcoreguidelines-owning-memory, cppcoreguidelines-no-malloc
+#   std::span over raw pointers     cppcoreguidelines-pro-bounds-pointer-arithmetic
+#   No mutable globals              cppcoreguidelines-avoid-non-const-global-variables
+#   Use fallible results            bugprone-unused-return-value (and -Werror for [[nodiscard]])
+Checks: >
+  -*,
+  bugprone-unused-return-value,
+  cppcoreguidelines-avoid-goto,
+  cppcoreguidelines-avoid-non-const-global-variables,
+  cppcoreguidelines-no-malloc,
+  cppcoreguidelines-owning-memory,
+  cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  misc-no-recursion,
+  readability-function-size
+WarningsAsErrors: '*'
+HeaderFilterRegex: '/cpp/'
+FormatStyle: none
+CheckOptions:
+  readability-function-size.LineThreshold: 50
