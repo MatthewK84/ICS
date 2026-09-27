@@ -1,0 +1,5 @@
+{
+  "//": "Type-checks every TypeScript file in the workspace except the seeded violations, which have their own tsconfig.json.",
+  "extends": "./tsconfig.base.json",
+  "include": ["*.ts", "apps/*/src", "apps/*/e2e", "apps/*/*.ts", "packages/*/src", "packages/*/test"]
+}

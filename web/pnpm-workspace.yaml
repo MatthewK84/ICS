@@ -1,0 +1,8 @@
+# pnpm workspace for ICS TypeScript (ICS-007). Every version is pinned in the
+# package.json files and locked in pnpm-lock.yaml.
+packages:
+  - apps/*
+  - packages/*
+
+# Refuse a Node.js version other than the one in package.json "engines".
+engineStrict: true

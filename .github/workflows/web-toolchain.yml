@@ -1,0 +1,73 @@
+name: TypeScript toolchain
+
+# Enforces the TypeScript Power-of-Ten profile (ICS-007): Prettier, ESLint
+# (strict type-checked rules plus ICS's own), tsc in strict mode, Vitest with an
+# 80% coverage floor, the production build and Playwright, all from
+# web/pnpm-lock.yaml. The policy step rejects suppressions and proves each rule
+# still fires on a seeded violation. The job runs in Microsoft's Playwright
+# image, pinned by digest, which carries Node.js 24.20.0 and the browsers that
+# match @playwright/test 1.63.0.
+
+on:
+  pull_request:
+    paths:
+      - web/**
+      - .github/workflows/web-toolchain.yml
+  push:
+    branches: [main]
+    paths:
+      - web/**
+      - .github/workflows/web-toolchain.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-toolchain-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: TypeScript checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      # corepack installs the pnpm version in package.json and checks its sha512.
+      - name: Install locked dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Format (Prettier)
+        run: pnpm run format:check
+
+      - name: Lint (ESLint)
+        run: pnpm run lint
+
+      - name: Type check (tsc, strict)
+        run: pnpm run typecheck
+
+      - name: Unit tests (Vitest, coverage)
+        run: pnpm run test
+
+      - name: Build
+        run: pnpm run build
+
+      - name: End-to-end tests (Playwright)
+        run: pnpm run e2e
+
+      - name: Power-of-Ten policy
+        run: policy/check-policy.sh

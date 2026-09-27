@@ -1,0 +1,5 @@
+{
+  "//": "Lets the type-aware lint rules see the seeded violations; tsc never checks them.",
+  "extends": "../../tsconfig.base.json",
+  "include": ["*.ts"]
+}

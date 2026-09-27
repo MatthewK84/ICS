@@ -1,0 +1,28 @@
+{
+  "name": "ics-web-workspace",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.6.0+sha512.3ef68f951cb111ac204b4a5a16f0b2ddf0da56a96e0413e81d855d9f0b55ef926714709028e1cd00c405c2c5fb7b9e8ec4dc46777c805d0373c2f2ff00fd20ec",
+  "engines": {
+    "node": "24.20.0"
+  },
+  "scripts": {
+    "format:check": "prettier --check .",
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --coverage",
+    "build": "pnpm --filter @ics/web run build",
+    "e2e": "pnpm --filter @ics/web run e2e"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.0",
+    "@vitest/coverage-v8": "5.0.2",
+    "eslint": "10.11.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "prettier": "3.9.9",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.1",
+    "vitest": "5.0.2"
+  }
+}
