@@ -7,7 +7,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
+from unittest.mock import patch
 
 import sarif_check as sc
 
@@ -29,7 +29,7 @@ def write_sarif(folder: Path, name: str, document: object) -> None:
 
 
 def run_main(argv: list[str]) -> tuple[int, str]:
-    with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+    with patch("sys.stdout", new_callable=io.StringIO) as out:
         code = sc.main(argv)
     return code, out.getvalue()
 

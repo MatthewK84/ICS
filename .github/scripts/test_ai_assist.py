@@ -7,7 +7,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
+from unittest.mock import patch
 
 import ai_assist as ai
 import gh_api as gh
@@ -102,20 +102,20 @@ class LabelTests(unittest.TestCase):
         self.assertIs(ai.label_action(unanswered, labelled), ai.LabelAction.NONE)
 
     def test_sync_label_skips_forks_and_none(self) -> None:
-        with mock.patch.object(gh, "api_request") as request:
+        with patch.object(gh, "api_request") as request:
             ai.sync_label(CONFIG, pull("", from_fork=True), ai.LabelAction.ADD)
             ai.sync_label(CONFIG, pull(""), ai.LabelAction.NONE)
         request.assert_not_called()
 
     def test_sync_label_adds_and_removes(self) -> None:
-        with mock.patch.object(gh, "api_request") as request:
+        with patch.object(gh, "api_request") as request:
             ai.sync_label(CONFIG, pull(""), ai.LabelAction.ADD)
             ai.sync_label(CONFIG, pull(""), ai.LabelAction.REMOVE)
         self.assertEqual(request.call_args_list[0].args[1:3], ("POST", "/repos/owner/repo/issues/7/labels"))
         self.assertEqual(request.call_args_list[1].args[1:3], ("DELETE", "/repos/owner/repo/issues/7/labels/ai-assisted"))
 
     def test_sync_label_failure_is_a_warning(self) -> None:
-        with mock.patch.object(gh, "api_request", side_effect=gh.ScriptError("403")):
+        with patch.object(gh, "api_request", side_effect=gh.ScriptError("403")):
             ai.sync_label(CONFIG, pull(""), ai.LabelAction.ADD)
 
 
@@ -148,7 +148,7 @@ class MainTests(unittest.TestCase):
                 "GITHUB_TOKEN": "token",
                 "GITHUB_REPOSITORY": "owner/repo",
             }
-            with mock.patch.dict(os.environ, env), mock.patch.object(gh, "api_request"):
+            with patch.dict(os.environ, env), patch.object(gh, "api_request"):
                 return ai.main(["declaration"])
 
     def test_declaration_passes_when_answered(self) -> None:
