@@ -138,7 +138,7 @@ class PredicateTests(unittest.TestCase):
         self.assertEqual(
             predicate["runDetails"],
             {
-                "builder": {"id": "https://github.com/actions/runner/github-hosted"},
+                "builder": {"id": "https://github.com/MatthewK84/ICS/.github/workflows/evidence.yml@refs/heads/main"},
                 "metadata": {"invocationId": "https://github.com/MatthewK84/ICS/actions/runs/303/attempts/2"},
             },
         )

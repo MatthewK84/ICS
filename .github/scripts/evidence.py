@@ -103,6 +103,11 @@ class RunContext:
         return f"{self.server}/{self.repository}"
 
     @property
+    def workflow_uri(self) -> str:
+        """The workflow that signs, as its Sigstore certificate names it."""
+        return f"{self.server}/{self.workflow_ref}"
+
+    @property
     def workflow_path(self) -> str:
         return self.workflow_ref.split("@", 1)[0].removeprefix(f"{self.repository}/")
 
@@ -140,7 +145,11 @@ def sha256_of(path: Path) -> str:
 
 
 def build_predicate(run: RunContext, tools: Sequence[Tool]) -> JsonObject:
-    """A SLSA v1 provenance predicate, in GitHub's workflow build type."""
+    """A SLSA v1 provenance predicate, in GitHub's workflow build type.
+
+    The builder is the workflow that signs: GitHub's attestation store rejects
+    provenance whose builder differs from the signing certificate's workflow.
+    """
     source: JsonObject = {"uri": f"git+{run.repository_url}@{run.ref}", "digest": {"gitCommit": run.sha}}
     return {
         "buildDefinition": {
@@ -159,7 +168,7 @@ def build_predicate(run: RunContext, tools: Sequence[Tool]) -> JsonObject:
             "resolvedDependencies": [source, *(tool.descriptor() for tool in tools)],
         },
         "runDetails": {
-            "builder": {"id": f"{run.server}/actions/runner/{run.runner_environment}"},
+            "builder": {"id": run.workflow_uri},
             "metadata": {"invocationId": f"{run.repository_url}/actions/runs/{run.run_id}/attempts/{run.run_attempt}"},
         },
     }
