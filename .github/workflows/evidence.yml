@@ -1,0 +1,78 @@
+name: Evidence
+
+# Every merge publishes a signed SBOM and provenance (ICS-009,
+# deploy/evidence/README.md). The job archives the merged source, writes a
+# CycloneDX SBOM of its Conan, uv and pnpm lockfiles with Syft, and SLSA v1
+# provenance, and signs both with cosign as in-toto attestations about the
+# archive. Signing is keyless: the certificate names this workflow, its ref and
+# the commit, and the public Sigstore log records it. Each bundle must verify,
+# and a tampered archive must fail verification.
+#
+# On main the attestations are published to the repository's attestation store
+# and then verified again from there with the GitHub CLI, as a consumer would.
+# Pull requests sign and verify but publish nothing. The files are kept as the
+# evidence-<sha> artifact for 90 days (7 for pull requests).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: evidence-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  evidence:
+    name: Signed SBOM and provenance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Install Syft and cosign
+        run: |
+          deploy/evidence/install-tools.sh "${RUNNER_TEMP}/bin"
+          echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
+
+      - name: Build, sign and verify the evidence
+        run: deploy/evidence/source-evidence.sh "${RUNNER_TEMP}/evidence"
+
+      - name: Publish the attestations
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 .github/scripts/evidence.py publish \
+            "${RUNNER_TEMP}/evidence/sbom.sigstore.json" "${RUNNER_TEMP}/evidence/provenance.sigstore.json"
+
+      - name: Verify the published attestations
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for predicate in https://cyclonedx.org/bom https://slsa.dev/provenance/v1; do
+            gh attestation verify "${RUNNER_TEMP}/evidence/ics-${GITHUB_SHA}.tar" --repo "${GITHUB_REPOSITORY}" \
+              --signer-workflow "${GITHUB_REPOSITORY}/.github/workflows/evidence.yml" \
+              --source-ref refs/heads/main --source-digest "${GITHUB_SHA}" --predicate-type "${predicate}"
+          done
+
+      - name: Archive the evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/evidence/
+          if-no-files-found: error
+          overwrite: true
+          retention-days: ${{ github.event_name == 'pull_request' && 7 || 90 }}

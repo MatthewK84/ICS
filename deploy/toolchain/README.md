@@ -1,6 +1,6 @@
 # C++ toolchain images
 
-Pinned build environments for ICS C++ code (ICS-004). CI builds both images and publishes them from `main` to GitHub's container registry, tagged with the commit SHA and `main`.
+Pinned build environments for ICS C++ code (ICS-004). CI builds both images and publishes them from `main` to GitHub's container registry, tagged with the commit SHA and `main`. Each published image is signed by digest with cosign and carries a CycloneDX SBOM and SLSA provenance; see [`../evidence/`](../evidence/README.md) to verify them.
 
 | Image | Base | Contents | Used for |
 |---|---|---|---|

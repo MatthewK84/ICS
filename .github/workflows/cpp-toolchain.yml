@@ -6,28 +6,35 @@ name: C++ toolchain
 # must pass under ASan, UBSan and TSan with both compilers and survive a minute
 # of fuzzing per target, and the C++ Power-of-Ten profile (ICS-005) must hold:
 # no suppressions, clean -Werror builds, clang-tidy and cppcheck. Each stage
-# must also reject its seeded defect. Images are published to GHCR from main.
+# must also reject its seeded defect. Images are published to GHCR from main,
+# signed by digest with cosign, with a CycloneDX SBOM and SLSA provenance
+# attached (ICS-009, deploy/evidence/README.md).
 
 on:
   pull_request:
     paths:
       - cpp/**
       - deploy/toolchain/**
+      - deploy/evidence/**
+      - .github/scripts/evidence.py
       - .github/workflows/cpp-toolchain.yml
   push:
     branches: [main]
     paths:
       - cpp/**
       - deploy/toolchain/**
+      - deploy/evidence/**
+      - .github/scripts/evidence.py
       - .github/workflows/cpp-toolchain.yml
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# A run on main is never cancelled, so every image it publishes gets signed.
 concurrency:
   group: cpp-toolchain-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   IMAGE: ghcr.io/matthewk84/ics-cpp
@@ -41,6 +48,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
     steps:
       - name: Check out the repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -75,6 +83,14 @@ jobs:
       - name: Power-of-Ten policy (clang-tidy, cppcheck, warnings)
         run: ${RUN} cpp/policy/check-policy.sh
 
+      - name: Install Syft and cosign
+        run: |
+          deploy/evidence/install-tools.sh "${RUNNER_TEMP}/bin"
+          echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
+
+      - name: SBOM of the image
+        run: deploy/evidence/image-sbom.sh ics-cpp:ci "${IMAGE}" "${RUNNER_TEMP}/ics-cpp.cdx.json"
+
       - name: Publish the image
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
@@ -86,3 +102,7 @@ jobs:
           docker tag ics-cpp:ci "${IMAGE}:main"
           docker push "${IMAGE}:${GITHUB_SHA}"
           docker push "${IMAGE}:main"
+
+      - name: Sign the image and attach its SBOM and provenance
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: deploy/evidence/attest-image.sh "${IMAGE}" "${GITHUB_SHA}" "${RUNNER_TEMP}/ics-cpp.cdx.json"
