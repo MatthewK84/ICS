@@ -1,0 +1,8 @@
+pnpm-lock.yaml
+**/dist/
+**/coverage/
+**/playwright-report/
+**/test-results/
+# Markdown follows the repository's documentation style (compact tables), not
+# Prettier's; Prettier formats the code.
+*.md
