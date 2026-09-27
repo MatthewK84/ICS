@@ -1,0 +1,8 @@
+# Build output
+cpp/build/
+
+# Python caches
+__pycache__/
+.mypy_cache/
+.ruff_cache/
+.coverage

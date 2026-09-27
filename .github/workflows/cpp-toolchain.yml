@@ -1,0 +1,87 @@
+name: C++ toolchain
+
+# Builds the ics-cpp image and proves the toolchain is reproducible (ICS-004):
+# the toolchain_check sample must build byte-identically in two build folders
+# with GCC 13 and with Clang 17, and the sanitizer presets must build and pass.
+# Images are published to GHCR from main only.
+
+on:
+  pull_request:
+    paths:
+      - cpp/**
+      - deploy/toolchain/**
+      - .github/workflows/cpp-toolchain.yml
+  push:
+    branches: [main]
+    paths:
+      - cpp/**
+      - deploy/toolchain/**
+      - .github/workflows/cpp-toolchain.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cpp-toolchain-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/matthewk84/ics-cpp
+  RUN: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v conan-home:/opt/conan-home ics-cpp:ci
+
+jobs:
+  toolchain:
+    name: ics-cpp image and reproducibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Build the ics-cpp image
+        run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
+
+      - name: Require the Conan lockfile
+        run: |
+          if [ -f cpp/conan.lock ]; then
+            exit 0
+          fi
+          ${RUN} bash -c 'conan lock create cpp --profile:all cpp/conan/profiles/gcc13 --lockfile-out /tmp/conan.lock >/dev/null && base64 -w0 /tmp/conan.lock'
+          echo
+          echo "::error::cpp/conan.lock is missing. Decode the base64 line above into cpp/conan.lock and commit it."
+          exit 1
+
+      - name: Reproducible build with GCC 13
+        run: ${RUN} deploy/toolchain/check-reproducible.sh gcc
+
+      - name: Reproducible build with Clang 17
+        run: ${RUN} deploy/toolchain/check-reproducible.sh clang
+
+      - name: Build and test the sanitizer presets
+        run: |
+          ${RUN} bash -c '
+            set -euo pipefail
+            for preset in gcc-asan gcc-tsan clang-asan clang-tsan; do
+              deploy/toolchain/conan-install.sh "${preset}" >/dev/null
+              (cd cpp && cmake --preset "${preset}" >/dev/null)
+              cmake --build --preset "${preset}" --target toolchain_check_test >/dev/null
+              ctest --preset "${preset}"
+            done'
+
+      - name: Publish the image
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          echo "${GITHUB_TOKEN}" | docker login ghcr.io -u "${ACTOR}" --password-stdin
+          docker tag ics-cpp:ci "${IMAGE}:${GITHUB_SHA}"
+          docker tag ics-cpp:ci "${IMAGE}:main"
+          docker push "${IMAGE}:${GITHUB_SHA}"
+          docker push "${IMAGE}:main"

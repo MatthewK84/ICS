@@ -1,0 +1,75 @@
+name: CUDA toolchain
+
+# Builds the ics-cuda image and compiles a sample kernel with each host
+# compiler (ICS-004). Runs only when the CUDA image or its sample changes,
+# because the base image is several gigabytes. Publishes to GHCR from main.
+
+on:
+  pull_request:
+    paths:
+      - deploy/toolchain/Dockerfile.cuda
+      - deploy/toolchain/install-toolchain.sh
+      - deploy/toolchain/requirements-*.txt
+      - cpp/toolchain_check/cuda/**
+      - .github/workflows/cuda-toolchain.yml
+  push:
+    branches: [main]
+    paths:
+      - deploy/toolchain/Dockerfile.cuda
+      - deploy/toolchain/install-toolchain.sh
+      - deploy/toolchain/requirements-*.txt
+      - cpp/toolchain_check/cuda/**
+      - .github/workflows/cuda-toolchain.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cuda-toolchain-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/matthewk84/ics-cuda
+
+jobs:
+  toolchain:
+    name: ics-cuda image and kernel build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Free disk space for the CUDA base image
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+
+      - name: Check out the repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Build the ics-cuda image
+        run: docker build -f deploy/toolchain/Dockerfile.cuda -t ics-cuda:ci .
+
+      - name: Compile the sample kernel with each host compiler
+        run: |
+          docker run --rm -v "${GITHUB_WORKSPACE}":/work/ics -w /work/ics ics-cuda:ci bash -c '
+            set -euo pipefail
+            nvcc --version | tail -n 1
+            for host in g++-13 clang++-17; do
+              nvcc -std=c++20 -arch=sm_89 -ccbin "${host}" -o "/tmp/axpy-${host}" cpp/toolchain_check/cuda/axpy.cu
+              echo "compiled and linked with host compiler ${host}"
+            done'
+
+      - name: Publish the image
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          echo "${GITHUB_TOKEN}" | docker login ghcr.io -u "${ACTOR}" --password-stdin
+          docker tag ics-cuda:ci "${IMAGE}:${GITHUB_SHA}"
+          docker tag ics-cuda:ci "${IMAGE}:main"
+          docker push "${IMAGE}:${GITHUB_SHA}"
+          docker push "${IMAGE}:main"
