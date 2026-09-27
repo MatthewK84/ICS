@@ -6,7 +6,7 @@
 FROM nvidia/cuda:12.9.1-devel-ubuntu24.04@sha256:020bc241a628776338f4d4053fed4c38f6f7f3d7eb5919fecb8de313bb8ba47c
 
 ARG UBUNTU_SNAPSHOT=20260926T000000Z
-COPY deploy/toolchain/install-toolchain.sh deploy/toolchain/requirements-build.txt deploy/toolchain/requirements-conan.txt /tmp/toolchain/
+COPY deploy/toolchain/install-toolchain.sh deploy/toolchain/apt-packages.txt deploy/toolchain/requirements-build.txt deploy/toolchain/requirements-conan.txt /tmp/toolchain/
 RUN --mount=type=secret,id=extra_ca,required=false \
     bash /tmp/toolchain/install-toolchain.sh "${UBUNTU_SNAPSHOT}" && rm -rf /tmp/toolchain
 

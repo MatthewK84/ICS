@@ -1,0 +1,661 @@
+# ICS dependency register (ICS-010, DoWI 8430.01 §3.5.i).
+#
+# Every direct dependency of the repository has an entry here, reviewed for
+# governance, sustainment, license and foreign influence. CI
+# (.github/workflows/dependency-register.yml) fails when a manifest names a
+# dependency that is not registered, when an entry is incomplete, or when a
+# registered package is no longer used. See docs/dependency-register.md for the
+# fields and how to add or remove an entry.
+#
+# Entries record public information as of their review date. "ships" is true
+# when the dependency is included in software ICS delivers; build, test and CI
+# tools are false.
+
+[register]
+# Our own packages and images, which need no entry.
+first_party = ["ghcr.io/matthewk84/", "@ics/"]
+
+# --- C++ (Conan) -------------------------------------------------------------
+
+[[project]]
+name = "GoogleTest"
+ecosystem = "conan"
+packages = ["gtest"]
+used_for = "C++ unit tests (test-only; linked into test binaries)"
+ships = false
+license = "BSD-3-Clause"
+source = "https://github.com/google/googletest"
+governance = "Google project on GitHub; Google engineers review and merge changes. The Conan recipe comes from Conan Center."
+sustainment = "Active, with releases every few months. Pinned in cpp/conan.lock. Catch2 or doctest could replace it."
+foreign_influence = "Steward: Google LLC (US)."
+single_maintainer = false
+maintainers = "Google engineering team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+# --- Python (PyPI) -----------------------------------------------------------
+
+[[project]]
+name = "Hypothesis"
+ecosystem = "pypi"
+packages = ["hypothesis"]
+used_for = "Property-based tests for the Python code"
+ships = false
+license = "MPL-2.0"
+source = "https://github.com/HypothesisWorks/hypothesis"
+governance = "Independent open-source project (HypothesisWorks); no corporate owner. The core team reviews and releases every merged change."
+sustainment = "Very active: a release for most merged pull requests. Pinned in python/uv.lock. Tests would fall back to example-based pytest cases."
+foreign_influence = "No corporate steward; maintained by individual volunteers. Code and releases are public on GitHub and PyPI."
+single_maintainer = false
+maintainers = "Small core team led by Zac Hatfield-Dodds; founded by David R. MacIver"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "mypy"
+ecosystem = "pypi"
+packages = ["mypy"]
+used_for = "Static type checking of the Python code (mypy --strict)"
+ships = false
+license = "MIT"
+source = "https://github.com/python/mypy"
+governance = "Hosted in the python GitHub organization; a core team of maintainers reviews and releases."
+sustainment = "Active, with regular feature releases. Pinned in python/uv.lock. Pyright is an alternative."
+foreign_influence = "No corporate owner; hosted by the Python organization on GitHub. Maintainers are individuals, several historically employed by Dropbox (US)."
+single_maintainer = false
+maintainers = "Core team; created by Jukka Lehtosalo"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "pytest"
+ecosystem = "pypi"
+packages = ["pytest"]
+used_for = "Python test runner"
+ships = false
+license = "MIT"
+source = "https://github.com/pytest-dev/pytest"
+governance = "pytest-dev organization with a team of core maintainers; funded through Open Collective and Tidelift."
+sustainment = "Very active, with frequent releases. Pinned in python/uv.lock. The standard library's unittest is a fallback."
+foreign_influence = "No corporate steward; an international volunteer team. Code and releases are public."
+single_maintainer = false
+maintainers = "pytest-dev core team (see the project's AUTHORS file)"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "pytest-cov"
+ecosystem = "pypi"
+packages = ["pytest-cov"]
+used_for = "Coverage measurement and the 90% coverage floor in pytest"
+ships = false
+license = "MIT"
+source = "https://github.com/pytest-dev/pytest-cov"
+governance = "Hosted in the pytest-dev organization; releases are made by one maintainer."
+sustainment = "Maintained, with a few releases a year. Pinned in python/uv.lock. coverage.py can be run directly if the plugin is abandoned."
+foreign_influence = "No corporate steward; maintained by an individual volunteer under the pytest-dev organization."
+single_maintainer = true
+maintainers = "Ionel Cristian Mărieș does most maintenance and the releases; created by Marc Schlaich"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "Ruff"
+ecosystem = "pypi"
+packages = ["ruff"]
+used_for = "Python linting (including the bandit security rules) and formatting"
+ships = false
+license = "MIT"
+source = "https://github.com/astral-sh/ruff"
+governance = "Developed by Astral Software Inc. staff in the open, with outside contributions."
+sustainment = "Very active, with weekly releases. Pinned in python/uv.lock. Flake8, Bandit and Black cover the same checks."
+foreign_influence = "Steward: Astral Software Inc. (US company, venture-funded)."
+single_maintainer = false
+maintainers = "Astral engineering team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "uv"
+ecosystem = "pypi"
+packages = ["uv"]
+used_for = "Python project and package manager: installs the locked Python toolchain"
+ships = false
+license = "MIT OR Apache-2.0"
+source = "https://github.com/astral-sh/uv"
+governance = "Developed by Astral Software Inc. staff in the open, with outside contributions."
+sustainment = "Very active, with weekly releases. Hash-pinned in python/requirements-uv.txt. pip with hash-pinned requirements files is a fallback."
+foreign_influence = "Steward: Astral Software Inc. (US company, venture-funded)."
+single_maintainer = false
+maintainers = "Astral engineering team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "Conan"
+ecosystem = "pypi"
+packages = ["conan"]
+used_for = "C++ package manager in the toolchain images; installs dependencies from cpp/conan.lock"
+ships = false
+license = "MIT"
+source = "https://github.com/conan-io/conan"
+governance = "Developed by JFrog's Conan team in the open; JFrog also runs Conan Center."
+sustainment = "Active, with monthly releases. Hash-pinned in deploy/toolchain/requirements-conan.txt. vcpkg is an alternative."
+foreign_influence = "Steward: JFrog Ltd., incorporated in Israel, headquartered in Sunnyvale, California, and listed on NASDAQ."
+single_maintainer = false
+maintainers = "JFrog Conan team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "setuptools"
+ecosystem = "pypi"
+packages = ["setuptools"]
+used_for = "Builds Conan's source distribution while the toolchain image is built"
+ships = false
+license = "MIT"
+source = "https://github.com/pypa/setuptools"
+governance = "Python Packaging Authority (PyPA) project with a small maintainer team."
+sustainment = "Very active, with frequent releases. Hash-pinned in deploy/toolchain/requirements-build.txt. Only needed while Conan ships as source."
+foreign_influence = "No corporate steward; a PyPA community project. Code and releases are public."
+single_maintainer = false
+maintainers = "Small team led by Jason R. Coombs"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+# --- TypeScript (npm) --------------------------------------------------------
+
+[[project]]
+name = "React"
+ecosystem = "npm"
+packages = ["react", "react-dom"]
+used_for = "The web app's user-interface library; bundled into the built app"
+ships = true
+license = "MIT"
+source = "https://github.com/react/react"
+governance = "Developed mainly by Meta's React team. Meta announced in 2025 that React moves to an independent React Foundation under the Linux Foundation; the npm metadata now points at the react GitHub organization."
+sustainment = "Very active. Pinned in web/pnpm-lock.yaml. No drop-in replacement; Preact is API-compatible for most uses."
+foreign_influence = "Meta Platforms, Inc. (US) and the React Foundation (Linux Foundation, US non-profit)."
+single_maintainer = false
+maintainers = "Meta React team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "React Hooks ESLint plugin"
+ecosystem = "npm"
+packages = ["eslint-plugin-react-hooks"]
+used_for = "ESLint rules for React hooks"
+ships = false
+license = "MIT"
+source = "https://github.com/facebook/react/tree/main/packages/eslint-plugin-react-hooks"
+governance = "Part of the React repository; released by Meta's React team."
+sustainment = "Released with React. Pinned in web/pnpm-lock.yaml. The lint rules could be dropped if it were abandoned."
+foreign_influence = "Steward: Meta Platforms, Inc. (US)."
+single_maintainer = false
+maintainers = "Meta React team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "TypeScript"
+ecosystem = "npm"
+packages = ["typescript"]
+used_for = "TypeScript compiler and type checker for the web code"
+ships = false
+license = "Apache-2.0"
+source = "https://github.com/microsoft/TypeScript"
+governance = "Developed by Microsoft's TypeScript team in the open."
+sustainment = "Very active, with quarterly releases. Pinned in web/pnpm-lock.yaml. No practical replacement."
+foreign_influence = "Steward: Microsoft Corporation (US)."
+single_maintainer = false
+maintainers = "Microsoft TypeScript team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "DefinitelyTyped"
+ecosystem = "npm"
+packages = ["@types/node", "@types/react", "@types/react-dom"]
+used_for = "Type definitions for Node.js and React"
+ships = false
+license = "MIT"
+source = "https://github.com/DefinitelyTyped/DefinitelyTyped"
+governance = "Community repository administered by Microsoft's TypeScript team; packages are published automatically from merged changes."
+sustainment = "Very active. Pinned in web/pnpm-lock.yaml. Types could be vendored if the repository stopped."
+foreign_influence = "Administered by Microsoft Corporation (US); definitions are contributed by the community."
+single_maintainer = false
+maintainers = "Microsoft TypeScript team and community owners of each package"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "ESLint"
+ecosystem = "npm"
+packages = ["eslint", "@eslint/js"]
+used_for = "Linting of the TypeScript code"
+ships = false
+license = "MIT"
+source = "https://github.com/eslint/eslint"
+governance = "OpenJS Foundation project with a technical steering committee; funded by sponsorships."
+sustainment = "Very active, with releases every two weeks. Pinned in web/pnpm-lock.yaml. No practical replacement for the custom rules."
+foreign_influence = "Governed under the OpenJS Foundation (US non-profit, part of the Linux Foundation)."
+single_maintainer = false
+maintainers = "ESLint technical steering committee and team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "typescript-eslint"
+ecosystem = "npm"
+packages = ["typescript-eslint", "@typescript-eslint/utils", "@typescript-eslint/rule-tester"]
+used_for = "Type-aware ESLint rules, and the utilities and tester for the custom ics/no-recursion rule"
+ships = false
+license = "MIT"
+source = "https://github.com/typescript-eslint/typescript-eslint"
+governance = "Independent project run by a volunteer maintainer team; funded through Open Collective."
+sustainment = "Very active, with weekly releases. Pinned in web/pnpm-lock.yaml. No practical replacement for type-aware linting."
+foreign_influence = "No corporate steward; an international volunteer team. Code and releases are public."
+single_maintainer = false
+maintainers = "Volunteer team (see the project's maintainer list)"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "Vite"
+ecosystem = "npm"
+packages = ["vite", "@vitejs/plugin-react"]
+used_for = "Builds and previews the web app"
+ships = false
+license = "MIT"
+source = "https://github.com/vitejs/vite"
+governance = "Vite team, several of whom work for VoidZero Inc., the company founded by Vite's creator Evan You."
+sustainment = "Very active. Pinned in web/pnpm-lock.yaml. Other bundlers (esbuild, Rollup, webpack) could replace it."
+foreign_influence = "Core maintainers are employed by VoidZero Inc.; the company's jurisdiction was not established in this review. Code and releases are public."
+single_maintainer = false
+maintainers = "Vite core team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "Vitest"
+ecosystem = "npm"
+packages = ["vitest", "@vitest/coverage-v8"]
+used_for = "Unit tests and coverage for the web code"
+ships = false
+license = "MIT"
+source = "https://github.com/vitest-dev/vitest"
+governance = "Vitest team, part of the Vite ecosystem; several maintainers work for VoidZero Inc."
+sustainment = "Very active. Pinned in web/pnpm-lock.yaml. Jest is an alternative."
+foreign_influence = "Core maintainers include VoidZero Inc. staff; the company's jurisdiction was not established in this review. Code and releases are public."
+single_maintainer = false
+maintainers = "Vitest core team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "Prettier"
+ecosystem = "npm"
+packages = ["prettier"]
+used_for = "Formats the web code"
+ships = false
+license = "MIT"
+source = "https://github.com/prettier/prettier"
+governance = "Independent project run by a volunteer team; funded through Open Collective."
+sustainment = "Active, with regular releases. Pinned in web/pnpm-lock.yaml. dprint or Biome could replace it."
+foreign_influence = "No corporate steward; an international volunteer team. Code and releases are public."
+single_maintainer = false
+maintainers = "Prettier team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "Playwright"
+ecosystem = "npm"
+packages = ["@playwright/test"]
+used_for = "End-to-end browser tests of the web app"
+ships = false
+license = "Apache-2.0"
+source = "https://github.com/microsoft/playwright"
+governance = "Developed by Microsoft's Playwright team in the open."
+sustainment = "Very active, with monthly releases. Pinned in web/pnpm-lock.yaml. Cypress is an alternative."
+foreign_influence = "Steward: Microsoft Corporation (US)."
+single_maintainer = false
+maintainers = "Microsoft Playwright team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+# --- Runtimes ----------------------------------------------------------------
+
+[[project]]
+name = "Node.js"
+ecosystem = "runtime"
+packages = ["node"]
+used_for = "Runs the web toolchain (engines.node in web/package.json)"
+ships = false
+license = "MIT"
+source = "https://github.com/nodejs/node"
+governance = "OpenJS Foundation project with a technical steering committee."
+sustainment = "Very active, with long-term-support release lines. Version pinned in web/package.json and the Playwright image."
+foreign_influence = "Governed under the OpenJS Foundation (US non-profit, part of the Linux Foundation)."
+single_maintainer = false
+maintainers = "Node.js technical steering committee and collaborators"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "pnpm"
+ecosystem = "runtime"
+packages = ["pnpm"]
+used_for = "Package manager for the web workspace (packageManager in web/package.json, checked by sha512)"
+ships = false
+license = "MIT"
+source = "https://github.com/pnpm/pnpm"
+governance = "Independent project; its creator leads development and releases; funded through sponsorships."
+sustainment = "Very active, with frequent releases. Pinned by version and sha512 in web/package.json. npm can install from package.json if pnpm stopped."
+foreign_influence = "No corporate steward; the lead maintainer's location and affiliation were not established in this review. Code and releases are public."
+single_maintainer = true
+maintainers = "Zoltan Kochan leads development and releases, with occasional co-maintainers"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "Python"
+ecosystem = "runtime"
+packages = ["python"]
+used_for = "Runs the Python code (requires-python in python/pyproject.toml); provided by the operating system"
+ships = false
+license = "PSF-2.0"
+source = "https://github.com/python/cpython"
+governance = "Python Software Foundation; a steering council elected by core developers."
+sustainment = "Very active, with yearly feature releases and five years of support each. ICS uses the operating system's Python 3.12."
+foreign_influence = "Governed by the Python Software Foundation (US non-profit)."
+single_maintainer = false
+maintainers = "CPython core developers and steering council"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+# --- GitHub Actions ----------------------------------------------------------
+
+[[project]]
+name = "GitHub first-party actions"
+ecosystem = "github-action"
+packages = ["actions/checkout", "actions/upload-artifact"]
+used_for = "Checks out the repository and uploads CI artifacts in every workflow"
+ships = false
+license = "MIT"
+source = "https://github.com/actions"
+governance = "Maintained by GitHub."
+sustainment = "Maintained alongside GitHub Actions. Pinned by commit SHA in each workflow."
+foreign_influence = "Steward: GitHub, Inc., a subsidiary of Microsoft Corporation (US)."
+single_maintainer = false
+maintainers = "GitHub Actions team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "CodeQL Action"
+ecosystem = "github-action"
+packages = ["github/codeql-action"]
+used_for = "Runs CodeQL analysis of the C++, Python and TypeScript code"
+ships = false
+license = "MIT AND LicenseRef-GitHub-CodeQL-Terms"
+source = "https://github.com/github/codeql-action"
+governance = "Maintained by GitHub. The action is MIT-licensed; the CodeQL tools it downloads are under GitHub's CodeQL terms, which allow analysis of open-source code."
+sustainment = "Very active. Pinned by commit SHA in .github/workflows/codeql.yml."
+foreign_influence = "Steward: GitHub, Inc., a subsidiary of Microsoft Corporation (US)."
+single_maintainer = false
+maintainers = "GitHub code-scanning team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+# --- Container images --------------------------------------------------------
+
+[[project]]
+name = "Ubuntu base image"
+ecosystem = "container"
+packages = ["docker.io/library/ubuntu"]
+used_for = "Base of the ics-cpp toolchain image"
+ships = false
+license = "LicenseRef-Ubuntu-archive"
+source = "https://hub.docker.com/_/ubuntu"
+governance = "Docker Official Image built by Canonical. Package licenses vary; the image SBOM lists them."
+sustainment = "Ubuntu 24.04 LTS is supported until 2029 (standard support). Pinned by digest in deploy/toolchain/Dockerfile.cpp."
+foreign_influence = "Steward: Canonical Ltd. (UK)."
+single_maintainer = false
+maintainers = "Canonical and the Ubuntu community"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "NVIDIA CUDA image"
+ecosystem = "container"
+packages = ["docker.io/nvidia/cuda"]
+used_for = "Base of the ics-cuda toolchain image (CUDA 12.9 developer image on Ubuntu 24.04)"
+ships = false
+license = "LicenseRef-NVIDIA-CUDA-EULA AND LicenseRef-Ubuntu-archive"
+source = "https://hub.docker.com/r/nvidia/cuda"
+governance = "Built and published by NVIDIA. The CUDA toolkit is under NVIDIA's CUDA end-user license agreement."
+sustainment = "NVIDIA publishes images for each CUDA release. Pinned by digest in deploy/toolchain/Dockerfile.cuda."
+foreign_influence = "Steward: NVIDIA Corporation (US); the Ubuntu layers come from Canonical Ltd. (UK)."
+single_maintainer = false
+maintainers = "NVIDIA"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "Playwright image"
+ecosystem = "container"
+packages = ["mcr.microsoft.com/playwright"]
+used_for = "Container for the web toolchain job: Node.js and the Playwright browsers"
+ships = false
+license = "Apache-2.0 AND LicenseRef-Ubuntu-archive"
+source = "https://mcr.microsoft.com/en-us/artifact/mar/playwright"
+governance = "Built and published by Microsoft's Playwright team."
+sustainment = "Published with each Playwright release. Pinned by digest in .github/workflows/web-toolchain.yml."
+foreign_influence = "Steward: Microsoft Corporation (US); the Ubuntu layers come from Canonical Ltd. (UK)."
+single_maintainer = false
+maintainers = "Microsoft Playwright team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+# --- Ubuntu packages in the toolchain images -----------------------------------
+
+[[project]]
+name = "ca-certificates"
+ecosystem = "apt"
+packages = ["ca-certificates"]
+used_for = "Trusted certificate authorities for HTTPS in the toolchain images"
+ships = false
+license = "GPL-2.0-or-later AND MPL-2.0"
+source = "https://launchpad.net/ubuntu/+source/ca-certificates"
+governance = "Ubuntu package derived from Debian; the certificate list comes from Mozilla's root store."
+sustainment = "Updated through Ubuntu security updates. Pinned through the Ubuntu snapshot date."
+foreign_influence = "Packaged by Canonical Ltd. (UK) from Debian; the root store is curated by Mozilla (US)."
+single_maintainer = false
+maintainers = "Ubuntu and Debian package maintainers; Mozilla root store program"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "GCC 13"
+ecosystem = "apt"
+packages = ["gcc-13", "g++-13"]
+used_for = "C and C++ compiler for every ICS build"
+ships = false
+license = "GPL-3.0-or-later WITH GCC-exception-3.1"
+source = "https://gcc.gnu.org"
+governance = "GNU project under the GCC steering committee; the Free Software Foundation holds much of the copyright."
+sustainment = "Active; GCC 13 receives maintenance releases. Pinned through the Ubuntu snapshot date. Clang 17 is the second compiler."
+foreign_influence = "GNU project of the Free Software Foundation (US non-profit); international contributors from many companies."
+single_maintainer = false
+maintainers = "GCC maintainers and steering committee"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "LLVM 17"
+ecosystem = "apt"
+packages = ["clang-17", "clang-tidy-17", "lld-17", "llvm-17", "libclang-rt-17-dev"]
+used_for = "Clang compiler, clang-tidy, the lld linker and the sanitizer and libFuzzer runtimes"
+ships = false
+license = "Apache-2.0 WITH LLVM-exception"
+source = "https://github.com/llvm/llvm-project"
+governance = "LLVM project, with the LLVM Foundation handling legal and infrastructure matters; code owners review changes."
+sustainment = "Very active upstream. LLVM 17 itself is no longer updated upstream; Ubuntu 24.04 carries it in its archive. Pinned through the Ubuntu snapshot date."
+foreign_influence = "LLVM Foundation (US non-profit); international contributors from many companies."
+single_maintainer = false
+maintainers = "LLVM community and code owners"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "CMake"
+ecosystem = "apt"
+packages = ["cmake"]
+used_for = "Configures every C++ build (presets in cpp/CMakePresets.json)"
+ships = false
+license = "BSD-3-Clause"
+source = "https://gitlab.kitware.com/cmake/cmake"
+governance = "Developed and maintained by Kitware, Inc., with community contributions."
+sustainment = "Very active, with releases every few months. Pinned through the Ubuntu snapshot date."
+foreign_influence = "Steward: Kitware, Inc. (US)."
+single_maintainer = false
+maintainers = "Kitware CMake team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "Ninja"
+ecosystem = "apt"
+packages = ["ninja-build"]
+used_for = "Build system that CMake generates for"
+ships = false
+license = "Apache-2.0"
+source = "https://github.com/ninja-build/ninja"
+governance = "Independent project in the ninja-build GitHub organization; created at Google, now maintained by volunteers."
+sustainment = "Stable and maintained, with infrequent releases. Pinned through the Ubuntu snapshot date. CMake's Makefile generator is a fallback."
+foreign_influence = "No corporate steward; maintained by individual volunteers. Code and releases are public."
+single_maintainer = true
+maintainers = "Jan Niklas Hasse does most maintenance and the releases; created by Evan Martin"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "Cppcheck"
+ecosystem = "apt"
+packages = ["cppcheck"]
+used_for = "C++ static analysis in the Power-of-Ten policy check"
+ships = false
+license = "GPL-3.0-or-later"
+source = "https://github.com/danmar/cppcheck"
+governance = "Led by its founder, Daniel Marjamäki, with community contributors; a commercial edition is sold separately."
+sustainment = "Active, with several releases a year. Pinned through the Ubuntu snapshot date. clang-tidy and CodeQL cover much of the same ground."
+foreign_influence = "Founder-led; the commercial edition is sold by Cppcheck Solutions AB (Sweden)."
+single_maintainer = true
+maintainers = "Daniel Marjamäki leads and releases, with a small group of regular contributors"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "Python 3 (Ubuntu)"
+ecosystem = "apt"
+packages = ["python3", "python3-venv"]
+used_for = "Python 3.12 in the toolchain images; runs Conan"
+ships = false
+license = "PSF-2.0"
+source = "https://launchpad.net/ubuntu/+source/python3-defaults"
+governance = "CPython from the Python Software Foundation, packaged by Ubuntu."
+sustainment = "Supported with Ubuntu 24.04 LTS. Pinned through the Ubuntu snapshot date."
+foreign_influence = "Python Software Foundation (US non-profit); packaged by Canonical Ltd. (UK)."
+single_maintainer = false
+maintainers = "CPython core developers; Ubuntu package maintainers"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "Git"
+ecosystem = "apt"
+packages = ["git"]
+used_for = "Version control inside the toolchain images"
+ships = false
+license = "GPL-2.0-only"
+source = "https://git.kernel.org/pub/scm/git/git.git"
+governance = "One maintainer integrates changes and makes releases; a project leadership committee represents Git at the Software Freedom Conservancy."
+sustainment = "Very active, with releases every few months. Pinned through the Ubuntu snapshot date."
+foreign_influence = "Member project of the Software Freedom Conservancy (US non-profit); international contributors."
+single_maintainer = false
+maintainers = "Junio C Hamano (maintainer) with a large contributor base"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+# --- Evidence tools (deploy/evidence/tools.txt) ---------------------------------
+
+[[project]]
+name = "Syft"
+ecosystem = "tool"
+packages = ["syft"]
+used_for = "Generates the CycloneDX SBOMs (ICS-009)"
+ships = false
+license = "Apache-2.0"
+source = "https://github.com/anchore/syft"
+governance = "Developed by Anchore, Inc. in the open, with community contributions."
+sustainment = "Very active, with frequent releases. Pinned by version and sha256 in deploy/evidence/tools.txt. Trivy and cdxgen are alternatives."
+foreign_influence = "Steward: Anchore, Inc. (US)."
+single_maintainer = false
+maintainers = "Anchore open-source team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "cosign"
+ecosystem = "tool"
+packages = ["cosign"]
+used_for = "Signs and verifies the SBOM, provenance and images (ICS-009)"
+ships = false
+license = "Apache-2.0"
+source = "https://github.com/sigstore/cosign"
+governance = "Sigstore project under the Open Source Security Foundation, with maintainers from several companies."
+sustainment = "Very active. Pinned by version and sha256 in deploy/evidence/tools.txt. The GitHub attestation actions sign the same way."
+foreign_influence = "Governed under the OpenSSF (US non-profit, part of the Linux Foundation)."
+single_maintainer = false
+maintainers = "Sigstore maintainers from several companies"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"

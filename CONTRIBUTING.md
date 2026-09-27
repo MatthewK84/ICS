@@ -59,13 +59,18 @@ An item that cannot apply to a change is checked and marked N/A with the reason,
   - approval after the latest push;
   - every review thread resolved;
   - **Squash and merge** only, signed commits and linear history.
-  - the "AI-assist declaration" check passing (see [AI-assisted changes](#ai-assisted-changes)).
+  - the "AI-assist declaration" check passing (see [AI-assisted changes](#ai-assisted-changes));
+  - the "Dependency register" check passing (see [Dependencies](#dependencies)).
 - **Addressing review:** push fixes to the same branch, reply on each thread, and re-request review from anyone who asked for changes.
 - **While the team is one person,** the repository admin may merge a pull request by bypassing the approval rules. Direct pushes to `main` are blocked for everyone.
 
 ## AI-assisted changes
 
 Every pull request ticks exactly one box under "AI assistance": **No AI assistance** or **AI-assisted**. An AI-assisted pull request also names the tool and the scope of what the tool did, and the model and version when known. The owner reads every AI-assisted change before merging it. The required "AI-assist declaration" check enforces the declaration, and the `ai-assisted` label follows the answer. The rules, the approved-tool register and the log are in [docs/ai-usage.md](docs/ai-usage.md).
+
+## Dependencies
+
+Every direct dependency needs a reviewed entry in the [dependency register](docs/dependency-register.md), covering governance, sustainment, license and foreign influence (DoWI 8430.01 §3.5.i). Add the entry in the same pull request as the dependency. The required "Dependency register" check fails on a dependency with no entry and on an entry nothing uses any more.
 
 ## Blockers
 
