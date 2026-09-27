@@ -31,10 +31,12 @@ export PATH="/tmp/uv/bin:${PATH}"
 uv sync --locked                                     # install the locked dependencies into .venv
 uv run --locked ruff check . && uv run --locked ruff format --check .
 uv run --locked mypy .                               # strict mode
-uv run --locked python -m ics_lint . --exclude policy/seeded
+uv run --locked python -m ics_lint . --exclude policy/seeded --exclude gen
 uv run --locked pytest                               # hypothesis, coverage of at least 90%
 policy/check-policy.sh
 ```
+
+`gen/` holds the protobuf messages generated from [`proto/`](../proto/README.md), imported as `ics.<package>`, for example `from ics.toolchain_check.v1 import sample_pb2`. They are generated and committed, never edited, so ruff and the AST checks skip them, and mypy reads their stubs without reporting on them.
 
 To add or upgrade a dependency, change `pyproject.toml`, run `uv lock`, and record the dependency in the [dependency register](../docs/dependency-register.md).
 

@@ -1,0 +1,9 @@
+# Tools the protobuf pipeline downloads (ICS-011), one per line:
+#   name version sha256 url
+# buf's sha256 is from the release's sha256.txt. protoc's release publishes no
+# checksum file, so its sha256 was computed from the downloaded archive.
+# deploy/evidence/install-tools.sh refuses a download that does not match.
+# protoc 35.0 must match the C++ (Conan protobuf/7.35.0) and Python (protobuf
+# 7.35.x) runtimes; upgrade all three together.
+buf 1.73.0 8f2986298ad08f0cc1bf999b9797b7c383adf32d7edf0f73d6f1e1a701baeac1 https://github.com/bufbuild/buf/releases/download/v1.73.0/buf-Linux-x86_64
+protoc 35.0 a45cda0989c17dd950db55f6fbe1e5814c50fda08e87aa422980ac1f89dddbbc https://github.com/protocolbuffers/protobuf/releases/download/v35.0/protoc-35.0-linux-x86_64.zip

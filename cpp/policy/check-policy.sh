@@ -50,7 +50,8 @@ quietly() {
 
 # Print each suppression marker in the given files or folders as file:line:text.
 find_suppressions() {
-  local skip=(--exclude-dir=build --exclude-dir=seeded)
+  # proto/gen is generated protobuf code (ICS-011), not ICS-authored.
+  local skip=(--exclude-dir=build --exclude-dir=seeded --exclude-dir=gen)
   grep -rnHE "${skip[@]}" --include='*.cpp' --include='*.hpp' --include='*.h' --include='*.cu' \
     -e "${CODE_SUPPRESSION}" "$@" || true
   grep -rnHE "${skip[@]}" --include='*.cmake' --include='CMakeLists.txt' --include='CMakePresets.json' \
@@ -108,10 +109,11 @@ check_clean_code() {
     configure "${compiler}"
     quietly cmake --build "${WORK}/${compiler}" || fail "the ICS code does not build cleanly with ${compiler}"
   done
-  quietly run-clang-tidy-17 -quiet -p "${WORK}/clang" '^(?!.*/policy/seeded)' \
+  quietly run-clang-tidy-17 -quiet -p "${WORK}/clang" '^(?!.*/(policy/seeded|proto/gen/))' \
     || fail "clang-tidy found violations in the ICS code"
   quietly cppcheck "${CPPCHECK_ARGS[@]}" --project="${WORK}/clang/compile_commands.json" \
-    -i "${CPP}/policy/seeded" -i "${CPP}/policy/seeded-runtime" || fail "cppcheck found defects in the ICS code"
+    -i "${CPP}/policy/seeded" -i "${CPP}/policy/seeded-runtime" -i "${CPP}/proto/gen" \
+    || fail "cppcheck found defects in the ICS code"
   echo "Clean code: ok (GCC 13 and Clang 17 with warnings as errors, clang-tidy, cppcheck)"
 }
 

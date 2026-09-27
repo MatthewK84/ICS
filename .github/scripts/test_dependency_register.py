@@ -225,10 +225,11 @@ class ManifestTests(unittest.TestCase):
         for relative, parser in expected.items():
             with self.subTest(relative=relative):
                 self.assertIs(dr.parser_for(relative), parser)
-        for relative in ("docs/notes.yml", "python/requirements.txt", "evidence/tools.txt", "README.md"):
+        for relative in ("docs/notes.yml", "python/requirements.txt", "tools.md", "README.md"):
             with self.subTest(relative=relative):
                 self.assertIsNone(dr.parser_for(relative))
         self.assertIsNotNone(dr.parser_for("deploy/evidence/tools.txt"))
+        self.assertIsNotNone(dr.parser_for("proto/tools.txt"))
         self.assertIsNotNone(dr.parser_for("deploy/toolchain/apt-packages.txt"))
 
     def test_finds_manifests_but_skips_installed_packages(self) -> None:

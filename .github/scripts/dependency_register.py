@@ -10,7 +10,7 @@ review of governance, sustainment, license and foreign influence.
 
 Manifests read: conanfile.py (literal requires), pyproject.toml,
 requirements*.in, package.json, GitHub workflow and action files (uses: and
-image:), Dockerfiles (FROM), apt-packages.txt and deploy/evidence/tools.txt.
+image:), Dockerfiles (FROM), apt-packages.txt and tools.txt pin lists.
 """
 
 from __future__ import annotations
@@ -252,7 +252,7 @@ def parser_for(relative: str) -> Parser | None:
         (is_workflow or name in ("action.yml", "action.yaml"), workflow_dependencies),
         (name == "Dockerfile" or name.startswith("Dockerfile.") or name.endswith(".Dockerfile"), dockerfile_images),
         (name == "apt-packages.txt", first_fields("apt")),
-        (relative == "deploy/evidence/tools.txt", first_fields("tool")),
+        (name == "tools.txt", first_fields("tool")),
     )
     return next((parser for matched, parser in matches if matched), None)
 

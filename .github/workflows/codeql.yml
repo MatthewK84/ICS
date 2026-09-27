@@ -90,6 +90,20 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Restore the Conan package cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /opt/conan-home
+          key: conan-codeql-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
+          restore-keys: conan-codeql-
+
+      # Before CodeQL starts tracing, so dependencies Conan builds from source
+      # (protobuf, abseil) are not analyzed as ICS code.
+      - name: Install the Conan dependencies
+        run: |
+          deploy/toolchain/conan-install.sh gcc-debug
+          conan cache clean "*" --source --build --download --temp
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
@@ -99,7 +113,6 @@ jobs:
 
       - name: Build (traced by CodeQL)
         run: |
-          deploy/toolchain/conan-install.sh gcc-debug
           cd cpp
           cmake --preset gcc-debug
           cmake --build --preset gcc-debug
@@ -109,9 +122,20 @@ jobs:
         with:
           category: /language:c-cpp
           output: ${{ runner.temp }}/sarif
+          upload: never
 
-      - name: Fail on any finding
-        run: python3 .github/scripts/sarif_check.py "${RUNNER_TEMP}/sarif"
+      # paths-ignore does not filter C++ results, so the results in the protobuf
+      # code generated into cpp/proto/gen (ICS-011), which is not ICS-authored,
+      # are dropped before the rest are checked and uploaded.
+      - name: Fail on any finding in ICS code
+        run: python3 .github/scripts/sarif_check.py "${RUNNER_TEMP}/sarif" --drop cpp/proto/gen/
+
+      - name: Upload the results
+        if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: ${{ runner.temp }}/sarif
+          category: /language:c-cpp
 
   seeded-cpp:
     name: CodeQL seeded defect (c-cpp)

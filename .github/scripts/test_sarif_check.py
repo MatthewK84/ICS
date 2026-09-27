@@ -20,7 +20,7 @@ CPP_RESULT: sc.JsonObject = {
 }
 
 
-def sarif(*results: sc.JsonObject) -> sc.JsonObject:
+def sarif(*results: object) -> sc.JsonObject:
     return {"version": "2.1.0", "runs": [{"results": list(results)}]}
 
 
@@ -82,6 +82,35 @@ class MainTests(unittest.TestCase):
             code, output = run_main([folder, "--expect", "cpp/wrong-type-format-argument", "cpp/other"])
         self.assertEqual(code, EXIT_FAILED)
         self.assertIn("no result for cpp/other", output)
+
+    def test_drop_removes_results_under_a_path_before_checking(self) -> None:
+        generated: sc.JsonObject = {
+            "ruleId": "cpp/commented-out-code",
+            "locations": [{"physicalLocation": {"artifactLocation": {"uri": "cpp/proto/gen/ics/a.pb.h"}}}],
+        }
+        with tempfile.TemporaryDirectory() as folder:
+            write_sarif(Path(folder), "cpp.sarif", sarif(generated, generated, CPP_RESULT, "not an object"))
+            code, output = run_main([folder, "--drop", "cpp/proto/gen/", "web/gen/"])
+            kept = json.loads((Path(folder) / "cpp.sarif").read_text(encoding="utf-8"))
+        self.assertEqual(code, EXIT_FAILED)
+        self.assertIn("dropped 2 result(s) under cpp/proto/gen/, web/gen/", output)
+        self.assertIn("sarif_check: 1 finding(s)", output)
+        self.assertEqual(kept["runs"][0]["results"], [CPP_RESULT, "not an object"])
+
+    def test_drop_leaves_runs_without_results_alone(self) -> None:
+        document: sc.JsonObject = {"runs": [{"tool": {}}, "not a run"]}
+        self.assertEqual(sc.drop_from(document, ("cpp/",)), 0)
+        self.assertEqual(document, {"runs": [{"tool": {}}, "not a run"]})
+        with self.assertRaises(sc.SarifError):
+            sc.drop_from([], ("cpp/",))
+
+    def test_drop_reports_unwritable_files(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            write_sarif(Path(folder), "cpp.sarif", sarif(CPP_RESULT))
+            with patch.object(Path, "write_text", side_effect=OSError("read-only")):
+                code, output = run_main([folder, "--drop", "cpp/proto/gen/"])
+        self.assertEqual(code, EXIT_FAILED)
+        self.assertIn("cannot write", output)
 
     def test_missing_or_broken_files_fail(self) -> None:
         with tempfile.TemporaryDirectory() as folder:

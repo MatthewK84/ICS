@@ -31,9 +31,16 @@ jobs:
       - name: Build the ics-cpp image
         run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
 
+      - name: Restore the Conan package cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/conan-home
+          key: conan-fuzz-nightly-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
+          restore-keys: conan-fuzz-nightly-
+
       - name: Fuzz
         run: |
-          docker run --rm -v "${GITHUB_WORKSPACE}":/work/ics -w /work/ics -v conan-home:/opt/conan-home \
+          docker run --rm -v "${GITHUB_WORKSPACE}":/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home \
             -e ARTIFACT_DIR=/work/ics/fuzz-crashes ics-cpp:ci cpp/policy/check-dynamic.sh fuzz 3600
 
       - name: Upload crash inputs

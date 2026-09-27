@@ -2,9 +2,14 @@
 
   sarif_check.py FOLDER                     fails if FOLDER's SARIF files hold any result
   sarif_check.py FOLDER --expect RULE ...   fails unless every RULE has a result
+  sarif_check.py FOLDER --drop PATH ...     first removes, in place, the results in
+                                            files under each PATH prefix
 
 Results that SARIF marks as suppressed still count, because ICS allows no
-suppressions. Each finding is printed as a GitHub error annotation.
+suppressions. --drop is for generated code, which is not ICS-authored: CodeQL's
+paths-ignore does not filter C++ results, so the C++ job drops the results in
+cpp/proto/gen/ (ICS-011) before it uploads and checks them. Each finding is
+printed as a GitHub error annotation.
 """
 
 from __future__ import annotations
@@ -65,15 +70,22 @@ def rule_of(result: JsonObject) -> str:
     return text_at(result, "ruleId") or text_at(result, "rule", "id") or "unknown-rule"
 
 
-def to_finding(result: JsonObject) -> Finding:
+def first_location(result: JsonObject) -> JsonObject:
     locations = objects(result.get("locations"))
-    location: JsonObject = locations[0] if locations else {}
-    physical = location.get("physicalLocation")
+    return locations[0] if locations else {}
+
+
+def result_path(result: JsonObject) -> str:
+    return text_at(first_location(result), "physicalLocation", "artifactLocation", "uri")
+
+
+def to_finding(result: JsonObject) -> Finding:
+    physical = first_location(result).get("physicalLocation")
     region = physical.get("region") if isinstance(physical, dict) else None
     start = region.get("startLine") if isinstance(region, dict) else None
     return Finding(
         rule_of(result),
-        text_at(location, "physicalLocation", "artifactLocation", "uri") or "unknown-file",
+        result_path(result) or "unknown-file",
         start if isinstance(start, int) else 1,
         text_at(result, "message", "text"),
     )
@@ -88,18 +100,54 @@ def findings_in(document: object) -> list[Finding]:
     return found
 
 
-def load_findings(folder: Path) -> list[Finding]:
+def sarif_files(folder: Path) -> list[Path]:
     files = sorted(folder.glob("*.sarif"))
     if not files:
         raise SarifError(f"no SARIF files in {folder}")
+    return files
+
+
+def read_document(path: Path) -> object:
+    try:
+        document: object = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise SarifError(f"cannot read {path}: {error}") from error
+    return document
+
+
+def load_findings(folder: Path) -> list[Finding]:
     found: list[Finding] = []
-    for path in files:
-        try:
-            document: object = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
-            raise SarifError(f"cannot read {path}: {error}") from error
-        found.extend(findings_in(document))
+    for path in sarif_files(folder):
+        found.extend(findings_in(read_document(path)))
     return sorted(found)
+
+
+def drop_from(document: object, prefixes: Sequence[str]) -> int:
+    """Remove the results in files under any prefix from a SARIF document; return how many."""
+    if not isinstance(document, dict):
+        raise SarifError("a SARIF file must hold a JSON object")
+    dropped = 0
+    for run in objects(document.get("runs")):
+        results = run.get("results")
+        if not isinstance(results, list):
+            continue
+        kept = [r for r in results if not (isinstance(r, dict) and result_path(r).startswith(tuple(prefixes)))]
+        dropped += len(results) - len(kept)
+        run["results"] = kept
+    return dropped
+
+
+def drop_results(folder: Path, prefixes: Sequence[str]) -> int:
+    """Rewrite each SARIF file in folder without the results under the prefixes."""
+    dropped = 0
+    for path in sarif_files(folder):
+        document = read_document(path)
+        dropped += drop_from(document, prefixes)
+        try:
+            path.write_text(json.dumps(document), encoding="utf-8")
+        except OSError as error:
+            raise SarifError(f"cannot write {path}: {error}") from error
+    return dropped
 
 
 def missing_rules(found: Sequence[Finding], expected: Sequence[str]) -> list[str]:
@@ -111,6 +159,9 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="sarif_check", description="Fail a CodeQL job on its SARIF results.")
     parser.add_argument("folder", type=Path, help="folder holding the .sarif files")
     parser.add_argument("--expect", nargs="+", default=[], metavar="RULE", help="rules that must each have a result")
+    parser.add_argument(
+        "--drop", nargs="+", default=[], metavar="PATH", help="first remove the results under these path prefixes"
+    )
     return parser.parse_args(argv)
 
 
@@ -130,6 +181,9 @@ def verdict(found: Sequence[Finding], expected: Sequence[str]) -> int:
 def main(argv: Sequence[str]) -> int:
     args = parse_args(argv)
     try:
+        if args.drop:
+            dropped = drop_results(args.folder, args.drop)
+            sys.stdout.write(f"sarif_check: dropped {dropped} result(s) under {', '.join(args.drop)}\n")
         found = load_findings(args.folder)
     except SarifError as error:
         sys.stdout.write(f"::error::{error}\n")

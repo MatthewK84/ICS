@@ -1,0 +1,76 @@
+name: Protobuf
+
+# The protobuf contracts and their generated code (ICS-011). buf formats and
+# lints proto/ (STANDARD and COMMENTS rules), finds no breaking change against
+# the base branch, and buf generate must reproduce the committed C++, Python
+# and TypeScript code exactly. Each check must also reject a seeded defect.
+# Each language's own workflow then builds and tests its generated package.
+# Runs in the Playwright image for its pinned Node.js, which runs protobuf-es.
+
+on:
+  pull_request:
+    paths:
+      - proto/**
+      - cpp/proto/**
+      - python/gen/**
+      - web/packages/ics-proto/**
+      - web/package.json
+      - web/pnpm-lock.yaml
+      - deploy/evidence/install-tools.sh
+      - .github/workflows/proto.yml
+  push:
+    branches: [main]
+    paths:
+      - proto/**
+      - cpp/proto/**
+      - python/gen/**
+      - web/packages/ics-proto/**
+      - web/package.json
+      - web/pnpm-lock.yaml
+      - deploy/evidence/install-tools.sh
+      - .github/workflows/proto.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: proto-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  proto:
+    name: Protobuf lint, breaking changes and generated code
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+      # The base branch for pull requests; the previous commit on main.
+      BREAKING_AGAINST: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || 'HEAD~1' }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      # The container runs as another user than the one that owns the checkout.
+      - name: Trust the checkout
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
+      - name: Install buf and protoc
+        run: |
+          deploy/evidence/install-tools.sh "${RUNNER_TEMP}/bin" proto/tools.txt
+          echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
+
+      # corepack installs the pnpm version in package.json and checks its sha512.
+      - name: Install protobuf-es from the lockfile
+        working-directory: web
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Check the contracts and generated code
+        run: proto/check-proto.sh "${BREAKING_AGAINST}"

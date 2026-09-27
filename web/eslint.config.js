@@ -17,6 +17,10 @@ export default defineConfig(
   },
   // The seeded violations are linted only by policy/check-policy.sh.
   { ignores: ["policy/seeded/"] },
+  // Code generated from proto/ (ICS-011) is not ICS-authored and is never edited
+  // by hand; it carries protobuf-es's own "eslint-disable" header. The code that
+  // uses it is linted as usual.
+  { ignores: ["packages/ics-proto/src/gen/"] },
   { linterOptions: { noInlineConfig: true, reportUnusedDisableDirectives: "error" } },
   js.configs.recommended,
   tseslint.configs.strictTypeChecked,

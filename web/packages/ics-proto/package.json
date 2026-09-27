@@ -1,0 +1,9 @@
+{
+  "name": "@ics/proto",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@bufbuild/protobuf": "2.15.0"
+  }
+}

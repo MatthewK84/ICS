@@ -34,6 +34,23 @@ reviewed = 2026-09-27
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
+[[project]]
+name = "Protocol Buffers (C++ runtime)"
+ecosystem = "conan"
+packages = ["protobuf"]
+used_for = "Runtime for the generated C++ messages in cpp/proto (ICS-011); pulls in abseil and zlib"
+ships = true
+license = "BSD-3-Clause"
+source = "https://github.com/protocolbuffers/protobuf"
+governance = "Google project on GitHub; Google engineers review and merge changes. The Conan recipe comes from Conan Center."
+sustainment = "Very active, with quarterly releases. Pinned in cpp/conan.lock at 7.35.0, which must match protoc 35.0 in proto/tools.txt."
+foreign_influence = "Steward: Google LLC (US)."
+single_maintainer = false
+maintainers = "Google protobuf team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
 # --- Python (PyPI) -----------------------------------------------------------
 
 [[project]]
@@ -168,6 +185,40 @@ sustainment = "Very active, with frequent releases. Hash-pinned in deploy/toolch
 foreign_influence = "No corporate steward; a PyPA community project. Code and releases are public."
 single_maintainer = false
 maintainers = "Small team led by Jason R. Coombs"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "Protocol Buffers (Python runtime)"
+ecosystem = "pypi"
+packages = ["protobuf"]
+used_for = "Runtime for the generated Python messages in python/gen (ICS-011)"
+ships = true
+license = "BSD-3-Clause"
+source = "https://github.com/protocolbuffers/protobuf"
+governance = "Google project on GitHub; Google engineers review and merge changes."
+sustainment = "Very active, with quarterly releases. Pinned in python/uv.lock at 7.35.1, at least as new as protoc 35.0 in proto/tools.txt."
+foreign_influence = "Steward: Google LLC (US)."
+single_maintainer = false
+maintainers = "Google protobuf team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "typeshed stubs for protobuf"
+ecosystem = "pypi"
+packages = ["types-protobuf"]
+used_for = "Type stubs that let mypy check code using the protobuf runtime, which ships none"
+ships = false
+license = "Apache-2.0"
+source = "https://github.com/python/typeshed"
+governance = "typeshed, hosted in the python GitHub organization; stubs are contributed by the community and published automatically."
+sustainment = "Very active; stubs are republished as the runtime changes. Pinned in python/uv.lock."
+foreign_influence = "No corporate steward; community maintainers under the Python organization on GitHub."
+single_maintainer = false
+maintainers = "typeshed maintainers"
 reviewed = 2026-09-27
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
@@ -344,6 +395,40 @@ reviewed = 2026-09-27
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
+[[project]]
+name = "protobuf-es runtime"
+ecosystem = "npm"
+packages = ["@bufbuild/protobuf"]
+used_for = "Runtime for the generated TypeScript messages in @ics/proto (ICS-011)"
+ships = true
+license = "Apache-2.0 AND BSD-3-Clause"
+source = "https://github.com/bufbuild/protobuf-es"
+governance = "Developed by Buf Technologies staff in the open, with community contributions."
+sustainment = "Active, with regular releases. Pinned in web/pnpm-lock.yaml. google-protobuf is an older alternative."
+foreign_influence = "Steward: Buf Technologies, Inc. (US)."
+single_maintainer = false
+maintainers = "Buf engineering team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "protobuf-es generator"
+ecosystem = "npm"
+packages = ["@bufbuild/protoc-gen-es"]
+used_for = "Generates the TypeScript messages in @ics/proto from proto/ (ICS-011)"
+ships = false
+license = "Apache-2.0"
+source = "https://github.com/bufbuild/protobuf-es"
+governance = "Developed by Buf Technologies staff in the open, with community contributions."
+sustainment = "Released with the protobuf-es runtime. Pinned in web/pnpm-lock.yaml."
+foreign_influence = "Steward: Buf Technologies, Inc. (US)."
+single_maintainer = false
+maintainers = "Buf engineering team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
 # --- Runtimes ----------------------------------------------------------------
 
 [[project]]
@@ -402,8 +487,8 @@ approved_by = "MatthewK84"
 [[project]]
 name = "GitHub first-party actions"
 ecosystem = "github-action"
-packages = ["actions/checkout", "actions/upload-artifact"]
-used_for = "Checks out the repository and uploads CI artifacts in every workflow"
+packages = ["actions/cache", "actions/checkout", "actions/upload-artifact"]
+used_for = "Checks out the repository, caches Conan packages and uploads CI artifacts"
 ships = false
 license = "MIT"
 source = "https://github.com/actions"
@@ -624,7 +709,7 @@ reviewed = 2026-09-27
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
-# --- Evidence tools (deploy/evidence/tools.txt) ---------------------------------
+# --- Evidence tools (deploy/evidence/tools.txt) -------------------------------
 
 [[project]]
 name = "Syft"
@@ -656,6 +741,42 @@ sustainment = "Very active. Pinned by version and sha256 in deploy/evidence/tool
 foreign_influence = "Governed under the OpenSSF (US non-profit, part of the Linux Foundation)."
 single_maintainer = false
 maintainers = "Sigstore maintainers from several companies"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+# --- Protobuf tools (proto/tools.txt) ----------------------------------------
+
+[[project]]
+name = "buf"
+ecosystem = "tool"
+packages = ["buf"]
+used_for = "Lints proto/, checks it for breaking changes and runs code generation (ICS-011)"
+ships = false
+license = "Apache-2.0"
+source = "https://github.com/bufbuild/buf"
+governance = "Developed by Buf Technologies staff in the open, with community contributions."
+sustainment = "Very active, with frequent releases. Pinned by version and sha256 in proto/tools.txt. protoc with its plugins covers generation without buf."
+foreign_influence = "Steward: Buf Technologies, Inc. (US)."
+single_maintainer = false
+maintainers = "Buf engineering team"
+reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "protoc"
+ecosystem = "tool"
+packages = ["protoc"]
+used_for = "The protobuf compiler; generates the C++ and Python messages through buf (ICS-011)"
+ships = false
+license = "BSD-3-Clause"
+source = "https://github.com/protocolbuffers/protobuf"
+governance = "Part of Google's Protocol Buffers project."
+sustainment = "Very active, with quarterly releases. Pinned by version and sha256 in proto/tools.txt at 35.0, which must match the C++ and Python runtimes."
+foreign_influence = "Steward: Google LLC (US)."
+single_maintainer = false
+maintainers = "Google protobuf team"
 reviewed = 2026-09-27
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
