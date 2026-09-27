@@ -7,7 +7,10 @@ Containers, the Envoy gRPC-Web proxy, systemd units and infrastructure as code f
 Rules:
 
 - Pin every base image and dependency; lockfiles are committed.
-- Every build produces a CycloneDX SBOM and signed provenance ([ICS-009](https://github.com/MatthewK84/ICS/issues/9)).
+- Every build produces a CycloneDX SBOM and signed provenance ([ICS-009](https://github.com/MatthewK84/ICS/issues/9), [`evidence/`](evidence/README.md)).
 - No credentials, range network addresses or other sensitive configuration in this repository; see [SECURITY.md](../SECURITY.md).
 
-Contents: [`toolchain/`](toolchain/README.md), the C++ and CUDA build images ([ICS-004](https://github.com/MatthewK84/ICS/issues/4)).
+Contents:
+
+- [`toolchain/`](toolchain/README.md): the C++ and CUDA build images ([ICS-004](https://github.com/MatthewK84/ICS/issues/4)).
+- [`evidence/`](evidence/README.md): the signed SBOMs and provenance published for every merge and image ([ICS-009](https://github.com/MatthewK84/ICS/issues/9)).
