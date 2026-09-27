@@ -74,7 +74,7 @@ jobs:
               # Presets resolve from cpp/, where CMakePresets.json lives.
               (cd cpp \
                 && cmake --preset "${preset}" >/dev/null \
-                && cmake --build --preset "${preset}" --target toolchain_check_test >/dev/null \
+                && cmake --build --preset "${preset}" >/dev/null \
                 && ctest --preset "${preset}")
             done'
 
