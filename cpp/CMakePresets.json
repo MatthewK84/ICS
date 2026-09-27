@@ -120,7 +120,8 @@
       ],
       "toolchainFile": "${sourceDir}/build/conan/clang17-Debug/conan_toolchain.cmake",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=thread -shared-libsan -Wl,-rpath,/usr/lib/llvm-17/lib/clang/17/lib/linux"
       }
     }
   ],
