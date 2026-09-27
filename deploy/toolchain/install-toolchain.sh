@@ -21,6 +21,7 @@ readonly PACKAGES=(
   gcc-13 g++-13
   clang-17 clang-tidy-17 lld-17 llvm-17 libclang-rt-17-dev
   cmake ninja-build
+  cppcheck
   python3 python3-venv
   git
 )
@@ -90,6 +91,7 @@ report_versions() {
   gcc-13 --version | head -n 1
   clang-17 --version | head -n 1
   clang-tidy-17 --version | grep -m 1 'LLVM version'
+  cppcheck --version
   cmake --version | head -n 1
   echo "ninja $(ninja --version)"
   conan --version

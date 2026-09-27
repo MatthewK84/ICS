@@ -1,0 +1,7 @@
+# CodeQL settings for the seeded defects (ICS-008): the same queries as the
+# real code, over .github/codeql/seeded only. Never uploaded.
+name: ICS CodeQL seeded defects
+queries:
+  - uses: security-and-quality
+paths:
+  - .github/codeql/seeded

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Install the Conan dependencies that a CMake preset needs (ICS-004).
 #
-# Usage: conan-install.sh PRESET   (for example gcc-release or clang-asan)
+# Usage: conan-install.sh PRESET   (for example gcc-release, clang-asan or clang-fuzz)
 #
 # Dependencies come from cpp/conan.lock and land in
 # cpp/build/conan/<profile>-<build type>/, where the preset's toolchain file
@@ -22,7 +22,7 @@ profile_for() {
 build_type_for() {
   case "${1#*-}" in
     release) echo Release ;;
-    debug | asan | tsan) echo Debug ;;
+    debug | asan | tsan | ubsan | fuzz) echo Debug ;;
     *) return 1 ;;
   esac
 }

@@ -1,0 +1,12 @@
+# CodeQL settings for the ICS code (ICS-008): the security-and-quality
+# queries, with the seeded violations left out; they exist to fail.
+name: ICS CodeQL
+queries:
+  - uses: security-and-quality
+paths-ignore:
+  - "**/policy/seeded/**"
+  - "**/policy/seeded-runtime/**"
+  - .github/codeql/seeded/**
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
