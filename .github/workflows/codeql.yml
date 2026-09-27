@@ -122,9 +122,20 @@ jobs:
         with:
           category: /language:c-cpp
           output: ${{ runner.temp }}/sarif
+          upload: never
 
-      - name: Fail on any finding
-        run: python3 .github/scripts/sarif_check.py "${RUNNER_TEMP}/sarif"
+      # paths-ignore does not filter C++ results, so the results in the protobuf
+      # code generated into cpp/proto/gen (ICS-011), which is not ICS-authored,
+      # are dropped before the rest are checked and uploaded.
+      - name: Fail on any finding in ICS code
+        run: python3 .github/scripts/sarif_check.py "${RUNNER_TEMP}/sarif" --drop cpp/proto/gen/
+
+      - name: Upload the results
+        if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: ${{ runner.temp }}/sarif
+          category: /language:c-cpp
 
   seeded-cpp:
     name: CodeQL seeded defect (c-cpp)
