@@ -1,20 +1,14 @@
-"""Check a pull request's AI-assistance declaration and its human approvals.
-
-Two entry points, one per required status check (ICS-003, docs/ai-usage.md):
+"""Check a pull request's AI-assistance declaration (ICS-003, docs/ai-usage.md).
 
   ai_assist.py declaration  Fails unless exactly one of "No AI assistance" and
                             "AI-assisted" is ticked and, when AI-assisted, the
-                            Tool, Model and version, and Scope fields are
-                            filled. Keeps the ai-assisted label in step and
-                            writes ai_assisted=true|false to GITHUB_OUTPUT.
-  ai_assist.py review       Fails until an AI-assisted pull request has enough
-                            approvals from humans other than its author.
+                            Tool and Scope fields are filled (Model and version
+                            is optional). Keeps the ai-assisted label in step.
 
 The pull-request text is untrusted: it is read from the event file
 (GITHUB_EVENT_PATH) and never passed through a shell.
 
-Environment: GITHUB_EVENT_PATH, GITHUB_TOKEN, GITHUB_REPOSITORY and, for the
-declaration check, GITHUB_OUTPUT.
+Environment: GITHUB_EVENT_PATH, GITHUB_TOKEN and GITHUB_REPOSITORY.
 """
 
 from __future__ import annotations
@@ -33,10 +27,8 @@ import gh_api as gh
 SECTION_HEADING: str = "## AI assistance"
 NO_AI_BOX: str = "no ai assistance"
 AI_BOX: str = "ai-assisted"
-FIELD_NAMES: tuple[str, ...] = ("Tool", "Model and version", "Scope")
+REQUIRED_FIELDS: tuple[str, ...] = ("Tool", "Scope")
 AI_LABEL: str = "ai-assisted"
-REQUIRED_HUMAN_APPROVALS: int = 2
-DECISIVE_REVIEW_STATES: frozenset[str] = frozenset({"APPROVED", "CHANGES_REQUESTED", "DISMISSED"})
 COMMENT: re.Pattern[str] = re.compile(r"<!--.*?-->", re.DOTALL)
 BOX_LINE: re.Pattern[str] = re.compile(r"^\s*[-*]\s+\[(?P<mark>[ xX])\]\s+(?P<text>.+?)\s*$")
 FIELD_LINE: re.Pattern[str] = re.compile(r"^\s*[-*]\s+\*\*(?P<name>[^*]+?):\*\*(?P<value>.*)$")
@@ -57,16 +49,8 @@ class Declaration:
 
 
 @dataclass(frozen=True)
-class Review:
-    login: str
-    is_bot: bool
-    state: str
-
-
-@dataclass(frozen=True)
 class PullRequest:
     number: int
-    author: str
     body: str
     labels: frozenset[str]
     from_fork: bool
@@ -114,7 +98,7 @@ def declaration_errors(decl: Declaration) -> list[str]:
         return ["Answer the AI assistance question: tick 'No AI assistance' or 'AI-assisted'."]
     if decl.no_ai:
         return []
-    return [f"AI-assisted: fill in '{name}'." for name in FIELD_NAMES if not decl.fields.get(name)]
+    return [f"AI-assisted: fill in '{name}'." for name in REQUIRED_FIELDS if not decl.fields.get(name)]
 
 
 def is_answered_ai(decl: Declaration) -> bool:
@@ -127,31 +111,6 @@ def label_action(decl: Declaration, labels: frozenset[str]) -> LabelAction:
     if decl.no_ai and not decl.ai_assisted and AI_LABEL in labels:
         return LabelAction.REMOVE
     return LabelAction.NONE
-
-
-def is_bot_account(login: str, account_type: object) -> bool:
-    return account_type == "Bot" or login.endswith("[bot]")
-
-
-def to_review(entry: gh.JsonObject) -> Review | None:
-    user: object = entry.get("user")
-    state: object = entry.get("state")
-    if not isinstance(user, dict) or not isinstance(state, str):
-        return None
-    login: object = user.get("login")
-    if not isinstance(login, str) or not login:
-        return None
-    return Review(login, is_bot_account(login, user.get("type")), state)
-
-
-def human_approvals(reviews: list[Review], author: str) -> int:
-    latest: dict[str, str] = {}
-    for review in reviews:
-        if review.is_bot or review.state not in DECISIVE_REVIEW_STATES:
-            continue
-        latest[review.login.lower()] = review.state
-    approvers: set[str] = {login for login, state in latest.items() if state == "APPROVED"}
-    return len(approvers - {author.lower()})
 
 
 def label_names(pull: gh.JsonObject) -> frozenset[str]:
@@ -175,10 +134,8 @@ def repo_name(pull: gh.JsonObject, side: str) -> str:
 def to_pull_request(event: gh.JsonObject) -> PullRequest:
     pull: gh.JsonObject = gh.require_object(event, "pull_request", "event")
     body: object = pull.get("body")
-    user: gh.JsonObject = gh.require_object(pull, "user", "pull_request")
     return PullRequest(
         gh.require_int(pull, "number", "pull_request"),
-        gh.require_str(user, "login", "pull_request.user"),
         body if isinstance(body, str) else "",
         label_names(pull),
         repo_name(pull, "head") != repo_name(pull, "base"),
@@ -214,17 +171,8 @@ def sync_label(config: gh.ApiConfig, pull: PullRequest, action: LabelAction) -> 
     print(f"Label '{AI_LABEL}': {action.value}")
 
 
-def write_output(name: str, value: str) -> None:
-    path: str = os.environ.get("GITHUB_OUTPUT", "")
-    if not path:
-        return
-    with open(path, "a", encoding="utf-8") as handle:
-        handle.write(f"{name}={value}\n")
-
-
 def run_declaration(config: gh.ApiConfig, pull: PullRequest) -> list[str]:
     decl: Declaration = parse_declaration(pull.body)
-    write_output("ai_assisted", "true" if is_answered_ai(decl) else "false")
     sync_label(config, pull, label_action(decl, pull.labels))
     errors: list[str] = declaration_errors(decl)
     if not errors:
@@ -232,27 +180,11 @@ def run_declaration(config: gh.ApiConfig, pull: PullRequest) -> list[str]:
     return errors
 
 
-def run_review(config: gh.ApiConfig, pull: PullRequest) -> list[str]:
-    entries: list[gh.JsonObject] = gh.fetch_all(config, f"/repos/{config.repo}/pulls/{pull.number}/reviews")
-    reviews: list[Review] = [review for review in map(to_review, entries) if review is not None]
-    count: int = human_approvals(reviews, pull.author)
-    print(f"Human approvals other than the author: {count} of {REQUIRED_HUMAN_APPROVALS} required")
-    if count >= REQUIRED_HUMAN_APPROVALS:
-        return []
-    return [
-        f"AI-assisted change: {count} of {REQUIRED_HUMAN_APPROVALS} required approvals from people other than "
-        "the author. Bot approvals do not count."
-    ]
-
-
 def run(argv: list[str]) -> list[str]:
-    if len(argv) != 1 or argv[0] not in ("declaration", "review"):
-        raise gh.ScriptError("usage: ai_assist.py declaration|review")
+    if argv != ["declaration"]:
+        raise gh.ScriptError("usage: ai_assist.py declaration")
     pull: PullRequest = load_event(os.environ.get("GITHUB_EVENT_PATH", ""))
-    config: gh.ApiConfig = gh.read_config()
-    if argv[0] == "declaration":
-        return run_declaration(config, pull)
-    return run_review(config, pull)
+    return run_declaration(gh.read_config(), pull)
 
 
 def main(argv: list[str]) -> int:

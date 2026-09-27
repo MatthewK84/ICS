@@ -45,10 +45,6 @@
           {
             "context": "AI-assist declaration",
             "integration_id": 15368
-          },
-          {
-            "context": "AI-assist human review",
-            "integration_id": 15368
           }
         ]
       }

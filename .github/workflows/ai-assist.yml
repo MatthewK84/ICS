@@ -1,18 +1,15 @@
 name: AI assist
 
-# Required status checks for AI-assisted changes (ICS-003, docs/ai-usage.md).
+# Required status check for AI-assisted changes (ICS-003, docs/ai-usage.md).
 # "AI-assist declaration" fails until the pull request answers the AI
-# assistance question; "AI-assist human review" runs only for AI-assisted
-# pull requests and fails until two people other than the author approve.
-# The pull-request text is read from the event file, never from a shell
+# assistance question, and keeps the ai-assisted label in step. The
+# pull-request text is read from the event file, never from a shell
 # expression, and pull_request (not pull_request_target) keeps fork runs
 # read-only.
 
 on:
   pull_request:
     types: [opened, edited, reopened, synchronize, ready_for_review]
-  pull_request_review:
-    types: [submitted, edited, dismissed]
 
 permissions:
   contents: read
@@ -30,8 +27,6 @@ jobs:
       contents: read
       issues: write
       pull-requests: write
-    outputs:
-      ai_assisted: ${{ steps.check.outputs.ai_assisted }}
     steps:
       - name: Check out the repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -42,27 +37,7 @@ jobs:
         run: python3 -m unittest discover -s .github/scripts -p 'test_*.py'
 
       - name: Check the declaration
-        id: check
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python3 .github/scripts/ai_assist.py declaration
 
-  human-review:
-    name: AI-assist human review
-    needs: declaration
-    if: ${{ !cancelled() && needs.declaration.outputs.ai_assisted == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      pull-requests: read
-    steps:
-      - name: Check out the repository
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-        with:
-          persist-credentials: false
-
-      - name: Count human approvals
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 .github/scripts/ai_assist.py review

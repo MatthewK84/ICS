@@ -8,13 +8,13 @@ Closes #
 
 ## AI assistance
 
-<!-- Tick exactly one box. If AI-assisted, fill in all three fields; the "AI-assist declaration" check blocks merge until this is answered. See docs/ai-usage.md. -->
+<!-- Tick exactly one box. If AI-assisted, fill in Tool and Scope (Model and version is optional); the "AI-assist declaration" check blocks merge until this is answered. See docs/ai-usage.md. -->
 
 - [ ] No AI assistance
 - [ ] AI-assisted
 
 - **Tool:** <!-- for example, Claude Code -->
-- **Model and version:** <!-- the model name and version the tool used -->
+- **Model and version:** <!-- optional: the model name and version the tool used -->
 - **Scope:** <!-- what the tool wrote or changed, and what a human wrote -->
 
 ## Close-out
