@@ -3,6 +3,8 @@ name: C++ toolchain
 # Builds the ics-cpp image and proves the toolchain is reproducible (ICS-004):
 # the toolchain_check sample must build byte-identically in two build folders
 # with GCC 13 and with Clang 17, and the sanitizer presets must build and pass.
+# Then enforces the C++ Power-of-Ten profile (ICS-005): no suppressions, clean
+# clang-tidy and -Werror builds, and every seeded violation rejected.
 # Images are published to GHCR from main only.
 
 on:
@@ -72,9 +74,12 @@ jobs:
               # Presets resolve from cpp/, where CMakePresets.json lives.
               (cd cpp \
                 && cmake --preset "${preset}" >/dev/null \
-                && cmake --build --preset "${preset}" --target toolchain_check_test >/dev/null \
+                && cmake --build --preset "${preset}" >/dev/null \
                 && ctest --preset "${preset}")
             done'
+
+      - name: Power-of-Ten policy
+        run: ${RUN} cpp/policy/check-policy.sh
 
       - name: Publish the image
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'

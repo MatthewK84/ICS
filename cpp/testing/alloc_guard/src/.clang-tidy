@@ -1,0 +1,6 @@
+# The allocation hook replaces the global operator new and delete, so it is
+# the one file in cpp/ that must call malloc and free (ICS-005). Everything
+# else keeps cppcoreguidelines-no-malloc, and cpp/policy/check-policy.sh fails
+# if any other .clang-tidy file appears.
+InheritParentConfig: true
+Checks: -cppcoreguidelines-no-malloc
