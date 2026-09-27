@@ -1,0 +1,46 @@
+name: Nightly fuzzing
+
+# Runs every C++ fuzz target for an hour each (ICS-008), meeting the Definition
+# of Done's "every new parser fuzzed for at least one hour". The seeded fuzz
+# target must still crash, and any crash from a real target fails the run and
+# is uploaded as the "fuzz-crashes" artifact for reproduction.
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fuzz-nightly
+  cancel-in-progress: false
+
+jobs:
+  fuzz:
+    name: Fuzz every target for an hour
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Build the ics-cpp image
+        run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
+
+      - name: Fuzz
+        run: |
+          docker run --rm -v "${GITHUB_WORKSPACE}":/work/ics -w /work/ics -v conan-home:/opt/conan-home \
+            -e ARTIFACT_DIR=/work/ics/fuzz-crashes ics-cpp:ci cpp/policy/check-dynamic.sh fuzz 3600
+
+      - name: Upload crash inputs
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fuzz-crashes
+          path: fuzz-crashes/
+          if-no-files-found: ignore
+          retention-days: 30

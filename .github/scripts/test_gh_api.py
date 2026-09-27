@@ -7,7 +7,7 @@ import io
 import time
 import unittest
 import urllib.error
-from unittest import mock
+from unittest.mock import patch
 
 import gh_api as gh
 
@@ -22,7 +22,7 @@ def http_error(code: int, headers: dict[str, str] | None = None) -> urllib.error
 class RetryTests(unittest.TestCase):
     def setUp(self) -> None:
         self.config = gh.ApiConfig("token", "owner/repo")
-        patcher = mock.patch.object(time, "sleep")
+        patcher = patch.object(time, "sleep")
         self.sleep = patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -33,24 +33,24 @@ class RetryTests(unittest.TestCase):
         self.assertFalse(gh.is_retryable(http_error(422)))
 
     def test_retries_then_succeeds(self) -> None:
-        with mock.patch.object(gh, "send_once", side_effect=[http_error(503), {"ok": True}]):
+        with patch.object(gh, "send_once", side_effect=[http_error(503), {"ok": True}]):
             self.assertEqual(gh.api_request(self.config, "GET", "/x"), {"ok": True})
         self.assertEqual(self.sleep.call_count, 1)
 
     def test_gives_up_after_bounded_attempts(self) -> None:
         failures: list[urllib.error.HTTPError] = [http_error(500)] * gh.MAX_ATTEMPTS
-        with mock.patch.object(gh, "send_once", side_effect=failures), self.assertRaises(gh.ScriptError):
+        with patch.object(gh, "send_once", side_effect=failures), self.assertRaises(gh.ScriptError):
             gh.api_request(self.config, "GET", "/x")
         self.assertEqual(self.sleep.call_count, gh.MAX_ATTEMPTS - 1)
 
     def test_fails_fast_on_client_error(self) -> None:
-        with mock.patch.object(gh, "send_once", side_effect=[http_error(422)]), self.assertRaises(gh.ScriptError):
+        with patch.object(gh, "send_once", side_effect=[http_error(422)]), self.assertRaises(gh.ScriptError):
             gh.api_request(self.config, "POST", "/x", {"title": "t"})
         self.sleep.assert_not_called()
 
     def test_fetch_all_follows_pages(self) -> None:
         full_page: list[gh.JsonObject] = [{"n": index} for index in range(gh.PAGE_SIZE)]
-        with mock.patch.object(gh, "api_request", side_effect=[full_page, [{"n": -1}]]) as request:
+        with patch.object(gh, "api_request", side_effect=[full_page, [{"n": -1}]]) as request:
             items: list[gh.JsonObject] = gh.fetch_all(self.config, "/items?state=all")
         self.assertEqual(len(items), gh.PAGE_SIZE + 1)
         self.assertIn("state=all&per_page=100&page=2", request.call_args_list[1].args[2])
@@ -71,9 +71,9 @@ class AccessorTests(unittest.TestCase):
             gh.require_objects({"items": [1]}, "items", "t")
 
     def test_read_config_needs_token_and_repo(self) -> None:
-        with mock.patch.dict("os.environ", {"GITHUB_TOKEN": "", "GITHUB_REPOSITORY": "o/r"}), self.assertRaises(gh.ScriptError):
+        with patch.dict("os.environ", {"GITHUB_TOKEN": "", "GITHUB_REPOSITORY": "o/r"}), self.assertRaises(gh.ScriptError):
             gh.read_config()
-        with mock.patch.dict("os.environ", {"GITHUB_TOKEN": "t", "GITHUB_REPOSITORY": "o/r"}):
+        with patch.dict("os.environ", {"GITHUB_TOKEN": "t", "GITHUB_REPOSITORY": "o/r"}):
             self.assertEqual(gh.read_config(), gh.ApiConfig("t", "o/r"))
 
     def test_build_request_sets_headers_and_body(self) -> None:

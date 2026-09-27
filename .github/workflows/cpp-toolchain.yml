@@ -2,10 +2,11 @@ name: C++ toolchain
 
 # Builds the ics-cpp image and proves the toolchain is reproducible (ICS-004):
 # the toolchain_check sample must build byte-identically in two build folders
-# with GCC 13 and with Clang 17, and the sanitizer presets must build and pass.
-# Then enforces the C++ Power-of-Ten profile (ICS-005): no suppressions, clean
-# clang-tidy and -Werror builds, and every seeded violation rejected.
-# Images are published to GHCR from main only.
+# with GCC 13 and with Clang 17. Then the test stages (ICS-008): the ICS code
+# must pass under ASan, UBSan and TSan with both compilers and survive a minute
+# of fuzzing per target, and the C++ Power-of-Ten profile (ICS-005) must hold:
+# no suppressions, clean -Werror builds, clang-tidy and cppcheck. Each stage
+# must also reject its seeded defect. Images are published to GHCR from main.
 
 on:
   pull_request:
@@ -65,20 +66,13 @@ jobs:
       - name: Reproducible build with Clang 17
         run: ${RUN} deploy/toolchain/check-reproducible.sh clang
 
-      - name: Build and test the sanitizer presets
-        run: |
-          ${RUN} bash -c '
-            set -euo pipefail
-            for preset in gcc-asan gcc-tsan clang-asan clang-tsan; do
-              deploy/toolchain/conan-install.sh "${preset}" >/dev/null
-              # Presets resolve from cpp/, where CMakePresets.json lives.
-              (cd cpp \
-                && cmake --preset "${preset}" >/dev/null \
-                && cmake --build --preset "${preset}" >/dev/null \
-                && ctest --preset "${preset}")
-            done'
+      - name: Sanitizers (ASan, UBSan, TSan)
+        run: ${RUN} cpp/policy/check-dynamic.sh sanitizers
 
-      - name: Power-of-Ten policy
+      - name: Fuzzing (one minute per target)
+        run: ${RUN} cpp/policy/check-dynamic.sh fuzz 60
+
+      - name: Power-of-Ten policy (clang-tidy, cppcheck, warnings)
         run: ${RUN} cpp/policy/check-policy.sh
 
       - name: Publish the image

@@ -4,7 +4,7 @@ Pinned build environments for ICS C++ code (ICS-004). CI builds both images and 
 
 | Image | Base | Contents | Used for |
 |---|---|---|---|
-| `ghcr.io/matthewk84/ics-cpp` | Ubuntu 24.04 | GCC 13.3, Clang 17.0.6 (with sanitizer runtimes and clang-tidy), CMake 3.28, Ninja 1.11, Conan 2.27 | Every C++ build and test |
+| `ghcr.io/matthewk84/ics-cpp` | Ubuntu 24.04 | GCC 13.3, Clang 17.0.6 (with sanitizer and libFuzzer runtimes and clang-tidy), cppcheck 2.13, CMake 3.28, Ninja 1.11, Conan 2.27 | Every C++ build and test |
 | `ghcr.io/matthewk84/ics-cuda` | NVIDIA CUDA 12.9.1 developer image, Ubuntu 24.04 | CUDA 12.9 plus everything in `ics-cpp` | GPU modules, from ICS-062 |
 
 ## How the images are pinned

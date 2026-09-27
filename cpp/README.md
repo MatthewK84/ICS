@@ -25,7 +25,7 @@ Rules (enforced in CI by [ICS-005](https://github.com/MatthewK84/ICS/issues/5) a
 
 ## Build
 
-Build inside the `ics-cpp` image (see [deploy/toolchain](../deploy/toolchain/README.md)). Each preset in [`CMakePresets.json`](CMakePresets.json) pairs a compiler, `gcc` or `clang`, with a variant, `debug`, `release`, `asan` or `tsan`:
+Build inside the `ics-cpp` image (see [deploy/toolchain](../deploy/toolchain/README.md)). Each preset in [`CMakePresets.json`](CMakePresets.json) pairs a compiler, `gcc` or `clang`, with a variant, `debug`, `release`, `asan`, `ubsan` or `tsan`; `clang-fuzz` builds the fuzz targets:
 
 ```sh
 deploy/toolchain/conan-install.sh gcc-release   # dependencies from cpp/conan.lock
@@ -47,7 +47,8 @@ The C++ rules from the coding-standards table in [docs/build-plan.md](../docs/bu
 |---|---|
 | No goto; no recursion; functions of 50 lines or fewer; no owning raw pointers or malloc; `std::span` over pointer arithmetic; no mutable globals | clang-tidy, configured in [`.clang-tidy`](.clang-tidy); every finding is an error |
 | `[[nodiscard]]` results are used; no implicit narrowing | `-Wall -Wextra -Wpedantic -Wconversion -Werror` for GCC and Clang, in [`cmake/Warnings.cmake`](cmake/Warnings.cmake) |
-| No suppressions | [`policy/check-policy.sh`](policy/check-policy.sh) rejects `NOLINT`, `diagnostic ignored` pragmas, `-Wno-` flags and any extra `.clang-tidy` file |
+| Defects such as out-of-bounds access or uninitialized reads | cppcheck 2.13 (warning, style, performance and portability checks) over the whole build; every finding is an error |
+| No suppressions | [`policy/check-policy.sh`](policy/check-policy.sh) rejects `NOLINT`, `cppcheck-suppress`, `diagnostic ignored` pragmas, `-Wno-` flags and any extra `.clang-tidy` file |
 | No allocation after initialization | [`ics::testing::NoAllocationScope`](testing/alloc_guard/include/ics/testing/no_allocation_scope.hpp) fails a test that allocates inside it |
 
 Run all of it the way CI does, inside the `ics-cpp` image:
@@ -65,6 +66,28 @@ Two exceptions are deliberate:
 - The allocation hook, [`testing/alloc_guard/src/allocation_hook.cpp`](testing/alloc_guard/src/allocation_hook.cpp), is the only file allowed to call `malloc`; its own `.clang-tidy` turns off `cppcoreguidelines-no-malloc` there and nowhere else. It marks ownership with `gsl::owner`, so `cppcoreguidelines-owning-memory` still applies.
 - The `clang-tsan` preset links Clang's shared TSan runtime (`-shared-libsan`), because the static runtime defines `operator new` and `delete` itself and would clash with the allocation hook. GCC's TSan runtime is already shared.
 
-Not enforced here: "no exceptions on real-time paths" needs `-fno-exceptions` on the real-time targets once they exist (ICS-015 onward), and cppcheck, CodeQL and coverage gates come with the CI stages in ICS-008.
+Not enforced here: "no exceptions on real-time paths" needs `-fno-exceptions` on the real-time targets once they exist (ICS-015 onward), and CI does not yet measure C++ test coverage against the Definition of Done's 90%.
 
-Next issue: [ICS-006](https://github.com/MatthewK84/ICS/issues/6) (Python toolchain), then [ICS-015](https://github.com/MatthewK84/ICS/issues/15) (common).
+## Test stages
+
+The dynamic stages run in CI on every change to `cpp/` (ICS-008), through [`policy/check-dynamic.sh`](policy/check-dynamic.sh):
+
+| Stage | How | Seeded defect it must catch |
+|---|---|---|
+| AddressSanitizer | `gcc-asan` and `clang-asan` presets; every test must pass | a heap buffer overflow |
+| UndefinedBehaviorSanitizer | `gcc-ubsan` and `clang-ubsan` presets, stopping at the first undefined behaviour | a signed integer overflow |
+| ThreadSanitizer | `gcc-tsan` and `clang-tsan` presets | a data race |
+| libFuzzer | `clang-fuzz` preset (libFuzzer with ASan and UBSan): one minute per fuzz target per change, and an hour per target nightly ([`fuzz-nightly.yml`](../.github/workflows/fuzz-nightly.yml)) | a heap overflow behind a four-byte magic prefix, which must be found within two minutes |
+
+```sh
+cpp/policy/check-dynamic.sh sanitizers
+cpp/policy/check-dynamic.sh fuzz 60        # seconds per fuzz target
+```
+
+The seeded defects live in [`policy/seeded-runtime/`](policy/seeded-runtime), each naming on its first line the report it must produce.
+
+Add a fuzz target with `ics_add_fuzzer(name SOURCES … LIBRARIES … CORPUS folder)` from [`cmake/Fuzzing.cmake`](cmake/Fuzzing.cmake), with a few small inputs in the corpus folder; see [`toolchain_check/fuzz`](toolchain_check/fuzz). Every build compiles fuzz sources, so the warnings, clang-tidy and cppcheck cover them; the `clang-fuzz` preset links them with libFuzzer. A nightly crash fails the run, and the crashing input is uploaded as the `fuzz-crashes` artifact; reproduce it with the fuzz target and the input file as its only argument.
+
+CodeQL analyzes the C++ code too, with the Python and TypeScript code; see [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml).
+
+Next issue: [ICS-009](https://github.com/MatthewK84/ICS/issues/9) (CI evidence: SBOMs, signing and provenance), then [ICS-015](https://github.com/MatthewK84/ICS/issues/15) (common).

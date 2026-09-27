@@ -32,6 +32,14 @@
       }
     },
     {
+      "name": "ubsan-flags",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-fsanitize=undefined -fno-sanitize-recover=all -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=undefined"
+      }
+    },
+    {
       "name": "gcc-debug",
       "displayName": "GCC 13 debug",
       "inherits": [
@@ -71,6 +79,18 @@
       "inherits": [
         "base",
         "tsan-flags"
+      ],
+      "toolchainFile": "${sourceDir}/build/conan/gcc13-Debug/conan_toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "gcc-ubsan",
+      "displayName": "GCC 13 ubsan",
+      "inherits": [
+        "base",
+        "ubsan-flags"
       ],
       "toolchainFile": "${sourceDir}/build/conan/gcc13-Debug/conan_toolchain.cmake",
       "cacheVariables": {
@@ -123,6 +143,32 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=thread -shared-libsan -Wl,-rpath,/usr/lib/llvm-17/lib/clang/17/lib/linux"
       }
+    },
+    {
+      "name": "clang-ubsan",
+      "displayName": "Clang 17 ubsan",
+      "inherits": [
+        "base",
+        "ubsan-flags"
+      ],
+      "toolchainFile": "${sourceDir}/build/conan/clang17-Debug/conan_toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "clang-fuzz",
+      "displayName": "Clang 17 libFuzzer with asan and ubsan",
+      "inherits": [
+        "base"
+      ],
+      "toolchainFile": "${sourceDir}/build/conan/clang17-Debug/conan_toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS": "-O1 -fsanitize=fuzzer-no-link,address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined",
+        "ICS_FUZZ": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -143,6 +189,10 @@
       "configurePreset": "gcc-tsan"
     },
     {
+      "name": "gcc-ubsan",
+      "configurePreset": "gcc-ubsan"
+    },
+    {
       "name": "clang-debug",
       "configurePreset": "clang-debug"
     },
@@ -157,6 +207,14 @@
     {
       "name": "clang-tsan",
       "configurePreset": "clang-tsan"
+    },
+    {
+      "name": "clang-ubsan",
+      "configurePreset": "clang-ubsan"
+    },
+    {
+      "name": "clang-fuzz",
+      "configurePreset": "clang-fuzz"
     }
   ],
   "testPresets": [
@@ -201,6 +259,16 @@
       }
     },
     {
+      "name": "gcc-ubsan",
+      "configurePreset": "gcc-ubsan",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
       "name": "clang-debug",
       "configurePreset": "clang-debug",
       "output": {
@@ -233,6 +301,16 @@
     {
       "name": "clang-tsan",
       "configurePreset": "clang-tsan",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "clang-ubsan",
+      "configurePreset": "clang-ubsan",
       "output": {
         "outputOnFailure": true
       },
