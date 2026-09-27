@@ -1,0 +1,5 @@
+# uv, the Python package and project manager (ICS-006). Installed first, then
+# it installs everything else from python/uv.lock. Regenerate the pinned file
+# with: uv pip compile --generate-hashes --python-version 3.12 \
+#   python/requirements-uv.in -o python/requirements-uv.txt
+uv==0.12.19
