@@ -24,7 +24,7 @@ def unset_fields(message: Message) -> list[str]:
     pending: list[Message] = [message]
     for _ in range(golden.MAX_MESSAGES):
         if not pending:
-            return missing
+            break
         current = pending.pop()
         present = current.ListFields()
         numbers = {field.number for field, _ in present}
@@ -36,7 +36,8 @@ def unset_fields(message: Message) -> list[str]:
         for field, value in present:
             if field.message_type is not None:
                 pending.extend(value if field.is_repeated else [value])
-    pytest.fail("more messages than a golden instance holds")
+    assert not pending, "more messages than a golden instance holds"
+    return missing
 
 
 @pytest.mark.parametrize(("name", "message_type"), golden.golden_types())
