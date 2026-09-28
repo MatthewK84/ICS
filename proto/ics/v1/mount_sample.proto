@@ -1,0 +1,49 @@
+// One time-tagged sample of a station mount's axes (ICS-012): encoder angles
+// from the time-tagger (ICS-032), with the mount client's state (ICS-033) and
+// the sun keep-out interlock's (ICS-034).
+syntax = "proto3";
+
+package ics.v1;
+
+// A station mount's axis angles and rates at one time, before the pointing
+// model is applied (the encoder module, ICS-036, applies it).
+message MountSample {
+  // What the mount is doing.
+  enum Mode {
+    // Not set.
+    MODE_UNSPECIFIED = 0;
+    // Stopped, holding position.
+    MODE_IDLE = 1;
+    // Slewing to a commanded position.
+    MODE_SLEWING = 2;
+    // Following rate commands from the cue extrapolator or the tracker.
+    MODE_TRACKING = 3;
+    // Parked, for example after an interlock or clock fault.
+    MODE_PARKED = 4;
+    // Faulted: the axes are not under control.
+    MODE_FAULT = 5;
+  }
+
+  // The station, as named in the range configuration.
+  string station_id = 1;
+  // When the encoders were read, UTC, in nanoseconds since the Unix epoch:
+  // the time-tagger's stamp.
+  int64 time_utc_ns = 2;
+  // Azimuth axis angle from its encoder, in radians, clockwise seen from
+  // above, from the axis zero.
+  double azimuth_rad = 3;
+  // Elevation axis angle from its encoder, in radians, upward from the axis
+  // zero.
+  double elevation_rad = 4;
+  // Azimuth axis rate, in radians per second, positive clockwise seen from
+  // above.
+  double azimuth_rate_rad_per_s = 5;
+  // Elevation axis rate, in radians per second, positive upward.
+  double elevation_rate_rad_per_s = 6;
+  // What the mount is doing.
+  Mode mode = 7;
+  // Whether the sun keep-out interlock is pre-empting commands.
+  bool sun_interlock_active = 8;
+  // Angle between the line of sight and the sun's centre, in radians.
+  double sun_separation_rad = 9;
+}

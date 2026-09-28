@@ -10,11 +10,13 @@ on:
   pull_request:
     paths:
       - python/**
+      - golden/proto/**
       - .github/workflows/python-toolchain.yml
   push:
     branches: [main]
     paths:
       - python/**
+      - golden/proto/**
       - .github/workflows/python-toolchain.yml
   workflow_dispatch:
 

@@ -1,0 +1,48 @@
+// Tracks: estimated trajectories of the objects in an engagement (ICS-012),
+// from the endgame tracker (ICS-067) and debris association (ICS-071).
+syntax = "proto3";
+
+package ics.v1;
+
+import "ics/v1/common.proto";
+
+// The estimated trajectory of one object.
+message Track {
+  // What produced the track.
+  enum Source {
+    // Not set.
+    SOURCE_UNSPECIFIED = 0;
+    // The endgame tracker, seeded by PLI.
+    SOURCE_ENDGAME = 1;
+    // Debris association across frames and stations.
+    SOURCE_ASSOCIATION = 2;
+    // PLI reports alone.
+    SOURCE_PLI = 3;
+  }
+
+  // The track, unique within its run.
+  string track_id = 1;
+  // What the object is.
+  EntityRole role = 2;
+  // What produced the track.
+  Source source = 3;
+  // The vehicle the track follows, as in PliRecord.entity_id; empty for
+  // debris.
+  string entity_id = 4;
+  // The estimated states, in time order.
+  repeated TrackState states = 5;
+}
+
+// A tracked object's estimated state at one time, in the range ENU frame.
+message TrackState {
+  // The time of the state, UTC, in nanoseconds since the Unix epoch.
+  int64 time_utc_ns = 1;
+  // Position, in metres.
+  EnuVector position_enu_m = 2;
+  // Velocity, in metres per second.
+  EnuVector velocity_enu_mps = 3;
+  // Position covariance, in square metres.
+  EnuCovariance position_covariance_m2 = 4;
+  // Velocity covariance, in square metres per second squared.
+  EnuCovariance velocity_covariance_m2_per_s2 = 5;
+}

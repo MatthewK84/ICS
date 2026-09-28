@@ -1,0 +1,48 @@
+// An event from the trigger controller (ICS-012), logged on UTC by ICS-040.
+syntax = "proto3";
+
+package ics.v1;
+
+// One step of a trigger sequence: arming on the engage command, updating the
+// closest-approach prediction, and firing the pulse generator or disarming.
+message TriggerEvent {
+  // What happened.
+  enum Kind {
+    // Not set.
+    KIND_UNSPECIFIED = 0;
+    // The controller armed on the engage command.
+    KIND_ARMED = 1;
+    // The controller updated its closest-approach prediction.
+    KIND_PREDICTED = 2;
+    // The controller fired the pulse generator.
+    KIND_FIRED = 3;
+    // The controller disarmed without firing; detail says why.
+    KIND_DISARMED = 4;
+    // The controller faulted; detail says why.
+    KIND_FAULT = 5;
+  }
+
+  // The trigger sequence: the same for every event from one arming to its
+  // firing or disarming, and unique within a run.
+  string sequence_id = 1;
+  // When the event happened, UTC, in nanoseconds since the Unix epoch. For
+  // KIND_FIRED, when the pulse generator fired.
+  int64 time_utc_ns = 2;
+  // What happened.
+  Kind kind = 3;
+  // The target, as in PliRecord.entity_id.
+  string target_entity_id = 4;
+  // The interceptor, as in PliRecord.entity_id.
+  string interceptor_entity_id = 5;
+  // The predicted time of closest approach, UTC, in nanoseconds since the Unix
+  // epoch. Set on KIND_PREDICTED and KIND_FIRED.
+  int64 predicted_closest_approach_utc_ns = 6;
+  // The predicted miss distance at closest approach, in metres. Set on
+  // KIND_PREDICTED and KIND_FIRED.
+  double predicted_miss_distance_m = 7;
+  // The pulse generator channels that fired, as named in the station
+  // configuration. Set on KIND_FIRED.
+  repeated string channels = 8;
+  // Why the controller disarmed or faulted, as free text.
+  string detail = 9;
+}

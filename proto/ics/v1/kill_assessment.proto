@@ -1,0 +1,92 @@
+// The kill assessment of one run (ICS-012): the kill classifier's result
+// (ICS-076), with closest approach and miss distance (ICS-068), and the
+// evaluator's overrides (ICS-090).
+syntax = "proto3";
+
+package ics.v1;
+
+import "ics/v1/common.proto";
+
+// What an engagement did to its target, and the evidence for it.
+message KillAssessment {
+  // The outcome for the target.
+  enum KillClass {
+    // Not set.
+    KILL_CLASS_UNSPECIFIED = 0;
+    // The target flew on under control and its mission was not denied.
+    KILL_CLASS_NO_KILL = 1;
+    // The target stayed intact and under control, but its mission was denied
+    // (the mission-denial check).
+    KILL_CLASS_MISSION_KILL = 2;
+    // The target fell ballistically, out of control, with its airframe intact
+    // (the ballistic-fit test).
+    KILL_CLASS_HARD_KILL = 3;
+    // The target broke up: pieces above the mass threshold reached the count
+    // threshold (the breakup count).
+    KILL_CLASS_CATASTROPHIC_KILL = 4;
+    // The run was not a valid test, for example because the interceptor never
+    // engaged. Only an evaluator assigns it.
+    KILL_CLASS_NO_TEST = 5;
+    // The data cannot support any other class.
+    KILL_CLASS_UNDETERMINED = 6;
+  }
+
+  // One threshold the classifier applied, as named in the kill-threshold
+  // parameter file (ICS-052).
+  message Threshold {
+    // The threshold's name in the parameter file, for example "N".
+    string name = 1;
+    // Its value, in unit.
+    double value = 2;
+    // Its unit as a UCUM code, for example "kg" or "s"; "1" if
+    // dimensionless.
+    string unit = 3;
+  }
+
+  // An evaluator's override of the class. Every override is kept.
+  message Override {
+    // The class the evaluator assigned.
+    KillClass kill_class = 1;
+    // The evaluator, as named by their PKI certificate.
+    string user = 2;
+    // When the override was made, UTC, in nanoseconds since the Unix epoch.
+    int64 time_utc_ns = 3;
+    // Why, in the evaluator's words; required.
+    string reason = 4;
+  }
+
+  // The run, as in RunRecord.run_id.
+  string run_id = 1;
+  // The target's track, as in Track.track_id.
+  string target_track_id = 2;
+  // The interceptor's track, as in Track.track_id.
+  string interceptor_track_id = 3;
+  // The class the classifier computed.
+  KillClass computed_class = 4;
+  // The time of closest approach between the interceptor and the target, UTC,
+  // in nanoseconds since the Unix epoch.
+  int64 closest_approach_utc_ns = 5;
+  // The time of first contact, UTC, in nanoseconds since the Unix epoch. Not
+  // set if they did not touch.
+  optional int64 contact_utc_ns = 6;
+  // The miss distance at closest approach, in metres, from same-frame
+  // relative measurements.
+  double miss_distance_m = 7;
+  // One-sigma uncertainty of miss_distance_m, in metres.
+  double miss_distance_sigma_m = 8;
+  // Where closest approach happened, in the range ENU frame, in metres.
+  EnuVector intercept_point_enu_m = 9;
+  // Breakup pieces that passed the mass threshold.
+  uint32 breakup_piece_count = 10;
+  // The normalized residual of the ballistic fit to the target after contact;
+  // dimensionless. Not set if no fit was possible.
+  optional double ballistic_fit_residual = 11;
+  // Whether the mission-denial check found the target's mission denied.
+  bool mission_denied = 12;
+  // The thresholds the classifier applied.
+  repeated Threshold thresholds = 13;
+  // The kill-threshold parameter file the thresholds came from.
+  FileDigest thresholds_file = 14;
+  // The evaluators' overrides, oldest first. The last one is in force.
+  repeated Override overrides = 15;
+}

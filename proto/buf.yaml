@@ -16,3 +16,7 @@ lint:
 breaking:
   use:
     - FILE
+  # ICS-012 replaced the ics.toolchain_check.v1 sample messages, which nothing
+  # used, with the ICS contracts. Remove this once main no longer has them.
+  ignore:
+    - ics/toolchain_check

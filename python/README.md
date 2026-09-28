@@ -8,6 +8,7 @@ Planned layout:
 
 ```text
 python/
+  ics_golden/   golden test vectors shared with C++ and TypeScript (golden/)
   ics_models/   pointing, calibration, trajectory, drag, footprint, killclass, uncertainty
   ics_synth/    synthetic engagement generator
   ics_stats/    Pk, timeline analysis, validation scorer
@@ -36,7 +37,7 @@ uv run --locked pytest                               # hypothesis, coverage of a
 policy/check-policy.sh
 ```
 
-`gen/` holds the protobuf messages generated from [`proto/`](../proto/README.md), imported as `ics.<package>`, for example `from ics.toolchain_check.v1 import sample_pb2`. They are generated and committed, never edited, so ruff and the AST checks skip them, and mypy reads their stubs without reporting on them.
+`gen/` holds the protobuf messages generated from [`proto/`](../proto/README.md), imported as `ics.<package>`, for example `from ics.v1 import run_record_pb2`. They are generated and committed, never edited, so ruff and the AST checks skip them, and mypy reads their stubs without reporting on them.
 
 To add or upgrade a dependency, change `pyproject.toml`, run `uv lock`, and record the dependency in the [dependency register](../docs/dependency-register.md).
 

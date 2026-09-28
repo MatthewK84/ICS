@@ -12,11 +12,13 @@ on:
   pull_request:
     paths:
       - web/**
+      - golden/proto/**
       - .github/workflows/web-toolchain.yml
   push:
     branches: [main]
     paths:
       - web/**
+      - golden/proto/**
       - .github/workflows/web-toolchain.yml
   workflow_dispatch:
 

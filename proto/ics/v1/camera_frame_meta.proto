@@ -1,0 +1,60 @@
+// Metadata for one camera frame (ICS-012), recorded by ics-camd (ICS-031)
+// from the camera SDKs (ICS-027, ICS-028) and the tracker (ICS-038).
+syntax = "proto3";
+
+package ics.v1;
+
+// When and how one frame was exposed. The image itself stays in the camera's
+// recording, which RunRecord.artifacts lists.
+message CameraFrameMeta {
+  // The kind of camera.
+  enum CameraKind {
+    // Not set.
+    CAMERA_KIND_UNSPECIFIED = 0;
+    // A high-speed visible camera (Phantom).
+    CAMERA_KIND_HIGH_SPEED_VISIBLE = 1;
+    // A high-speed mid-wave infrared camera (FLIR X6980-HS).
+    CAMERA_KIND_MWIR = 2;
+    // The tracking camera on a mount.
+    CAMERA_KIND_TRACKING = 3;
+  }
+
+  // Where the frame's raw time stamp came from.
+  enum TimeSource {
+    // Not set.
+    TIME_SOURCE_UNSPECIFIED = 0;
+    // The IRIG-B time code the camera embedded in the frame.
+    TIME_SOURCE_IRIG = 1;
+    // The host clock when the frame arrived: used only for cameras without a
+    // time code input.
+    TIME_SOURCE_HOST = 2;
+  }
+
+  // The station, as named in the range configuration.
+  string station_id = 1;
+  // The camera, as named in the station configuration.
+  string camera_id = 2;
+  // The kind of camera.
+  CameraKind camera_kind = 3;
+  // The recording segment (for a Phantom camera, the cine), unique per camera
+  // within a run.
+  string segment_id = 4;
+  // The frame's position in its segment, counting from 0.
+  uint64 frame_index = 5;
+  // When the exposure started, UTC, in nanoseconds since the Unix epoch,
+  // after the camera offset in time_offset_applied_ns was removed.
+  int64 exposure_start_utc_ns = 6;
+  // How long the exposure lasted, in nanoseconds.
+  int64 exposure_duration_ns = 7;
+  // Where the raw time stamp came from.
+  TimeSource time_source = 8;
+  // The camera offset removed from the raw time stamp, in nanoseconds
+  // (TimeQuality.CameraOffset.offset_ns); 0 before the camera is calibrated.
+  int64 time_offset_applied_ns = 9;
+  // Image width, in pixels.
+  uint32 width_px = 10;
+  // Image height, in pixels.
+  uint32 height_px = 11;
+  // Bits per pixel in the recorded image.
+  uint32 bits_per_pixel = 12;
+}

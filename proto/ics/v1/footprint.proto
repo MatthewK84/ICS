@@ -1,0 +1,36 @@
+// The debris footprint of one run (ICS-012): where the pieces are predicted
+// to land, from the footprint Monte Carlo (ICS-051, ICS-077).
+syntax = "proto3";
+
+package ics.v1;
+
+import "ics/v1/common.proto";
+
+// Probability regions on the ground for the debris of one run.
+message Footprint {
+  // A polygon on the ground.
+  message Polygon {
+    // The vertices in order, counterclockwise seen from above. The last
+    // vertex joins the first; it is not repeated.
+    repeated GeodeticPoint vertices = 1;
+  }
+
+  // The area a piece lands in with a given probability.
+  message Region {
+    // The probability that a piece lands inside, from 0 to 1.
+    double probability = 1;
+    // The polygons that make up the region; it may be split in several.
+    repeated Polygon polygons = 2;
+  }
+
+  // The run, as in RunRecord.run_id.
+  string run_id = 1;
+  // Monte Carlo samples drawn.
+  uint32 sample_count = 2;
+  // The fragments propagated, as in Fragment.fragment_id.
+  repeated string fragment_ids = 3;
+  // The regions, smallest probability first: 0.5, 0.9 and 0.99 by default.
+  repeated Region regions = 4;
+  // The input files: the wind profile, the drag table and any others.
+  repeated FileDigest inputs = 5;
+}
