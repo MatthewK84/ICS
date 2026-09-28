@@ -1,0 +1,12 @@
+# Added to the host profile for the asan and fuzz presets (ICS-011): the
+# dependencies are built with AddressSanitizer too. Protobuf and abseil
+# annotate their containers only when ASan is on, so a mix of instrumented ICS
+# code and uninstrumented libraries reports false container overflows. Only
+# host packages get the flags; build tools such as CMake do not. The flags are
+# part of the package ID, so sanitized and plain builds never mix in the cache.
+[conf]
+tools.build:cflags+=["-fsanitize=address", "-fno-omit-frame-pointer"]
+tools.build:cxxflags+=["-fsanitize=address", "-fno-omit-frame-pointer"]
+tools.build:exelinkflags+=["-fsanitize=address"]
+tools.build:sharedlinkflags+=["-fsanitize=address"]
+tools.info.package_id:confs+=["tools.build:cflags", "tools.build:cxxflags", "tools.build:exelinkflags", "tools.build:sharedlinkflags"]
