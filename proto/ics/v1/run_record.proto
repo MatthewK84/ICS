@@ -1,0 +1,83 @@
+// The record of one run (ICS-012): what was measured, with which software,
+// parameters and models, and where every artifact is. ICS-013 maps it to the
+// run-record JSON Schema; ICS-079 builds, hashes and signs it.
+syntax = "proto3";
+
+package ics.v1;
+
+import "ics/v1/common.proto";
+import "ics/v1/footprint.proto";
+import "ics/v1/kill_assessment.proto";
+
+// One run: its headline results, and a manifest of everything else by
+// SHA-256.
+message RunRecord {
+  // A condition that limits what the run can support.
+  enum Flag {
+    // Not set.
+    FLAG_UNSPECIFIED = 0;
+    // Truth was reduced: a truth source was missing or degraded, for example
+    // no PLI from the target.
+    FLAG_REDUCED_TRUTH = 1;
+    // Camera coverage around closest approach was incomplete.
+    FLAG_INCOMPLETE_COVERAGE = 2;
+    // A station's clock was in holdover or free-running during the run.
+    FLAG_TIME_DEGRADED = 3;
+  }
+
+  // A station that took part.
+  message Station {
+    // The station, as named in the range configuration.
+    string station_id = 1;
+    // The mount's surveyed reference point.
+    GeodeticPoint position = 2;
+    // The station's cameras, as named in the station configuration.
+    repeated string camera_ids = 3;
+  }
+
+  // One measured value, keyed to a C4 measure or a validation criterion.
+  message Measurement {
+    // The measure's ID: a C4 MOP or KPP ID, or a validation criterion such as
+    // "C7". ICS-013 lists the IDs.
+    string criterion_id = 1;
+    // The value, in unit.
+    double value = 2;
+    // One-sigma uncertainty of value, in unit.
+    double sigma = 3;
+    // The unit as a UCUM code, for example "m", "s" or "kg"; "1" if
+    // dimensionless.
+    string unit = 4;
+  }
+
+  // The run, unique across all test events.
+  string run_id = 1;
+  // The test event the run belongs to, for example "V2".
+  string event_id = 2;
+  // When the run started, UTC, in nanoseconds since the Unix epoch.
+  int64 start_utc_ns = 3;
+  // When the run ended, UTC, in nanoseconds since the Unix epoch.
+  int64 end_utc_ns = 4;
+  // The origin of the range ENU frame: the defended asset.
+  GeodeticPoint range_origin = 5;
+  // The stations that took part.
+  repeated Station stations = 6;
+  // The ICS source revision that produced the record, as a full git commit
+  // SHA.
+  string software_revision = 7;
+  // The parameter files loaded at startup: pointing models, drag tables,
+  // kill thresholds and the like.
+  repeated FileDigest parameter_files = 8;
+  // The models loaded at startup, such as ONNX files.
+  repeated FileDigest models = 9;
+  // Every other artifact of the run: tracks, fragments, frame metadata, PLI
+  // logs and imagery.
+  repeated FileDigest artifacts = 10;
+  // The kill assessment.
+  KillAssessment kill_assessment = 11;
+  // The debris footprint.
+  Footprint footprint = 12;
+  // The measured values.
+  repeated Measurement measurements = 13;
+  // Conditions that limit what the run can support.
+  repeated Flag flags = 14;
+}

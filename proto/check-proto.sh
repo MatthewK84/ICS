@@ -79,15 +79,15 @@ check_seeds() {
   local output status copy="${WORK}/seeded"
   mkdir -p "${copy}"
   cp -r "${ROOT}/proto/." "${copy}/proto"
-  cp "${LINT_SEED}" "${copy}/proto/ics/toolchain_check/v1/"
+  cp "${LINT_SEED}" "${copy}/proto/ics/v1/"
   status=0 && output="$(buf lint --error-format=json "${copy}/proto" 2>&1)" || status=$?
   expect_rejected "buf lint" "$(sed -n '1s|^// expect: ||p' "${LINT_SEED}")" "${output}" "${status}"
-  rm "${copy}/proto/ics/toolchain_check/v1/$(basename "${LINT_SEED}")"
-  sed -i '/repeated double values = 3;/d' "${copy}/proto/ics/toolchain_check/v1/sample.proto"
+  rm "${copy}/proto/ics/v1/$(basename "${LINT_SEED}")"
+  sed -i '/repeated Flag flags = 14;/d' "${copy}/proto/ics/v1/run_record.proto"
   status=0 && output="$(buf breaking --error-format=json "${copy}/proto" --against "${ROOT}/proto" 2>&1)" || status=$?
   expect_rejected "buf breaking" "FIELD_NO_DELETE" "${output}" "${status}"
   cp -r "${WORK}/fresh" "${copy}/committed"
-  echo "// edited by hand" >>"${copy}/committed/python/gen/ics/toolchain_check/v1/sample_pb2.py"
+  echo "// edited by hand" >>"${copy}/committed/python/gen/ics/v1/run_record_pb2.py"
   status=0 && output="$(compare_generated "${copy}/committed" 2>&1)" || status=$?
   expect_rejected "the generated-code comparison" "edited by hand" "${output}" "${status}"
 }

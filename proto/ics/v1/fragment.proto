@@ -1,0 +1,38 @@
+// Fragments: pieces of debris and their estimated physical properties
+// (ICS-012), from the 7-state fit (ICS-073) and mass estimation (ICS-075).
+syntax = "proto3";
+
+package ics.v1;
+
+import "ics/v1/common.proto";
+
+// One piece of debris. Its trajectory is the Track named by track_id.
+message Fragment {
+  // The fragment, unique within its run.
+  string fragment_id = 1;
+  // The track that follows it, as in Track.track_id.
+  string track_id = 2;
+  // What the fragment broke off, if known: ENTITY_ROLE_TARGET or
+  // ENTITY_ROLE_INTERCEPTOR.
+  EntityRole parent_role = 3;
+  // The material class, as named in the drag-table parameter file.
+  string material_class = 4;
+  // Ballistic coefficient β = m / (Cd·A), in kilograms per square metre.
+  double ballistic_coefficient_kg_per_m2 = 5;
+  // One-sigma uncertainty of ballistic_coefficient_kg_per_m2, in kilograms
+  // per square metre.
+  double ballistic_coefficient_sigma_kg_per_m2 = 6;
+  // Projected area A, in square metres.
+  double projected_area_m2 = 7;
+  // One-sigma uncertainty of projected_area_m2, in square metres.
+  double projected_area_sigma_m2 = 8;
+  // Drag coefficient Cd from the drag table; dimensionless.
+  double drag_coefficient = 9;
+  // Estimated mass, β·A·Cd, in kilograms.
+  double mass_kg = 10;
+  // One-sigma uncertainty of mass_kg, in kilograms.
+  double mass_sigma_kg = 11;
+  // When the fragment was first seen, UTC, in nanoseconds since the Unix
+  // epoch.
+  int64 first_seen_utc_ns = 12;
+}

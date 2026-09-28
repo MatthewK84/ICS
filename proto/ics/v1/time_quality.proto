@@ -1,0 +1,57 @@
+// Time quality at one station (ICS-012), published by ics-timingd (ICS-019)
+// with the camera offsets from the strobe latency analyzer (ICS-029).
+syntax = "proto3";
+
+package ics.v1;
+
+// The state of a station's time reference, and how far its clocks can be
+// trusted.
+message TimeQuality {
+  // The state of the station's grandmaster clock.
+  enum ClockState {
+    // Not set.
+    CLOCK_STATE_UNSPECIFIED = 0;
+    // Locked to GNSS.
+    CLOCK_STATE_LOCKED = 1;
+    // GNSS is lost; the grandmaster keeps time on its oscillator.
+    CLOCK_STATE_HOLDOVER = 2;
+    // Never locked, or holdover has expired: times are not traceable to UTC.
+    CLOCK_STATE_FREE_RUNNING = 3;
+  }
+
+  // One camera's time offset, measured from strobe frames.
+  message CameraOffset {
+    // The camera, as named in the station configuration.
+    string camera_id = 1;
+    // The camera's time stamp minus UTC, in nanoseconds. Subtract it from the
+    // camera's raw time stamps.
+    int64 offset_ns = 2;
+    // One-sigma uncertainty of offset_ns, in nanoseconds.
+    int64 offset_sigma_ns = 3;
+    // When the offset was measured, UTC, in nanoseconds since the Unix epoch.
+    int64 measured_utc_ns = 4;
+  }
+
+  // The station, as named in the range configuration.
+  string station_id = 1;
+  // When this state was sampled, UTC, in nanoseconds since the Unix epoch.
+  int64 time_utc_ns = 2;
+  // The grandmaster's clock state.
+  ClockState clock_state = 3;
+  // How long the grandmaster has been in holdover, in nanoseconds; 0 unless
+  // clock_state is CLOCK_STATE_HOLDOVER.
+  int64 holdover_duration_ns = 4;
+  // GNSS satellites the grandmaster is using.
+  uint32 gnss_satellite_count = 5;
+  // This host's PTP offset from the grandmaster, in nanoseconds.
+  int64 ptp_offset_ns = 6;
+  // The PTP mean path delay to the grandmaster, in nanoseconds.
+  int64 ptp_path_delay_ns = 7;
+  // Whether the IRIG-B time code to the cameras is locked to the grandmaster.
+  bool irig_b_locked = 8;
+  // The timing service's bound on this host's clock error from UTC, in
+  // nanoseconds: an estimate, not a measurement.
+  int64 error_bound_ns = 9;
+  // The latest offset of each camera at the station.
+  repeated CameraOffset camera_offsets = 10;
+}

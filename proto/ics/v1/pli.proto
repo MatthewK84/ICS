@@ -1,0 +1,150 @@
+// Position location information (PLI) from the vehicles in an engagement
+// (ICS-012). The adapters (ICS-021 to ICS-025) turn each feed into PliRecord
+// and PliEvent; ics-plid (ICS-030) serves them.
+syntax = "proto3";
+
+package ics.v1;
+
+import "ics/v1/common.proto";
+
+// Where a PLI message came from.
+enum PliSource {
+  // Not set.
+  PLI_SOURCE_UNSPECIFIED = 0;
+  // MAVLink telemetry (ICS-021).
+  PLI_SOURCE_MAVLINK = 1;
+  // Cursor on Target (ICS-022).
+  PLI_SOURCE_COT = 2;
+  // Lattice StreamEntities (ICS-023).
+  PLI_SOURCE_LATTICE = 3;
+  // SAPIENT, BSI Flex 335 v2.0 (ICS-024).
+  PLI_SOURCE_SAPIENT = 4;
+  // A PX4 ULog flight log, imported after the flight (ICS-025).
+  PLI_SOURCE_ULOG = 5;
+  // An ArduPilot DataFlash flight log, imported after the flight (ICS-025).
+  PLI_SOURCE_DATAFLASH = 6;
+}
+
+// How a PLI time was established.
+enum PliTimeBasis {
+  // Not set.
+  PLI_TIME_BASIS_UNSPECIFIED = 0;
+  // The vehicle's GNSS time, converted to UTC.
+  PLI_TIME_BASIS_VEHICLE_GNSS = 1;
+  // The vehicle's boot clock, aligned to UTC by the offset and drift fit
+  // (ICS-026).
+  PLI_TIME_BASIS_VEHICLE_ALIGNED = 2;
+  // The time ICS received the message: the vehicle sent no usable time.
+  PLI_TIME_BASIS_RECEIPT = 3;
+}
+
+// One position report for one vehicle, converted to ICS frames and time.
+message PliRecord {
+  // The kind of position fix.
+  enum FixType {
+    // Not set.
+    FIX_TYPE_UNSPECIFIED = 0;
+    // No fix: the position is not valid.
+    FIX_TYPE_NONE = 1;
+    // A two-dimensional fix: the height is not valid.
+    FIX_TYPE_TWO_DIMENSIONAL = 2;
+    // A three-dimensional GNSS fix.
+    FIX_TYPE_THREE_DIMENSIONAL = 3;
+    // A differential GNSS fix.
+    FIX_TYPE_DGNSS = 4;
+    // An RTK fix with float ambiguities.
+    FIX_TYPE_RTK_FLOAT = 5;
+    // An RTK fix with fixed ambiguities.
+    FIX_TYPE_RTK_FIXED = 6;
+    // A position not from GNSS, such as a sensor track or an estimate.
+    FIX_TYPE_OTHER = 7;
+  }
+
+  // The vehicle's attitude: the rotation from its body frame (forward, right,
+  // down) to the local north-east-down frame at its position, as a unit
+  // quaternion. This is MAVLink's convention; the other feeds are converted.
+  message Attitude {
+    // Scalar part.
+    double w = 1;
+    // Vector part, north component.
+    double x = 2;
+    // Vector part, east component.
+    double y = 3;
+    // Vector part, down component.
+    double z = 4;
+  }
+
+  // The vehicle, as its source identifies it: for example the MAVLink system
+  // ID or the CoT uid.
+  string entity_id = 1;
+  // What the vehicle is in the engagement.
+  EntityRole role = 2;
+  // Where the report came from.
+  PliSource source = 3;
+  // When the position was valid, UTC, in nanoseconds since the Unix epoch.
+  int64 valid_utc_ns = 4;
+  // When ICS received the report, UTC, in nanoseconds since the Unix epoch:
+  // the capture NIC's hardware time stamp. Not set for imported logs.
+  optional int64 received_utc_ns = 5;
+  // How valid_utc_ns was established.
+  PliTimeBasis time_basis = 6;
+  // The vehicle's position.
+  GeodeticPoint position = 7;
+  // The vehicle's velocity, in the range ENU frame, in metres per second.
+  EnuVector velocity_enu_mps = 8;
+  // One-sigma horizontal position uncertainty, in metres; for CoT, ce mapped
+  // to one sigma. Not set when the source reports none.
+  optional double horizontal_sigma_m = 9;
+  // One-sigma vertical position uncertainty, in metres; for CoT, le mapped to
+  // one sigma. Not set when the source reports none.
+  optional double vertical_sigma_m = 10;
+  // The kind of position fix.
+  FixType fix_type = 11;
+  // The vehicle's attitude, if its source reports one.
+  Attitude attitude = 12;
+}
+
+// A discrete event from a vehicle or its link: arming, a mode change, a
+// command and its acknowledgement, a status message, or a lost link.
+message PliEvent {
+  // What happened.
+  enum Kind {
+    // Not set.
+    KIND_UNSPECIFIED = 0;
+    // The vehicle armed.
+    KIND_ARMED = 1;
+    // The vehicle disarmed.
+    KIND_DISARMED = 2;
+    // The flight mode changed; detail holds the new mode.
+    KIND_MODE_CHANGED = 3;
+    // A command was sent to the vehicle; command and detail describe it.
+    KIND_COMMAND = 4;
+    // The vehicle acknowledged a command; command_result holds the result.
+    KIND_COMMAND_ACK = 5;
+    // The vehicle sent a status message; detail holds its text.
+    KIND_STATUS_TEXT = 6;
+    // The link went silent for longer than the configured timeout.
+    KIND_LINK_LOST = 7;
+    // The link came back.
+    KIND_LINK_RESTORED = 8;
+  }
+
+  // The vehicle, as in PliRecord.entity_id.
+  string entity_id = 1;
+  // Where the event came from.
+  PliSource source = 2;
+  // When the event happened, UTC, in nanoseconds since the Unix epoch.
+  int64 time_utc_ns = 3;
+  // How time_utc_ns was established.
+  PliTimeBasis time_basis = 4;
+  // What happened.
+  Kind kind = 5;
+  // The command number, for commands and acknowledgements: for MAVLink, the
+  // MAV_CMD value.
+  uint32 command = 6;
+  // The acknowledgement's result as its source reports it: for MAVLink, the
+  // MAV_RESULT value.
+  uint32 command_result = 7;
+  // The mode name, command description or status text, as received.
+  string detail = 8;
+}

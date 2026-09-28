@@ -1,0 +1,73 @@
+// Types shared by the ICS contracts (ICS-012): positions in the two range
+// frames, their uncertainty, the roles of the objects in an engagement, and
+// file digests. Units and frames are named in proto/README.md.
+syntax = "proto3";
+
+package ics.v1;
+
+// A point on or above the WGS84 ellipsoid.
+message GeodeticPoint {
+  // Geodetic latitude, in degrees, positive north, from -90 to 90.
+  double latitude_deg = 1;
+  // Longitude, in degrees, positive east, from -180 to 180.
+  double longitude_deg = 2;
+  // Height above the WGS84 ellipsoid, in metres (not above mean sea level).
+  double height_ellipsoid_m = 3;
+}
+
+// A vector in the range's east-north-up frame, whose origin is the defended
+// asset (RunRecord.range_origin). The field that holds it names the unit:
+// metres for a position, metres per second for a velocity.
+message EnuVector {
+  // East component.
+  double east = 1;
+  // North component.
+  double north = 2;
+  // Up component, along the ellipsoid normal at the range origin.
+  double up = 3;
+}
+
+// A symmetric 3×3 matrix over the east, north and up axes, such as the
+// covariance of an EnuVector, stored as its upper triangle. The field that
+// holds it names the unit.
+message EnuCovariance {
+  // East-east element: the east variance.
+  double ee = 1;
+  // East-north element.
+  double en = 2;
+  // East-up element.
+  double eu = 3;
+  // North-north element: the north variance.
+  double nn = 4;
+  // North-up element.
+  double nu = 5;
+  // Up-up element: the up variance.
+  double uu = 6;
+}
+
+// What an object is in an engagement.
+enum EntityRole {
+  // Not set.
+  ENTITY_ROLE_UNSPECIFIED = 0;
+  // The target aircraft.
+  ENTITY_ROLE_TARGET = 1;
+  // The interceptor.
+  ENTITY_ROLE_INTERCEPTOR = 2;
+  // A piece of debris from the target or the interceptor.
+  ENTITY_ROLE_DEBRIS = 3;
+  // Anything else in the air, such as a chase or safety aircraft.
+  ENTITY_ROLE_OTHER = 4;
+}
+
+// A file named by its SHA-256 digest, as run records and manifests list it.
+message FileDigest {
+  // Path relative to the run's data root, with forward slashes.
+  string path = 1;
+  // SHA-256 of the file's bytes, as 64 lowercase hexadecimal characters.
+  string sha256_hex = 2;
+  // Size of the file, in bytes.
+  uint64 size_bytes = 3;
+  // The file's media type, for example "application/x-protobuf" or
+  // "application/onnx".
+  string media_type = 4;
+}

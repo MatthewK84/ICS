@@ -3,7 +3,7 @@
 // the module and requires buf lint to reject its camelCase field name.
 syntax = "proto3";
 
-package ics.toolchain_check.v1;
+package ics.v1;
 
 // A message with a badly named field.
 message LintViolation {
