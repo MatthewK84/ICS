@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
-# Install the Conan dependencies that a CMake preset needs (ICS-004).
+# Install the Conan dependencies that CMake presets need (ICS-004).
 #
-# Usage: conan-install.sh PRESET   (for example gcc-release, clang-asan or clang-fuzz)
+# Usage: conan-install.sh PRESET...   (for example gcc-release, clang-asan or clang-fuzz)
 #
 # Dependencies come from cpp/conan.lock and land in
-# cpp/build/conan/<profile>-<build type>/, where the preset's toolchain file
-# points.
+# cpp/build/conan/<profile>-<build type>[-<sanitizer>]/, where the preset's
+# toolchain file points. The asan, tsan and fuzz presets build the dependencies
+# with the matching sanitizer, from cpp/conan/profiles/asan or tsan (ICS-011).
 set -euo pipefail
 
-readonly PRESET="${1:?usage: conan-install.sh PRESET}"
-readonly ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+readonly ROOT
+readonly MAX_PRESETS=16
 
 profile_for() {
   case "${1%%-*}" in
@@ -27,18 +29,43 @@ build_type_for() {
   esac
 }
 
-main() {
-  local profile build_type
-  if ! profile="$(profile_for "${PRESET}")" || ! build_type="$(build_type_for "${PRESET}")"; then
-    echo "unknown preset '${PRESET}'; see cpp/CMakePresets.json" >&2
+# The sanitizer the dependencies need; empty when they are built plainly.
+# UBSan checks only instrumented code and needs nothing from the dependencies.
+# libFuzzer runs with ASan, so the fuzz preset shares the ASan dependencies.
+sanitizer_for() {
+  case "${1#*-}" in
+    asan | fuzz) echo asan ;;
+    tsan) echo tsan ;;
+    *) echo "" ;;
+  esac
+}
+
+install_preset() {
+  local preset="$1"
+  local profile build_type sanitizer
+  if ! profile="$(profile_for "${preset}")" || ! build_type="$(build_type_for "${preset}")"; then
+    echo "unknown preset '${preset}'; see cpp/CMakePresets.json" >&2
     exit 2
   fi
+  sanitizer="$(sanitizer_for "${preset}")"
   conan install "${ROOT}/cpp" \
     --profile:all "${ROOT}/cpp/conan/profiles/${profile}" \
+    ${sanitizer:+--profile:host "${ROOT}/cpp/conan/profiles/${sanitizer}"} \
     --settings:all "build_type=${build_type}" \
     --lockfile "${ROOT}/cpp/conan.lock" \
-    --output-folder "${ROOT}/cpp/build/conan/${profile}-${build_type}" \
+    --output-folder "${ROOT}/cpp/build/conan/${profile}-${build_type}${sanitizer:+-${sanitizer}}" \
     --build=missing
 }
 
-main
+main() {
+  local preset
+  if (($# == 0 || $# > MAX_PRESETS)); then
+    echo "usage: conan-install.sh PRESET... (at most ${MAX_PRESETS})" >&2
+    exit 2
+  fi
+  for preset in "$@"; do
+    install_preset "${preset}"
+  done
+}
+
+main "$@"

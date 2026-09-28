@@ -40,14 +40,16 @@ env:
   IMAGE: ghcr.io/matthewk84/ics-cpp
   # Conan's package cache lives on the runner at /tmp/conan-home, so it can be
   # cached between runs: protobuf and abseil build from source for each
-  # compiler and build type (ICS-011).
+  # compiler, build type and sanitizer (ICS-011).
   RUN: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home ics-cpp:ci
 
 jobs:
   toolchain:
     name: ics-cpp image and reproducibility
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    # A run that must build every dependency from source takes about 100
+    # minutes; with the Conan cache it takes about 25.
+    timeout-minutes: 120
     permissions:
       contents: read
       packages: write
@@ -62,7 +64,8 @@ jobs:
         run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
 
       - name: Restore the Conan package cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: conan-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: /tmp/conan-home
           key: conan-cpp-toolchain-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
@@ -78,6 +81,25 @@ jobs:
           echo "::error::cpp/conan.lock is missing. Decode the base64 line above into cpp/conan.lock and commit it."
           exit 1
 
+      # Every Conan binary the later steps need: plain, and with ASan and TSan
+      # for the sanitizer and fuzz presets. The cache is saved right away, so
+      # a failing test does not throw away the builds.
+      - name: Install the Conan dependencies of every preset
+        run: >-
+          ${RUN} deploy/toolchain/conan-install.sh gcc-release clang-release
+          gcc-debug clang-debug gcc-asan clang-asan gcc-tsan clang-tsan
+
+      - name: Trim the Conan package cache before it is saved
+        if: steps.conan-cache.outputs.cache-hit != 'true'
+        run: ${RUN} conan cache clean "*" --source --build --download --temp
+
+      - name: Save the Conan package cache
+        if: steps.conan-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/conan-home
+          key: ${{ steps.conan-cache.outputs.cache-primary-key }}
+
       - name: Reproducible build with GCC 13
         run: ${RUN} deploy/toolchain/check-reproducible.sh gcc
 
@@ -92,9 +114,6 @@ jobs:
 
       - name: Power-of-Ten policy (clang-tidy, cppcheck, warnings)
         run: ${RUN} cpp/policy/check-policy.sh
-
-      - name: Trim the Conan package cache before it is saved
-        run: ${RUN} conan cache clean "*" --source --build --download --temp
 
       - name: Install Syft and cosign
         run: |
