@@ -11,12 +11,14 @@ on:
     paths:
       - python/**
       - golden/proto/**
+      - schemas/**
       - .github/workflows/python-toolchain.yml
   push:
     branches: [main]
     paths:
       - python/**
       - golden/proto/**
+      - schemas/**
       - .github/workflows/python-toolchain.yml
   workflow_dispatch:
 

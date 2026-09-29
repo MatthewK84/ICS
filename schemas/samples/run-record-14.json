@@ -1,0 +1,144 @@
+{
+  "run_id": "example-14",
+  "event_id": "EXAMPLE",
+  "start_utc_ns": "1791228000000000000",
+  "end_utc_ns": "1791228180000000000",
+  "range_origin": {
+    "latitude_deg": 40.0,
+    "longitude_deg": -100.0,
+    "height_ellipsoid_m": 700.0
+  },
+  "stations": [
+    {
+      "station_id": "north",
+      "position": {
+        "latitude_deg": 40.0134747,
+        "longitude_deg": -100.0,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "north-narrow",
+        "north-wide",
+        "north-mwir"
+      ]
+    }
+  ],
+  "software_revision": "b47b069880f4157d994e2f19a437be865833a78e",
+  "parameter_files": [
+    {
+      "path": "parameters/pointing-model.toml",
+      "sha256_hex": "6cff1cf9ef8dceaeade8dec349a14546717e218a10977e1727c5cd9714766e9f",
+      "size_bytes": "6069000",
+      "media_type": "application/toml"
+    },
+    {
+      "path": "parameters/drag-table.toml",
+      "sha256_hex": "0dddca0776c50817953e274e559cdb3a085c542b0d80806afabb5c232ce65729",
+      "size_bytes": "4837677",
+      "media_type": "application/toml"
+    },
+    {
+      "path": "parameters/kill-thresholds.toml",
+      "sha256_hex": "e4d9d62542b93df5573f934dca01584bfb988c54cd0dc6f66d4e78071ce992b5",
+      "size_bytes": "6395710",
+      "media_type": "application/toml"
+    }
+  ],
+  "models": [
+    {
+      "path": "models/segmentation.onnx",
+      "sha256_hex": "689280f06dcebaed37f37b6386f5a3caada1dd80abe9913d1999fbce76a13823",
+      "size_bytes": "4433785",
+      "media_type": "application/onnx"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "tracks.binpb",
+      "sha256_hex": "3a08a92a42880a3994589ff905d361cce0fee34f025532ebd8ab81cf00fd9a53",
+      "size_bytes": "1837458",
+      "media_type": "application/x-protobuf"
+    },
+    {
+      "path": "frame-metadata.binpb",
+      "sha256_hex": "0bac7cfab827f54f794c0ef8e4b4ba449d12d712a5ab7def07090c32a690fa6e",
+      "size_bytes": "3339917",
+      "media_type": "application/x-protobuf"
+    },
+    {
+      "path": "pli.binpb",
+      "sha256_hex": "23ab4f68786e361abe6045042b741ee4dc2bc6d7940965ddc13b49a0f61f3b1f",
+      "size_bytes": "1358900",
+      "media_type": "application/x-protobuf"
+    }
+  ],
+  "kill_assessment": {
+    "run_id": "example-14",
+    "target_track_id": "target",
+    "interceptor_track_id": "interceptor",
+    "computed_class": "KILL_CLASS_UNDETERMINED",
+    "closest_approach_utc_ns": "1791228045800000000",
+    "miss_distance_m": 5.0,
+    "miss_distance_sigma_m": 0.02,
+    "intercept_point_enu_m": {
+      "east": 718.0,
+      "north": 1222.0,
+      "up": 190.0
+    },
+    "thresholds": [
+      {
+        "name": "N",
+        "value": 5.0,
+        "unit": "1"
+      },
+      {
+        "name": "m",
+        "value": 0.01,
+        "unit": "kg"
+      },
+      {
+        "name": "T",
+        "value": 10.0,
+        "unit": "s"
+      },
+      {
+        "name": "residual_gate",
+        "value": 3.0,
+        "unit": "1"
+      }
+    ],
+    "thresholds_file": {
+      "path": "parameters/kill-thresholds.toml",
+      "sha256_hex": "e4d9d62542b93df5573f934dca01584bfb988c54cd0dc6f66d4e78071ce992b5",
+      "size_bytes": "6395710",
+      "media_type": "application/toml"
+    },
+    "breakup_piece_count": 0,
+    "mission_denied": false,
+    "overrides": []
+  },
+  "measurements": [
+    {
+      "criterion_id": "INT-1",
+      "value": 81.0,
+      "sigma": 0.5,
+      "unit": "m/s"
+    },
+    {
+      "criterion_id": "INT-2",
+      "value": 63.0,
+      "sigma": 1.0,
+      "unit": "m/s2"
+    },
+    {
+      "criterion_id": "INT-6",
+      "value": 5.0,
+      "sigma": 0.02,
+      "unit": "m"
+    }
+  ],
+  "flags": [
+    "FLAG_REDUCED_TRUTH",
+    "FLAG_INCOMPLETE_COVERAGE"
+  ]
+}

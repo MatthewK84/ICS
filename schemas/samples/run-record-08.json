@@ -1,0 +1,142 @@
+{
+  "run_id": "example-08",
+  "event_id": "EXAMPLE",
+  "start_utc_ns": "1791220800000000000",
+  "end_utc_ns": "1791220980000000000",
+  "range_origin": {
+    "latitude_deg": 40.0,
+    "longitude_deg": -100.0,
+    "height_ellipsoid_m": 700.0
+  },
+  "stations": [
+    {
+      "station_id": "north",
+      "position": {
+        "latitude_deg": 40.0134747,
+        "longitude_deg": -100.0,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "north-narrow",
+        "north-wide",
+        "north-mwir"
+      ]
+    },
+    {
+      "station_id": "east",
+      "position": {
+        "latitude_deg": 40.0,
+        "longitude_deg": -99.9824101,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "east-narrow",
+        "east-wide",
+        "east-mwir"
+      ]
+    }
+  ],
+  "software_revision": "b47b069880f4157d994e2f19a437be865833a78e",
+  "parameter_files": [
+    {
+      "path": "parameters/pointing-model.toml",
+      "sha256_hex": "8bf1bde608c82ff7f5c585a9496e9c0dc1e756884cc8f880649c913a9e8d7944",
+      "size_bytes": "6073551",
+      "media_type": "application/toml"
+    },
+    {
+      "path": "parameters/drag-table.toml",
+      "sha256_hex": "bcdc3f52a150356bd613af0e68f3bc993dbaadeb26b4871f1b9876c538765f65",
+      "size_bytes": "4841784",
+      "media_type": "application/toml"
+    },
+    {
+      "path": "parameters/kill-thresholds.toml",
+      "sha256_hex": "acd9e3e4043aa0494a6bf95f315e9a5ed99a86f4519c87d2b2e19d0e9a3aff8e",
+      "size_bytes": "6400372",
+      "media_type": "application/toml"
+    }
+  ],
+  "models": [
+    {
+      "path": "models/segmentation.onnx",
+      "sha256_hex": "d0bf9af97051958985ea630ecaddf8d237dbf58289a82007a4f13fefe1add6e6",
+      "size_bytes": "4437670",
+      "media_type": "application/onnx"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "tracks.binpb",
+      "sha256_hex": "dac70d6f0286eacfedfbcf593e60dc238aecec791edf56bc95bfb9d42e6ac4ad",
+      "size_bytes": "1840011",
+      "media_type": "application/x-protobuf"
+    },
+    {
+      "path": "frame-metadata.binpb",
+      "sha256_hex": "60960ba1831bdc7e06cd2edab5ed134fee8075a818c02efdd28c4d17774860a6",
+      "size_bytes": "3343358",
+      "media_type": "application/x-protobuf"
+    },
+    {
+      "path": "pli.binpb",
+      "sha256_hex": "a0a8915af1c897aa717e073bc3c1d0a2b71852130f3729c14ac522d6437108f1",
+      "size_bytes": "1361120",
+      "media_type": "application/x-protobuf"
+    }
+  ],
+  "kill_assessment": {
+    "run_id": "example-08",
+    "target_track_id": "target",
+    "interceptor_track_id": "interceptor",
+    "computed_class": "KILL_CLASS_UNDETERMINED",
+    "closest_approach_utc_ns": "1791220838600000000",
+    "miss_distance_m": 3.5,
+    "miss_distance_sigma_m": 0.02,
+    "intercept_point_enu_m": {
+      "east": 496.0,
+      "north": 1084.0,
+      "up": 160.0
+    },
+    "thresholds": [
+      {
+        "name": "N",
+        "value": 5.0,
+        "unit": "1"
+      },
+      {
+        "name": "m",
+        "value": 0.01,
+        "unit": "kg"
+      },
+      {
+        "name": "T",
+        "value": 10.0,
+        "unit": "s"
+      },
+      {
+        "name": "residual_gate",
+        "value": 3.0,
+        "unit": "1"
+      }
+    ],
+    "thresholds_file": {
+      "path": "parameters/kill-thresholds.toml",
+      "sha256_hex": "acd9e3e4043aa0494a6bf95f315e9a5ed99a86f4519c87d2b2e19d0e9a3aff8e",
+      "size_bytes": "6400372",
+      "media_type": "application/toml"
+    },
+    "overrides": [
+      {
+        "kill_class": "KILL_CLASS_NO_TEST",
+        "user": "evaluator.example",
+        "time_utc_ns": "1791224438600000000",
+        "reason": "The target left the test area before the engagement."
+      }
+    ],
+    "breakup_piece_count": 0,
+    "mission_denied": false
+  },
+  "measurements": [],
+  "flags": []
+}

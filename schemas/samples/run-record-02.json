@@ -1,0 +1,297 @@
+{
+  "run_id": "example-02",
+  "event_id": "EXAMPLE",
+  "start_utc_ns": "1791213600000000000",
+  "end_utc_ns": "1791213780000000000",
+  "range_origin": {
+    "latitude_deg": 40.0,
+    "longitude_deg": -100.0,
+    "height_ellipsoid_m": 700.0
+  },
+  "stations": [
+    {
+      "station_id": "north",
+      "position": {
+        "latitude_deg": 40.0134747,
+        "longitude_deg": -100.0,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "north-narrow",
+        "north-wide",
+        "north-mwir"
+      ]
+    },
+    {
+      "station_id": "east",
+      "position": {
+        "latitude_deg": 40.0,
+        "longitude_deg": -99.9824101,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "east-narrow",
+        "east-wide",
+        "east-mwir"
+      ]
+    },
+    {
+      "station_id": "west",
+      "position": {
+        "latitude_deg": 40.0,
+        "longitude_deg": -100.0175899,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "west-narrow",
+        "west-wide",
+        "west-mwir"
+      ]
+    }
+  ],
+  "software_revision": "b47b069880f4157d994e2f19a437be865833a78e",
+  "parameter_files": [
+    {
+      "path": "parameters/pointing-model.toml",
+      "sha256_hex": "a79017e6b3603dd76eeab481ceba356de78c044fcfcc6fb3460e200d594ef100",
+      "size_bytes": "6064449",
+      "media_type": "application/toml"
+    },
+    {
+      "path": "parameters/drag-table.toml",
+      "sha256_hex": "c74cded2f7e7cfd41c3deea4a22eb588e018f8f3966b44239e531532e061a660",
+      "size_bytes": "4833570",
+      "media_type": "application/toml"
+    },
+    {
+      "path": "parameters/kill-thresholds.toml",
+      "sha256_hex": "1fef89ba185a7f8d36eb2857f0834a66e8b467ba81f2acd25bfd5b2a7fa47a2f",
+      "size_bytes": "6391048",
+      "media_type": "application/toml"
+    }
+  ],
+  "models": [
+    {
+      "path": "models/segmentation.onnx",
+      "sha256_hex": "ccb3b815ee1fccc9a3a4732aec0dce04c95463ee306e904600d87a6051a0f214",
+      "size_bytes": "4429900",
+      "media_type": "application/onnx"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "tracks.binpb",
+      "sha256_hex": "070cdf027661dddea098b4bb0755e516d0dac406548c694fbb7c31f529adaada",
+      "size_bytes": "1834905",
+      "media_type": "application/x-protobuf"
+    },
+    {
+      "path": "frame-metadata.binpb",
+      "sha256_hex": "094d8ba30d2ab5cdf9bea6f6b76ed5a686f9e4ab919a666e672657443ce48186",
+      "size_bytes": "3336476",
+      "media_type": "application/x-protobuf"
+    },
+    {
+      "path": "pli.binpb",
+      "sha256_hex": "ed0df9d080ce44e10c371cc95b8a4984a6f3e0fa2bcf03b354ad2a889753e208",
+      "size_bytes": "1356680",
+      "media_type": "application/x-protobuf"
+    }
+  ],
+  "kill_assessment": {
+    "run_id": "example-02",
+    "target_track_id": "target",
+    "interceptor_track_id": "interceptor",
+    "computed_class": "KILL_CLASS_HARD_KILL",
+    "closest_approach_utc_ns": "1791213631400000000",
+    "contact_utc_ns": "1791213631400000000",
+    "miss_distance_m": 0.07,
+    "miss_distance_sigma_m": 0.02,
+    "intercept_point_enu_m": {
+      "east": 274.0,
+      "north": 946.0,
+      "up": 130.0
+    },
+    "ballistic_fit_residual": 0.7,
+    "mission_denied": true,
+    "thresholds": [
+      {
+        "name": "N",
+        "value": 5.0,
+        "unit": "1"
+      },
+      {
+        "name": "m",
+        "value": 0.01,
+        "unit": "kg"
+      },
+      {
+        "name": "T",
+        "value": 10.0,
+        "unit": "s"
+      },
+      {
+        "name": "residual_gate",
+        "value": 3.0,
+        "unit": "1"
+      }
+    ],
+    "thresholds_file": {
+      "path": "parameters/kill-thresholds.toml",
+      "sha256_hex": "1fef89ba185a7f8d36eb2857f0834a66e8b467ba81f2acd25bfd5b2a7fa47a2f",
+      "size_bytes": "6391048",
+      "media_type": "application/toml"
+    },
+    "breakup_piece_count": 0,
+    "overrides": []
+  },
+  "footprint": {
+    "run_id": "example-02",
+    "sample_count": 10000,
+    "fragment_ids": [
+      "target-body"
+    ],
+    "regions": [
+      {
+        "probability": 0.5,
+        "polygons": [
+          {
+            "vertices": [
+              {
+                "latitude_deg": 40.0082734,
+                "longitude_deg": -99.9967283,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0082734,
+                "longitude_deg": -99.9961419,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0087226,
+                "longitude_deg": -99.9961419,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0087226,
+                "longitude_deg": -99.9967283,
+                "height_ellipsoid_m": 700.0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "probability": 0.9,
+        "polygons": [
+          {
+            "vertices": [
+              {
+                "latitude_deg": 40.007959,
+                "longitude_deg": -99.9971387,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.007959,
+                "longitude_deg": -99.9957315,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.009037,
+                "longitude_deg": -99.9957315,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.009037,
+                "longitude_deg": -99.9971387,
+                "height_ellipsoid_m": 700.0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "probability": 0.99,
+        "polygons": [
+          {
+            "vertices": [
+              {
+                "latitude_deg": 40.0075099,
+                "longitude_deg": -99.997725,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0075099,
+                "longitude_deg": -99.9951452,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0094862,
+                "longitude_deg": -99.9951452,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0094862,
+                "longitude_deg": -99.997725,
+                "height_ellipsoid_m": 700.0
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "inputs": [
+      {
+        "path": "inputs/wind-profile.json",
+        "sha256_hex": "d2c9cd13b5d6478a452f89cb36e8fb5c9fdc20be2fa2a79e11b2b73496d48e52",
+        "size_bytes": "4378100",
+        "media_type": "application/json"
+      },
+      {
+        "path": "parameters/drag-table.toml",
+        "sha256_hex": "c74cded2f7e7cfd41c3deea4a22eb588e018f8f3966b44239e531532e061a660",
+        "size_bytes": "4833570",
+        "media_type": "application/toml"
+      }
+    ]
+  },
+  "measurements": [
+    {
+      "criterion_id": "3.1.2",
+      "value": 1.0,
+      "unit": "1",
+      "sigma": 0.0
+    },
+    {
+      "criterion_id": "3.1.3",
+      "value": 1422.565,
+      "sigma": 1.5,
+      "unit": "m"
+    },
+    {
+      "criterion_id": "3.1.4",
+      "value": 10.4,
+      "sigma": 0.001,
+      "unit": "s"
+    },
+    {
+      "criterion_id": "INT-1",
+      "value": 63.0,
+      "sigma": 0.5,
+      "unit": "m/s"
+    },
+    {
+      "criterion_id": "INT-2",
+      "value": 39.0,
+      "sigma": 1.0,
+      "unit": "m/s2"
+    },
+    {
+      "criterion_id": "INT-6",
+      "value": 0.07,
+      "sigma": 0.02,
+      "unit": "m"
+    }
+  ],
+  "flags": []
+}

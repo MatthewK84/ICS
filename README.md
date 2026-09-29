@@ -7,7 +7,7 @@ ICS produces truth-grade intercept, kill and debris data for non-explosive hit-t
 Start here:
 
 - [Build plan](docs/build-plan.md): phases, language boundaries, coding standards, task card and Definition of Done.
-- [GitHub issues (Path B)](docs/github-issues-path-b.md): the 97 issues, ICS-001 through ICS-097, by milestone.
+- [GitHub issues (Path B)](docs/github-issues-path-b.md): the 96 issues, ICS-001 through ICS-097 (ICS-080 was dropped), by milestone.
 - [Contributing](CONTRIBUTING.md): the workflow, task card, Definition of Done, branch naming and review rules.
 - [Repository protection](docs/repository-protection.md): the rules on `main` and how changes get merged.
 

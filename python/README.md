@@ -8,7 +8,7 @@ Planned layout:
 
 ```text
 python/
-  ics_golden/   golden test vectors shared with C++ and TypeScript (golden/)
+  ics_golden/   golden test vectors shared with C++ and TypeScript (golden/), and the run-record samples (schemas/)
   ics_models/   pointing, calibration, trajectory, drag, footprint, killclass, uncertainty
   ics_synth/    synthetic engagement generator
   ics_stats/    Pk, timeline analysis, validation scorer
