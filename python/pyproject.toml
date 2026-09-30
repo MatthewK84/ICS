@@ -12,11 +12,14 @@ dependencies = ["protobuf==7.35.1"]
 [dependency-groups]
 dev = [
   "hypothesis==6.168.2",
+  # Validates run records against schemas/run-record.schema.json (ICS-013).
+  "jsonschema==4.26.0",
   "mypy==2.3.1",
   "pytest==9.1.1",
   "pytest-cov==7.1.0",
   "ruff==0.16.9",
-  # Type stubs for the protobuf runtime, which ships none; used by mypy.
+  # Type stubs for jsonschema and the protobuf runtime, which ship none; used by mypy.
+  "types-jsonschema==4.26.0.20260518",
   "types-protobuf==7.35.1.20260906",
 ]
 

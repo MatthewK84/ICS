@@ -1,0 +1,364 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ics:schema:run-record:v1",
+  "title": "ICS run record",
+  "description": "One run of the Intercept Characterization System (ICS): the protobuf JSON form of ics.v1.RunRecord (proto/ics/v1/run_record.proto), printed with proto field names and every field without presence. Measurements are keyed to the JIATF 401 Common Criteria for CUAS Characterization (C4) or to a validation criterion. See schemas/README.md (ICS-013).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id",
+    "event_id",
+    "start_utc_ns",
+    "end_utc_ns",
+    "range_origin",
+    "stations",
+    "software_revision",
+    "parameter_files",
+    "models",
+    "artifacts",
+    "kill_assessment",
+    "measurements",
+    "flags"
+  ],
+  "properties": {
+    "run_id": {
+      "description": "The run, unique across all test events.",
+      "$ref": "#/$defs/identifier"
+    },
+    "event_id": {
+      "description": "The test event the run belongs to, for example \"V2\".",
+      "$ref": "#/$defs/identifier"
+    },
+    "start_utc_ns": {
+      "description": "When the run started, UTC, in nanoseconds since the Unix epoch.",
+      "$ref": "#/$defs/utc_ns"
+    },
+    "end_utc_ns": {
+      "description": "When the run ended, UTC, in nanoseconds since the Unix epoch.",
+      "$ref": "#/$defs/utc_ns"
+    },
+    "range_origin": {
+      "description": "The origin of the range ENU frame: the defended asset.",
+      "$ref": "#/$defs/geodetic_point"
+    },
+    "stations": {
+      "description": "The stations that took part.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/station" }
+    },
+    "software_revision": {
+      "description": "The ICS source revision that produced the record, as a full git commit SHA (SHA-1 or SHA-256).",
+      "type": "string",
+      "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+    },
+    "parameter_files": {
+      "description": "The parameter files loaded at startup: pointing models, drag tables, kill thresholds and the like.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/file_digest" }
+    },
+    "models": {
+      "description": "The models loaded at startup, such as ONNX files.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/file_digest" }
+    },
+    "artifacts": {
+      "description": "Every other artifact of the run: tracks, fragments, frame metadata, PLI logs and imagery.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/file_digest" }
+    },
+    "kill_assessment": { "$ref": "#/$defs/kill_assessment" },
+    "footprint": { "$ref": "#/$defs/footprint" },
+    "measurements": {
+      "description": "The measured values, each keyed to a C4 measure or a validation criterion.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/measurement" }
+    },
+    "flags": {
+      "description": "Conditions that limit what the run can support.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["FLAG_REDUCED_TRUTH", "FLAG_INCOMPLETE_COVERAGE", "FLAG_TIME_DEGRADED"] }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "utc_ns": {
+      "description": "A time, UTC, in nanoseconds since the Unix epoch: an int64 written as a decimal string, as protobuf JSON writes 64-bit integers.",
+      "type": "string",
+      "pattern": "^[0-9]{1,19}$"
+    },
+    "non_negative": {
+      "type": "number",
+      "minimum": 0
+    },
+    "geodetic_point": {
+      "description": "A point on or above the WGS84 ellipsoid.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["latitude_deg", "longitude_deg", "height_ellipsoid_m"],
+      "properties": {
+        "latitude_deg": { "description": "Geodetic latitude, in degrees, positive north.", "type": "number", "minimum": -90, "maximum": 90 },
+        "longitude_deg": { "description": "Longitude, in degrees, positive east.", "type": "number", "minimum": -180, "maximum": 180 },
+        "height_ellipsoid_m": { "description": "Height above the WGS84 ellipsoid, in metres.", "type": "number" }
+      }
+    },
+    "enu_vector": {
+      "description": "A vector in the range ENU frame; the field that holds it names the unit.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["east", "north", "up"],
+      "properties": {
+        "east": { "type": "number" },
+        "north": { "type": "number" },
+        "up": { "type": "number" }
+      }
+    },
+    "file_digest": {
+      "description": "A file named by its SHA-256 digest.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256_hex", "size_bytes", "media_type"],
+      "properties": {
+        "path": { "description": "Path relative to the run's data root, with forward slashes.", "type": "string", "pattern": "^[^/\\\\][^\\\\]*$" },
+        "sha256_hex": { "description": "SHA-256 of the file's bytes, as 64 lowercase hexadecimal characters.", "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "size_bytes": { "description": "Size of the file, in bytes: a uint64 written as a decimal string.", "type": "string", "pattern": "^[0-9]{1,20}$" },
+        "media_type": { "description": "The file's media type, for example \"application/x-protobuf\".", "type": "string", "pattern": "^[a-z]+/[A-Za-z0-9.+-]+$" }
+      }
+    },
+    "station": {
+      "description": "A station that took part.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["station_id", "position", "camera_ids"],
+      "properties": {
+        "station_id": { "$ref": "#/$defs/identifier" },
+        "position": { "description": "The mount's surveyed reference point.", "$ref": "#/$defs/geodetic_point" },
+        "camera_ids": { "type": "array", "items": { "$ref": "#/$defs/identifier" } }
+      }
+    },
+    "kill_class": {
+      "enum": [
+        "KILL_CLASS_NO_KILL",
+        "KILL_CLASS_MISSION_KILL",
+        "KILL_CLASS_HARD_KILL",
+        "KILL_CLASS_CATASTROPHIC_KILL",
+        "KILL_CLASS_NO_TEST",
+        "KILL_CLASS_UNDETERMINED"
+      ]
+    },
+    "threshold": {
+      "description": "One threshold the kill classifier applied, as named in the kill-threshold parameter file.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "value", "unit"],
+      "properties": {
+        "name": { "$ref": "#/$defs/text" },
+        "value": { "type": "number" },
+        "unit": { "description": "A UCUM unit code; \"1\" if dimensionless.", "$ref": "#/$defs/text" }
+      }
+    },
+    "override": {
+      "description": "An evaluator's override of the kill class.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kill_class", "user", "time_utc_ns", "reason"],
+      "properties": {
+        "kill_class": { "$ref": "#/$defs/kill_class" },
+        "user": { "$ref": "#/$defs/text" },
+        "time_utc_ns": { "$ref": "#/$defs/utc_ns" },
+        "reason": { "description": "Why, in the evaluator's words; required.", "$ref": "#/$defs/text" }
+      }
+    },
+    "kill_assessment": {
+      "description": "What the engagement did to its target, and the evidence for it (ics.v1.KillAssessment).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "target_track_id",
+        "interceptor_track_id",
+        "computed_class",
+        "closest_approach_utc_ns",
+        "miss_distance_m",
+        "miss_distance_sigma_m",
+        "breakup_piece_count",
+        "mission_denied",
+        "thresholds",
+        "overrides"
+      ],
+      "properties": {
+        "run_id": { "$ref": "#/$defs/identifier" },
+        "target_track_id": { "type": "string" },
+        "interceptor_track_id": { "type": "string" },
+        "computed_class": {
+          "description": "The class the classifier computed. Only an evaluator assigns KILL_CLASS_NO_TEST.",
+          "enum": [
+            "KILL_CLASS_NO_KILL",
+            "KILL_CLASS_MISSION_KILL",
+            "KILL_CLASS_HARD_KILL",
+            "KILL_CLASS_CATASTROPHIC_KILL",
+            "KILL_CLASS_UNDETERMINED"
+          ]
+        },
+        "closest_approach_utc_ns": { "$ref": "#/$defs/utc_ns" },
+        "contact_utc_ns": { "description": "The time of first contact; absent if they did not touch.", "$ref": "#/$defs/utc_ns" },
+        "miss_distance_m": { "description": "Miss distance at closest approach, in metres.", "$ref": "#/$defs/non_negative" },
+        "miss_distance_sigma_m": { "description": "One-sigma uncertainty of miss_distance_m, in metres.", "$ref": "#/$defs/non_negative" },
+        "intercept_point_enu_m": { "description": "Where closest approach happened, in the range ENU frame, in metres.", "$ref": "#/$defs/enu_vector" },
+        "breakup_piece_count": { "type": "integer", "minimum": 0 },
+        "ballistic_fit_residual": { "description": "Normalized residual of the ballistic fit; absent if no fit was possible.", "$ref": "#/$defs/non_negative" },
+        "mission_denied": { "type": "boolean" },
+        "thresholds": { "type": "array", "items": { "$ref": "#/$defs/threshold" } },
+        "thresholds_file": { "$ref": "#/$defs/file_digest" },
+        "overrides": {
+          "description": "The evaluators' overrides, oldest first. The last one is in force.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/override" }
+        }
+      }
+    },
+    "polygon": {
+      "description": "A polygon on the ground: vertices in order, counterclockwise seen from above, not closed.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["vertices"],
+      "properties": {
+        "vertices": { "type": "array", "minItems": 3, "items": { "$ref": "#/$defs/geodetic_point" } }
+      }
+    },
+    "region": {
+      "description": "The area a piece lands in with a given probability.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["probability", "polygons"],
+      "properties": {
+        "probability": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        "polygons": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/polygon" } }
+      }
+    },
+    "footprint": {
+      "description": "Probability regions on the ground for the run's debris (ics.v1.Footprint).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_id", "sample_count", "fragment_ids", "regions", "inputs"],
+      "properties": {
+        "run_id": { "$ref": "#/$defs/identifier" },
+        "sample_count": { "type": "integer", "minimum": 1 },
+        "fragment_ids": { "type": "array", "items": { "$ref": "#/$defs/text" } },
+        "regions": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/region" } },
+        "inputs": { "type": "array", "items": { "$ref": "#/$defs/file_digest" } }
+      }
+    },
+    "measurement": {
+      "description": "One measured value. Exactly one branch applies: a C4 measure with its fixed unit, or a validation criterion.",
+      "oneOf": [
+        { "$ref": "#/$defs/c4_3_1_2" },
+        { "$ref": "#/$defs/c4_3_1_3" },
+        { "$ref": "#/$defs/c4_3_1_4" },
+        { "$ref": "#/$defs/c4_int_1" },
+        { "$ref": "#/$defs/c4_int_2" },
+        { "$ref": "#/$defs/c4_int_6" },
+        { "$ref": "#/$defs/validation_criterion" }
+      ]
+    },
+    "c4_3_1_2": {
+      "title": "C4 MOP 3.1.2 Probability of Kill / Defeat (Pk)",
+      "description": "Per run: 1 if the kill class in force is a kill (mission, hard or catastrophic), 0 if it is no kill. Omitted for no-test and undetermined runs. C4 reports Pk in percent over runs.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["criterion_id", "value", "sigma", "unit"],
+      "properties": {
+        "criterion_id": { "const": "3.1.2" },
+        "value": { "enum": [0, 1] },
+        "sigma": { "const": 0 },
+        "unit": { "const": "1" }
+      }
+    },
+    "c4_3_1_3": {
+      "title": "C4 MOP 3.1.3 Defeat Range",
+      "description": "Per defeat: the distance from the interceptor's launch point to the intercept point, in metres. C4 reports the mean over defeats in kilometres.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["criterion_id", "value", "sigma", "unit"],
+      "properties": {
+        "criterion_id": { "const": "3.1.3" },
+        "value": { "$ref": "#/$defs/non_negative" },
+        "sigma": { "$ref": "#/$defs/non_negative" },
+        "unit": { "const": "m" }
+      }
+    },
+    "c4_3_1_4": {
+      "title": "C4 MOP 3.1.4 Defeat Engagement Time",
+      "description": "Per defeat: the time from the engage command (the trigger controller arming) to closest approach, in seconds. C4 reports the mean over defeats in seconds.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["criterion_id", "value", "sigma", "unit"],
+      "properties": {
+        "criterion_id": { "const": "3.1.4" },
+        "value": { "$ref": "#/$defs/non_negative" },
+        "sigma": { "$ref": "#/$defs/non_negative" },
+        "unit": { "const": "s" }
+      }
+    },
+    "c4_int_1": {
+      "title": "C4 INT-1 Interceptor Max Speed",
+      "description": "Per run: the highest interceptor speed observed, in metres per second. C4 reports it in m/s or knots.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["criterion_id", "value", "sigma", "unit"],
+      "properties": {
+        "criterion_id": { "const": "INT-1" },
+        "value": { "$ref": "#/$defs/non_negative" },
+        "sigma": { "$ref": "#/$defs/non_negative" },
+        "unit": { "const": "m/s" }
+      }
+    },
+    "c4_int_2": {
+      "title": "C4 INT-2 Acceleration / G-Load",
+      "description": "Per run: the peak interceptor acceleration observed, in metres per second squared. C4 reports it in g (9.80665 m/s2).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["criterion_id", "value", "sigma", "unit"],
+      "properties": {
+        "criterion_id": { "const": "INT-2" },
+        "value": { "$ref": "#/$defs/non_negative" },
+        "sigma": { "$ref": "#/$defs/non_negative" },
+        "unit": { "const": "m/s2" }
+      }
+    },
+    "c4_int_6": {
+      "title": "C4 INT-6 Terminal Guidance Accuracy (CEP)",
+      "description": "Per run: the miss distance at closest approach, in metres (kill_assessment.miss_distance_m). C4 reports the circular error probable over runs in metres.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["criterion_id", "value", "sigma", "unit"],
+      "properties": {
+        "criterion_id": { "const": "INT-6" },
+        "value": { "$ref": "#/$defs/non_negative" },
+        "sigma": { "$ref": "#/$defs/non_negative" },
+        "unit": { "const": "m" }
+      }
+    },
+    "validation_criterion": {
+      "title": "Validation criterion C1 to C19",
+      "description": "A value toward one of the ICS validation criteria, in the unit its definition gives as a UCUM code.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["criterion_id", "value", "sigma", "unit"],
+      "properties": {
+        "criterion_id": { "type": "string", "pattern": "^C([1-9]|1[0-9])$" },
+        "value": { "type": "number" },
+        "sigma": { "$ref": "#/$defs/non_negative" },
+        "unit": { "$ref": "#/$defs/text" }
+      }
+    }
+  }
+}

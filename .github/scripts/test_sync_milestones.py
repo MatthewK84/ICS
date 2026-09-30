@@ -42,9 +42,10 @@ class ManifestTests(unittest.TestCase):
         with self.assertRaises(gh.ScriptError):
             sm.parse_manifest(data)
 
-    def test_repository_manifest_covers_all_97_tasks(self) -> None:
+    def test_repository_manifest_covers_every_planned_task(self) -> None:
         manifest: sm.Manifest = sm.load_manifest(str(MANIFEST_PATH))
-        expected: set[str] = {f"ICS-{number:03d}" for number in range(1, 98)}
+        # ICS-080 was dropped (ICS-013).
+        expected: set[str] = {f"ICS-{number:03d}" for number in range(1, 98)} - {"ICS-080"}
         self.assertEqual(len(manifest.milestones), 7)
         self.assertEqual(set(manifest.task_milestones), expected)
 

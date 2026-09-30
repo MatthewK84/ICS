@@ -1,0 +1,174 @@
+{
+  "run_id": "example-16",
+  "event_id": "EXAMPLE",
+  "start_utc_ns": "1791230400000000000",
+  "end_utc_ns": "1791230580000000000",
+  "range_origin": {
+    "latitude_deg": 40.0,
+    "longitude_deg": -100.0,
+    "height_ellipsoid_m": 700.0
+  },
+  "stations": [
+    {
+      "station_id": "north",
+      "position": {
+        "latitude_deg": 40.0134747,
+        "longitude_deg": -100.0,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "north-narrow",
+        "north-wide",
+        "north-mwir"
+      ]
+    },
+    {
+      "station_id": "east",
+      "position": {
+        "latitude_deg": 40.0,
+        "longitude_deg": -99.9824101,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "east-narrow",
+        "east-wide",
+        "east-mwir"
+      ]
+    },
+    {
+      "station_id": "west",
+      "position": {
+        "latitude_deg": 40.0,
+        "longitude_deg": -100.0175899,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "west-narrow",
+        "west-wide",
+        "west-mwir"
+      ]
+    }
+  ],
+  "software_revision": "b47b069880f4157d994e2f19a437be865833a78e",
+  "parameter_files": [
+    {
+      "path": "parameters/pointing-model.toml",
+      "sha256_hex": "a7fb620899f06d07002cbce9961adac54c2bd01a804ea2c7a5768b7d6c643aaf",
+      "size_bytes": "6072034",
+      "media_type": "application/toml"
+    },
+    {
+      "path": "parameters/drag-table.toml",
+      "sha256_hex": "1e991f165b64c204125f26bd596c013eed96f92c52409fdce8e4a6ae323e4f13",
+      "size_bytes": "4840415",
+      "media_type": "application/toml"
+    },
+    {
+      "path": "parameters/kill-thresholds.toml",
+      "sha256_hex": "db461f5a121cf9a65ac7e1912313812a195ff9714ad80b71ddbcef2e34ed7314",
+      "size_bytes": "6398818",
+      "media_type": "application/toml"
+    }
+  ],
+  "models": [
+    {
+      "path": "models/segmentation.onnx",
+      "sha256_hex": "faf4c6d3f980af5f3ca17c22bebadb1abf788f336395ead057effddbcdb4a196",
+      "size_bytes": "4436375",
+      "media_type": "application/onnx"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "tracks.binpb",
+      "sha256_hex": "b3ff6522681e7c46b90eb97a86f97a5a8fa1fbf12e151626394259126e6ff53e",
+      "size_bytes": "1839160",
+      "media_type": "application/x-protobuf"
+    },
+    {
+      "path": "frame-metadata.binpb",
+      "sha256_hex": "45113813448bc927feab13827b43a14e3ec3a017ff23c68e86e7b6e7fe2680a2",
+      "size_bytes": "3342211",
+      "media_type": "application/x-protobuf"
+    },
+    {
+      "path": "pli.binpb",
+      "sha256_hex": "c3ce537a3586dfec8371484fb338c0c1bab4d9a97bf21ef1a8ee4c0594e9f293",
+      "size_bytes": "1360380",
+      "media_type": "application/x-protobuf"
+    }
+  ],
+  "kill_assessment": {
+    "run_id": "example-16",
+    "target_track_id": "target",
+    "interceptor_track_id": "interceptor",
+    "computed_class": "KILL_CLASS_NO_KILL",
+    "closest_approach_utc_ns": "1791230448200000000",
+    "miss_distance_m": 5.5,
+    "miss_distance_sigma_m": 0.02,
+    "intercept_point_enu_m": {
+      "east": 792.0,
+      "north": 1268.0,
+      "up": 200.0
+    },
+    "ballistic_fit_residual": 1.4,
+    "thresholds": [
+      {
+        "name": "N",
+        "value": 5.0,
+        "unit": "1"
+      },
+      {
+        "name": "m",
+        "value": 0.01,
+        "unit": "kg"
+      },
+      {
+        "name": "T",
+        "value": 10.0,
+        "unit": "s"
+      },
+      {
+        "name": "residual_gate",
+        "value": 3.0,
+        "unit": "1"
+      }
+    ],
+    "thresholds_file": {
+      "path": "parameters/kill-thresholds.toml",
+      "sha256_hex": "db461f5a121cf9a65ac7e1912313812a195ff9714ad80b71ddbcef2e34ed7314",
+      "size_bytes": "6398818",
+      "media_type": "application/toml"
+    },
+    "breakup_piece_count": 0,
+    "mission_denied": false,
+    "overrides": []
+  },
+  "measurements": [
+    {
+      "criterion_id": "3.1.2",
+      "unit": "1",
+      "value": 0.0,
+      "sigma": 0.0
+    },
+    {
+      "criterion_id": "INT-1",
+      "value": 84.0,
+      "sigma": 0.5,
+      "unit": "m/s"
+    },
+    {
+      "criterion_id": "INT-2",
+      "value": 67.0,
+      "sigma": 1.0,
+      "unit": "m/s2"
+    },
+    {
+      "criterion_id": "INT-6",
+      "value": 5.5,
+      "sigma": 0.02,
+      "unit": "m"
+    }
+  ],
+  "flags": []
+}

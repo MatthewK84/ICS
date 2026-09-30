@@ -4,7 +4,7 @@ Sep 26, 2026 · @Matthew Kolakowski
 
 ## BLUF
 
-Build ICS in 77 tasks across seven phases: 34 C++ tasks, 1 firmware task, 13 Python model tasks, 10 TypeScript/React tasks, and 19 foundation, contract and integration tasks. Lock the protobuf contracts first, write every algorithm in Python before porting it to C++, and field-test only after SITL and HIL pass. The critical path runs through encoder time-tagging and moving-camera registration, not the image algorithms. Path A completes in about 18 to 20 months; Path B adds about 4 months to Phase 4.
+Build ICS in 76 tasks across seven phases: 33 C++ tasks, 1 firmware task, 13 Python model tasks, 10 TypeScript/React tasks, and 19 foundation, contract and integration tasks. Lock the protobuf contracts first, write every algorithm in Python before porting it to C++, and field-test only after SITL and HIL pass. The critical path runs through encoder time-tagging and moving-camera registration, not the image algorithms. Path A completes in about 18 to 20 months; Path B adds about 4 months to Phase 4.
 
 ## Execution instructions
 
@@ -110,7 +110,7 @@ Stand up the repository, three toolchains, the evidence pipeline and the shared 
 | FND-08 | Add AI-assist controls per §3.6: merge-request label, required human review, model and version log | All | FND-01 | Template blocks merge until the label is set |
 | FND-09 | Publish the task card and Definition of Done in CONTRIBUTING | All | FND-01 | Every issue uses the card |
 | PRO-01 | Define protobuf contracts: TimeQuality, PliRecord, PliEvent, MountSample, CameraFrameMeta, TriggerEvent, Track, Fragment, KillAssessment, Footprint, RunRecord | Proto | FND-01 | buf lint and buf breaking pass; C++, Python and TS code generated |
-| PRO-02 | Publish the run-record JSON Schema keyed to C4 MOP and KPP IDs; agree the DroneScore import mapping | Proto | PRO-01 | 20 sample records validate and import |
+| PRO-02 | Publish the run-record JSON Schema keyed to C4 MOP and KPP IDs | Proto | PRO-01 | 20 sample records validate |
 | PRO-03 | Fix frame and time conventions: WGS84, range ENU origin at the defended asset, UTC as int64 ns, ellipsoid heights | C++, Python | PRO-01 | Shared golden vectors pass in both languages |
 
 ## Phases 1 and 2: Core services and station control (C++, months 2 to 8)
@@ -186,7 +186,6 @@ Port each Python reference to C++ and gate every port on parity with its golden 
 | CPP-30 | Port the footprint Monte Carlo | PY-06 | Parity with PY-06; meets C11 |
 | CPP-31 | Deliver ics-pipeline: batch orchestration with checkpoints and bounded retry with backoff | CPP-23 to CPP-30 | Processes one run in ≤10 minutes on the field server |
 | CPP-32 | Build record: run records, SHA-256 manifests, in-toto attestations; adapt the verdict evidence-chain design | PRO-02, CPP-31 | Records validate; any byte change breaks verification |
-| CPP-33 | Build the DroneScore export adapter | CPP-32 | 50 sample runs import cleanly |
 | CPP-34 | Deliver ics-api: read-only gRPC query service behind Envoy gRPC-Web | PRO-01, CPP-32 | UI contract tests pass |
 
 ## Phase 5: Front end (TypeScript and React, months 4 to 15)

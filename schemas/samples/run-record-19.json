@@ -1,0 +1,157 @@
+{
+  "run_id": "example-19",
+  "event_id": "EXAMPLE",
+  "start_utc_ns": "1791234000000000000",
+  "end_utc_ns": "1791234180000000000",
+  "range_origin": {
+    "latitude_deg": 40.0,
+    "longitude_deg": -100.0,
+    "height_ellipsoid_m": 700.0
+  },
+  "stations": [
+    {
+      "station_id": "north",
+      "position": {
+        "latitude_deg": 40.0134747,
+        "longitude_deg": -100.0,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "north-narrow",
+        "north-wide",
+        "north-mwir"
+      ]
+    },
+    {
+      "station_id": "east",
+      "position": {
+        "latitude_deg": 40.0,
+        "longitude_deg": -99.9824101,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "east-narrow",
+        "east-wide",
+        "east-mwir"
+      ]
+    },
+    {
+      "station_id": "west",
+      "position": {
+        "latitude_deg": 40.0,
+        "longitude_deg": -100.0175899,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "west-narrow",
+        "west-wide",
+        "west-mwir"
+      ]
+    }
+  ],
+  "software_revision": "b47b069880f4157d994e2f19a437be865833a78e",
+  "parameter_files": [
+    {
+      "path": "parameters/pointing-model.toml",
+      "sha256_hex": "90a6aa470c9b70b60642a096dff8b9da46aa0cc8d87a8c6daa5057f413a97cf5",
+      "size_bytes": "6076585",
+      "media_type": "application/toml"
+    },
+    {
+      "path": "parameters/drag-table.toml",
+      "sha256_hex": "988bdf40639f8b5da0444dd4aafe0ca5625aea57049dd2ba82eaaebb051a70a9",
+      "size_bytes": "4844522",
+      "media_type": "application/toml"
+    },
+    {
+      "path": "parameters/kill-thresholds.toml",
+      "sha256_hex": "de652d1f67a61b9dd961f345280853b2cd11636d13ba12dadf86346e87a252d5",
+      "size_bytes": "6403480",
+      "media_type": "application/toml"
+    }
+  ],
+  "models": [
+    {
+      "path": "models/segmentation.onnx",
+      "sha256_hex": "3b4ccfc4a73e6a756d1661add6f9ddd359137cdd83e881513084c59e33cfdcbc",
+      "size_bytes": "4440260",
+      "media_type": "application/onnx"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "tracks.binpb",
+      "sha256_hex": "750438d29713b843085faea642a208816a0f08a3b6c50b64a296dfa3eb79e430",
+      "size_bytes": "1841713",
+      "media_type": "application/x-protobuf"
+    },
+    {
+      "path": "frame-metadata.binpb",
+      "sha256_hex": "3edcf334ab35c42b60f02be48ac39187c6a9e7af7841efbf78ea23d10546a35f",
+      "size_bytes": "3345652",
+      "media_type": "application/x-protobuf"
+    },
+    {
+      "path": "pli.binpb",
+      "sha256_hex": "0cb840ae550723d9c25529b70fed84909027143e71821018a2b37ad7e5ca5727",
+      "size_bytes": "1362600",
+      "media_type": "application/x-protobuf"
+    }
+  ],
+  "kill_assessment": {
+    "run_id": "example-19",
+    "target_track_id": "target",
+    "interceptor_track_id": "interceptor",
+    "computed_class": "KILL_CLASS_NO_KILL",
+    "closest_approach_utc_ns": "1791234051800000000",
+    "miss_distance_m": 6.25,
+    "miss_distance_sigma_m": 0.02,
+    "intercept_point_enu_m": {
+      "east": 903.0,
+      "north": 1337.0,
+      "up": 215.0
+    },
+    "thresholds": [
+      {
+        "name": "N",
+        "value": 5.0,
+        "unit": "1"
+      },
+      {
+        "name": "m",
+        "value": 0.01,
+        "unit": "kg"
+      },
+      {
+        "name": "T",
+        "value": 10.0,
+        "unit": "s"
+      },
+      {
+        "name": "residual_gate",
+        "value": 3.0,
+        "unit": "1"
+      }
+    ],
+    "thresholds_file": {
+      "path": "parameters/kill-thresholds.toml",
+      "sha256_hex": "de652d1f67a61b9dd961f345280853b2cd11636d13ba12dadf86346e87a252d5",
+      "size_bytes": "6403480",
+      "media_type": "application/toml"
+    },
+    "overrides": [
+      {
+        "kill_class": "KILL_CLASS_NO_TEST",
+        "user": "evaluator.example",
+        "time_utc_ns": "1791237651800000000",
+        "reason": "The target left the test area before the engagement."
+      }
+    ],
+    "breakup_piece_count": 0,
+    "mission_denied": false
+  },
+  "flags": [
+    "FLAG_REDUCED_TRUTH"
+  ],
+  "measurements": []
+}

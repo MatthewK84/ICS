@@ -1,0 +1,313 @@
+{
+  "run_id": "example-05",
+  "event_id": "EXAMPLE",
+  "start_utc_ns": "1791217200000000000",
+  "end_utc_ns": "1791217380000000000",
+  "range_origin": {
+    "latitude_deg": 40.0,
+    "longitude_deg": -100.0,
+    "height_ellipsoid_m": 700.0
+  },
+  "stations": [
+    {
+      "station_id": "north",
+      "position": {
+        "latitude_deg": 40.0134747,
+        "longitude_deg": -100.0,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "north-narrow",
+        "north-wide",
+        "north-mwir"
+      ]
+    },
+    {
+      "station_id": "east",
+      "position": {
+        "latitude_deg": 40.0,
+        "longitude_deg": -99.9824101,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "east-narrow",
+        "east-wide",
+        "east-mwir"
+      ]
+    },
+    {
+      "station_id": "west",
+      "position": {
+        "latitude_deg": 40.0,
+        "longitude_deg": -100.0175899,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "west-narrow",
+        "west-wide",
+        "west-mwir"
+      ]
+    }
+  ],
+  "software_revision": "b47b069880f4157d994e2f19a437be865833a78e",
+  "parameter_files": [
+    {
+      "path": "parameters/pointing-model.toml",
+      "sha256_hex": "1c26998e56428fbd42d5a9cfeb8d95e26f48552a8396f60b6cde7b5c13db84b4",
+      "size_bytes": "6069000",
+      "media_type": "application/toml"
+    },
+    {
+      "path": "parameters/drag-table.toml",
+      "sha256_hex": "33fec467ff7f87715b281a7e6474901c425460461e63429a396c0193b0f76a5f",
+      "size_bytes": "4837677",
+      "media_type": "application/toml"
+    },
+    {
+      "path": "parameters/kill-thresholds.toml",
+      "sha256_hex": "11030671fff0a45e82e38bb4c1929db1f94f1d141fcf90dd422ffedc56f04aff",
+      "size_bytes": "6395710",
+      "media_type": "application/toml"
+    }
+  ],
+  "models": [
+    {
+      "path": "models/segmentation.onnx",
+      "sha256_hex": "d543993c9f030bb6462bab1556609fa5b6dad01dcf7e5561da49dcaa37dba5ea",
+      "size_bytes": "4433785",
+      "media_type": "application/onnx"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "tracks.binpb",
+      "sha256_hex": "bdbf1ed32abad060e7dc982bed31736335d953c2b6f71830fe8f6b99c4744b34",
+      "size_bytes": "1837458",
+      "media_type": "application/x-protobuf"
+    },
+    {
+      "path": "frame-metadata.binpb",
+      "sha256_hex": "20379b6ab5d1eb5af1e4eb04415c7400f00ccd4b889028da0a14ce2ce4deca46",
+      "size_bytes": "3339917",
+      "media_type": "application/x-protobuf"
+    },
+    {
+      "path": "pli.binpb",
+      "sha256_hex": "7bb235f12db23cb44356a4913b709759f17a7df293b7d42b4af208c12e0e9df7",
+      "size_bytes": "1358900",
+      "media_type": "application/x-protobuf"
+    },
+    {
+      "path": "fragments.binpb",
+      "sha256_hex": "74d974697b68f146165f8655e649231988f6f3c209ad1da64125148141fddfe8",
+      "size_bytes": "2383874",
+      "media_type": "application/x-protobuf"
+    }
+  ],
+  "kill_assessment": {
+    "run_id": "example-05",
+    "target_track_id": "target",
+    "interceptor_track_id": "interceptor",
+    "computed_class": "KILL_CLASS_CATASTROPHIC_KILL",
+    "closest_approach_utc_ns": "1791217235000000000",
+    "contact_utc_ns": "1791217235000000000",
+    "miss_distance_m": 0.1,
+    "miss_distance_sigma_m": 0.02,
+    "intercept_point_enu_m": {
+      "east": 385.0,
+      "north": 1015.0,
+      "up": 145.0
+    },
+    "breakup_piece_count": 9,
+    "ballistic_fit_residual": 0.85,
+    "mission_denied": true,
+    "thresholds": [
+      {
+        "name": "N",
+        "value": 5.0,
+        "unit": "1"
+      },
+      {
+        "name": "m",
+        "value": 0.01,
+        "unit": "kg"
+      },
+      {
+        "name": "T",
+        "value": 10.0,
+        "unit": "s"
+      },
+      {
+        "name": "residual_gate",
+        "value": 3.0,
+        "unit": "1"
+      }
+    ],
+    "thresholds_file": {
+      "path": "parameters/kill-thresholds.toml",
+      "sha256_hex": "11030671fff0a45e82e38bb4c1929db1f94f1d141fcf90dd422ffedc56f04aff",
+      "size_bytes": "6395710",
+      "media_type": "application/toml"
+    },
+    "overrides": []
+  },
+  "footprint": {
+    "run_id": "example-05",
+    "sample_count": 10000,
+    "fragment_ids": [
+      "fragment-01",
+      "fragment-02",
+      "fragment-03",
+      "fragment-04",
+      "fragment-05",
+      "fragment-06",
+      "fragment-07",
+      "fragment-08",
+      "fragment-09"
+    ],
+    "regions": [
+      {
+        "probability": 0.5,
+        "polygons": [
+          {
+            "vertices": [
+              {
+                "latitude_deg": 40.0088933,
+                "longitude_deg": -99.9954266,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0088933,
+                "longitude_deg": -99.9948403,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0093424,
+                "longitude_deg": -99.9948403,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0093424,
+                "longitude_deg": -99.9954266,
+                "height_ellipsoid_m": 700.0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "probability": 0.9,
+        "polygons": [
+          {
+            "vertices": [
+              {
+                "latitude_deg": 40.0085789,
+                "longitude_deg": -99.9958371,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0085789,
+                "longitude_deg": -99.9944299,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0096568,
+                "longitude_deg": -99.9944299,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0096568,
+                "longitude_deg": -99.9958371,
+                "height_ellipsoid_m": 700.0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "probability": 0.99,
+        "polygons": [
+          {
+            "vertices": [
+              {
+                "latitude_deg": 40.0081297,
+                "longitude_deg": -99.9964234,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0081297,
+                "longitude_deg": -99.9938435,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.010106,
+                "longitude_deg": -99.9938435,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.010106,
+                "longitude_deg": -99.9964234,
+                "height_ellipsoid_m": 700.0
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "inputs": [
+      {
+        "path": "inputs/wind-profile.json",
+        "sha256_hex": "6e20bf2a3c9f661196a54cd4e118b113555ee307418ffa6121c530c9001a16e5",
+        "size_bytes": "4381985",
+        "media_type": "application/json"
+      },
+      {
+        "path": "parameters/drag-table.toml",
+        "sha256_hex": "33fec467ff7f87715b281a7e6474901c425460461e63429a396c0193b0f76a5f",
+        "size_bytes": "4837677",
+        "media_type": "application/toml"
+      }
+    ]
+  },
+  "measurements": [
+    {
+      "criterion_id": "3.1.2",
+      "value": 1.0,
+      "unit": "1",
+      "sigma": 0.0
+    },
+    {
+      "criterion_id": "3.1.3",
+      "value": 1538.335,
+      "sigma": 1.5,
+      "unit": "m"
+    },
+    {
+      "criterion_id": "3.1.4",
+      "value": 12.5,
+      "sigma": 0.001,
+      "unit": "s"
+    },
+    {
+      "criterion_id": "INT-1",
+      "value": 67.5,
+      "sigma": 0.5,
+      "unit": "m/s"
+    },
+    {
+      "criterion_id": "INT-2",
+      "value": 45.0,
+      "sigma": 1.0,
+      "unit": "m/s2"
+    },
+    {
+      "criterion_id": "INT-6",
+      "value": 0.1,
+      "sigma": 0.02,
+      "unit": "m"
+    }
+  ],
+  "flags": [
+    "FLAG_REDUCED_TRUTH"
+  ]
+}

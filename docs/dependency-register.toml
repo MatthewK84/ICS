@@ -71,6 +71,23 @@ prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
 [[project]]
+name = "jsonschema"
+ecosystem = "pypi"
+packages = ["jsonschema"]
+used_for = "Validates run records and the run-record schema itself in the Python tests (ICS-013)"
+ships = false
+license = "MIT"
+source = "https://github.com/python-jsonschema/jsonschema"
+governance = "Independent open-source project in the python-jsonschema GitHub organization; no corporate owner. Its author reviews and releases changes."
+sustainment = "Mature and maintained: 4.26.0 was released in January 2026, with regular releases before it. Funded through GitHub Sponsors and Tidelift. Pinned in python/uv.lock. Any other JSON Schema 2020-12 validator could replace it, since the schema is standard."
+foreign_influence = "No corporate steward; maintained by individual volunteers led by its author. Code and releases are public on GitHub and PyPI."
+single_maintainer = true
+maintainers = "Julian Berman, the author, does most maintenance and every release, with occasional outside contributors"
+reviewed = 2026-09-29
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
 name = "mypy"
 ecosystem = "pypi"
 packages = ["mypy"]
@@ -207,10 +224,10 @@ prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
 [[project]]
-name = "typeshed stubs for protobuf"
+name = "typeshed stubs"
 ecosystem = "pypi"
-packages = ["types-protobuf"]
-used_for = "Type stubs that let mypy check code using the protobuf runtime, which ships none"
+packages = ["types-jsonschema", "types-protobuf"]
+used_for = "Type stubs that let mypy check code using jsonschema and the protobuf runtime, which ship none"
 ships = false
 license = "Apache-2.0"
 source = "https://github.com/python/typeshed"

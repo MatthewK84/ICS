@@ -1,0 +1,324 @@
+{
+  "run_id": "example-10",
+  "event_id": "EXAMPLE",
+  "start_utc_ns": "1791223200000000000",
+  "end_utc_ns": "1791223380000000000",
+  "range_origin": {
+    "latitude_deg": 40.0,
+    "longitude_deg": -100.0,
+    "height_ellipsoid_m": 700.0
+  },
+  "stations": [
+    {
+      "station_id": "north",
+      "position": {
+        "latitude_deg": 40.0134747,
+        "longitude_deg": -100.0,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "north-narrow",
+        "north-wide",
+        "north-mwir"
+      ]
+    },
+    {
+      "station_id": "east",
+      "position": {
+        "latitude_deg": 40.0,
+        "longitude_deg": -99.9824101,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "east-narrow",
+        "east-wide",
+        "east-mwir"
+      ]
+    },
+    {
+      "station_id": "west",
+      "position": {
+        "latitude_deg": 40.0,
+        "longitude_deg": -100.0175899,
+        "height_ellipsoid_m": 702.0
+      },
+      "camera_ids": [
+        "west-narrow",
+        "west-wide",
+        "west-mwir"
+      ]
+    }
+  ],
+  "software_revision": "b47b069880f4157d994e2f19a437be865833a78e",
+  "parameter_files": [
+    {
+      "path": "parameters/pointing-model.toml",
+      "sha256_hex": "124ff5cc78247f08f9740647407a0bf663690b98f31ed0eb18b257eacbccf758",
+      "size_bytes": "6062932",
+      "media_type": "application/toml"
+    },
+    {
+      "path": "parameters/drag-table.toml",
+      "sha256_hex": "3cfe8adee7b08b1d5e469a7c5da5cad3cab377cb41a18da428905a20a390d301",
+      "size_bytes": "4832201",
+      "media_type": "application/toml"
+    },
+    {
+      "path": "parameters/kill-thresholds.toml",
+      "sha256_hex": "0fc529dcc7663c9a08e05af71c5f4d9c2aeb6851407bed584eedfbc6bb8497be",
+      "size_bytes": "6389494",
+      "media_type": "application/toml"
+    }
+  ],
+  "models": [
+    {
+      "path": "models/segmentation.onnx",
+      "sha256_hex": "ccfdf5adb962abc0aa658cb031fb8e2ef3d9ac184b186c6458c22db6bef39914",
+      "size_bytes": "4428605",
+      "media_type": "application/onnx"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "tracks.binpb",
+      "sha256_hex": "ab52e470d3ccf2834cb3a49349d1195f7989aac4f35d95f32cb6ceda36c0fefd",
+      "size_bytes": "1834054",
+      "media_type": "application/x-protobuf"
+    },
+    {
+      "path": "frame-metadata.binpb",
+      "sha256_hex": "a40589e13f19e6d44ad7c65fc5460cefbf0f31d5836590f246310937cf6d54b0",
+      "size_bytes": "3335329",
+      "media_type": "application/x-protobuf"
+    },
+    {
+      "path": "pli.binpb",
+      "sha256_hex": "2ec4a0e990f737a0a6a164bfb4a0334e54666b2060219ceb238bf23cef67394d",
+      "size_bytes": "1355940",
+      "media_type": "application/x-protobuf"
+    },
+    {
+      "path": "fragments.binpb",
+      "sha256_hex": "6cfe9aebb4157dbcf8439cc2d55cf1d1deaeac76db7f364100d372545b76df87",
+      "size_bytes": "2380026",
+      "media_type": "application/x-protobuf"
+    }
+  ],
+  "kill_assessment": {
+    "run_id": "example-10",
+    "target_track_id": "target",
+    "interceptor_track_id": "interceptor",
+    "computed_class": "KILL_CLASS_CATASTROPHIC_KILL",
+    "closest_approach_utc_ns": "1791223241000000000",
+    "contact_utc_ns": "1791223241000000000",
+    "miss_distance_m": 0.15,
+    "miss_distance_sigma_m": 0.02,
+    "intercept_point_enu_m": {
+      "east": 570.0,
+      "north": 1130.0,
+      "up": 170.0
+    },
+    "breakup_piece_count": 22,
+    "ballistic_fit_residual": 1.1,
+    "mission_denied": true,
+    "thresholds": [
+      {
+        "name": "N",
+        "value": 5.0,
+        "unit": "1"
+      },
+      {
+        "name": "m",
+        "value": 0.01,
+        "unit": "kg"
+      },
+      {
+        "name": "T",
+        "value": 10.0,
+        "unit": "s"
+      },
+      {
+        "name": "residual_gate",
+        "value": 3.0,
+        "unit": "1"
+      }
+    ],
+    "thresholds_file": {
+      "path": "parameters/kill-thresholds.toml",
+      "sha256_hex": "0fc529dcc7663c9a08e05af71c5f4d9c2aeb6851407bed584eedfbc6bb8497be",
+      "size_bytes": "6389494",
+      "media_type": "application/toml"
+    },
+    "overrides": []
+  },
+  "footprint": {
+    "run_id": "example-10",
+    "sample_count": 10000,
+    "fragment_ids": [
+      "fragment-01",
+      "fragment-02",
+      "fragment-03",
+      "fragment-04",
+      "fragment-05",
+      "fragment-06",
+      "fragment-07",
+      "fragment-08",
+      "fragment-09",
+      "fragment-10",
+      "fragment-11",
+      "fragment-12",
+      "fragment-13",
+      "fragment-14",
+      "fragment-15",
+      "fragment-16",
+      "fragment-17",
+      "fragment-18",
+      "fragment-19",
+      "fragment-20",
+      "fragment-21",
+      "fragment-22"
+    ],
+    "regions": [
+      {
+        "probability": 0.5,
+        "polygons": [
+          {
+            "vertices": [
+              {
+                "latitude_deg": 40.0099263,
+                "longitude_deg": -99.9932572,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0099263,
+                "longitude_deg": -99.9926709,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0103755,
+                "longitude_deg": -99.9926709,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0103755,
+                "longitude_deg": -99.9932572,
+                "height_ellipsoid_m": 700.0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "probability": 0.9,
+        "polygons": [
+          {
+            "vertices": [
+              {
+                "latitude_deg": 40.0096119,
+                "longitude_deg": -99.9936676,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0096119,
+                "longitude_deg": -99.9922604,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0106899,
+                "longitude_deg": -99.9922604,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0106899,
+                "longitude_deg": -99.9936676,
+                "height_ellipsoid_m": 700.0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "probability": 0.99,
+        "polygons": [
+          {
+            "vertices": [
+              {
+                "latitude_deg": 40.0091628,
+                "longitude_deg": -99.994254,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0091628,
+                "longitude_deg": -99.9916741,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0111391,
+                "longitude_deg": -99.9916741,
+                "height_ellipsoid_m": 700.0
+              },
+              {
+                "latitude_deg": 40.0111391,
+                "longitude_deg": -99.994254,
+                "height_ellipsoid_m": 700.0
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "inputs": [
+      {
+        "path": "inputs/wind-profile.json",
+        "sha256_hex": "947e2b09c72c1dbd6c6523306f326701fabe0168e63cf7e7c4893a021963e29d",
+        "size_bytes": "4376805",
+        "media_type": "application/json"
+      },
+      {
+        "path": "parameters/drag-table.toml",
+        "sha256_hex": "3cfe8adee7b08b1d5e469a7c5da5cad3cab377cb41a18da428905a20a390d301",
+        "size_bytes": "4832201",
+        "media_type": "application/toml"
+      }
+    ]
+  },
+  "measurements": [
+    {
+      "criterion_id": "3.1.2",
+      "value": 1.0,
+      "unit": "1",
+      "sigma": 0.0
+    },
+    {
+      "criterion_id": "3.1.3",
+      "value": 1736.289,
+      "sigma": 1.5,
+      "unit": "m"
+    },
+    {
+      "criterion_id": "3.1.4",
+      "value": 16.0,
+      "sigma": 0.001,
+      "unit": "s"
+    },
+    {
+      "criterion_id": "INT-1",
+      "value": 75.0,
+      "sigma": 0.5,
+      "unit": "m/s"
+    },
+    {
+      "criterion_id": "INT-2",
+      "value": 55.0,
+      "sigma": 1.0,
+      "unit": "m/s2"
+    },
+    {
+      "criterion_id": "INT-6",
+      "value": 0.15,
+      "sigma": 0.02,
+      "unit": "m"
+    }
+  ],
+  "flags": []
+}

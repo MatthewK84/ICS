@@ -282,7 +282,7 @@
     },
     {
       "id": "ICS-013",
-      "title": "Publish the run-record JSON Schema and DroneScore mapping",
+      "title": "Publish the run-record JSON Schema",
       "plan_id": "PRO-02",
       "milestone": "M0 Foundation",
       "weeks": 3,
@@ -294,10 +294,9 @@
       ],
       "steps": [
         "Write the JSON Schema keyed to C4 MOP and KPP IDs.",
-        "Build 20 sample records.",
-        "Map fields to the DroneScore import."
+        "Build 20 sample records."
       ],
-      "done_when": "All 20 samples validate and import into DroneScore"
+      "done_when": "All 20 samples validate"
     },
     {
       "id": "ICS-014",
@@ -1683,25 +1682,6 @@
         "Emit in-toto attestations adapted from verdict."
       ],
       "done_when": "Any byte change breaks verification"
-    },
-    {
-      "id": "ICS-080",
-      "title": "Build the DroneScore export",
-      "plan_id": "CPP-33",
-      "milestone": "M4 Algorithms",
-      "weeks": 3,
-      "blocked_by": [
-        "ICS-079"
-      ],
-      "labels": [
-        "lang:cpp",
-        "area:products"
-      ],
-      "steps": [
-        "Map run records to the DroneScore import.",
-        "Retry with bounded backoff."
-      ],
-      "done_when": "50 sample runs import cleanly"
     },
     {
       "id": "ICS-081",

@@ -4,7 +4,7 @@ Sep 26, 2026 · @Matthew Kolakowski
 
 ## BLUF
 
-Create 97 GitHub issues, ICS-001 through ICS-097, and work them in numeric order within each milestone. Direct task effort totals about 625 person-weeks; reviews, management and field support fill the rest of the 16 engineer-years. Path B adds 14 issues that replace the OWLSS algorithms: Python references for detection and association, plus full C++ registration, detection, association and estimation. Each issue lists its plan ID from the [Build plan](build-plan.md), its dependencies, its steps and the test that closes it.
+Work the 96 GitHub issues, ICS-001 through ICS-097 (ICS-080 was dropped), in numeric order within each milestone. Direct task effort totals about 622 person-weeks; reviews, management and field support fill the rest of the 16 engineer-years. Path B adds 14 issues that replace the OWLSS algorithms: Python references for detection and association, plus full C++ registration, detection, association and estimation. Each issue lists its plan ID from the [Build plan](build-plan.md), its dependencies, its steps and the test that closes it.
 
 ## Repository setup
 
@@ -45,7 +45,7 @@ Build the repository, toolchains, evidence pipeline and shared contracts. No pro
 | [ICS-010](https://github.com/MatthewK84/ICS/issues/10) | Open the dependency register per DoWI 8430.01 §3.5.i (FND-07) | 3 | 009 | 1) List every direct dependency. 2) Record governance, sustainment, license and foreign-influence review. 3) Flag single-maintainer projects. 4) Fail CI on unregistered dependencies. | CI rejects a new unregistered dependency |
 | [ICS-011](https://github.com/MatthewK84/ICS/issues/11) | Set up protobuf tooling (PRO-01) | 2 | 004, 006, 007 | 1) Add buf with lint and breaking-change checks. 2) Generate C++, Python and TypeScript code. 3) Publish generated packages in the monorepo. | buf generate runs in CI for all three languages |
 | [ICS-012](https://github.com/MatthewK84/ICS/issues/12) | Define ICS protobuf messages (PRO-01) | 4 | 011 | 1) Define TimeQuality, PliRecord and PliEvent. 2) Define MountSample, CameraFrameMeta and TriggerEvent. 3) Define Track, Fragment, KillAssessment, Footprint and RunRecord. 4) Document every field with units. | buf lint passes; all three language leads approve |
-| [ICS-013](https://github.com/MatthewK84/ICS/issues/13) | Publish the run-record JSON Schema and DroneScore mapping (PRO-02) | 3 | 012 | 1) Write the JSON Schema keyed to C4 MOP and KPP IDs. 2) Build 20 sample records. 3) Map fields to the DroneScore import. | All 20 samples validate and import into DroneScore |
+| [ICS-013](https://github.com/MatthewK84/ICS/issues/13) | Publish the run-record JSON Schema (PRO-02) | 3 | 012 | 1) Write the JSON Schema keyed to C4 MOP and KPP IDs. 2) Build 20 sample records. | All 20 samples validate |
 | [ICS-014](https://github.com/MatthewK84/ICS/issues/14) | Fix frame and time conventions (PRO-03) | 2 | 012 | 1) Document WGS84, range ENU origin, UTC as int64 ns and ellipsoid heights. 2) Generate golden conversion vectors with GeographicLib. | Golden vectors merged into golden/ |
 
 ## M1 Core services: timing, PLI and camera I/O
@@ -162,7 +162,6 @@ Port each Python reference to C++ and gate every port on parity with its golden 
 | [ICS-077](https://github.com/MatthewK84/ICS/issues/77) | Port the footprint Monte Carlo (CPP-30) | 6 | 051 | 1) Port ICS-051. 2) Run parity tests. | Parity; meets C11 |
 | [ICS-078](https://github.com/MatthewK84/ICS/issues/78) | Deliver ics-pipeline (CPP-31) | 8 | 058 to 077 | 1) Orchestrate stages with checkpoints. 2) Retry with bounded backoff. | One run processes in ≤10 minutes |
 | [ICS-079](https://github.com/MatthewK84/ICS/issues/79) | Build run records and provenance (CPP-32) | 8 | 013, 078 | 1) Build run records. 2) Write SHA-256 manifests. 3) Emit in-toto attestations adapted from verdict. | Any byte change breaks verification |
-| [ICS-080](https://github.com/MatthewK84/ICS/issues/80) | Build the DroneScore export (CPP-33) | 3 | 079 | 1) Map run records to the DroneScore import. 2) Retry with bounded backoff. | 50 sample runs import cleanly |
 | [ICS-081](https://github.com/MatthewK84/ICS/issues/81) | Deliver ics-api (CPP-34) | 6 | 012, 079 | 1) Serve read-only gRPC queries. 2) Configure Envoy gRPC-Web. | UI contract tests pass |
 
 ## M5 Front end
@@ -197,7 +196,7 @@ Prove the system on the bench, then in the field in validation-event order, then
 
 ## Effort totals
 
-Direct task effort totals 625 person-weeks across 97 issues. The 14 `path-b` issues account for 131 person-weeks.
+Direct task effort totals 622 person-weeks across 96 issues. The 14 `path-b` issues account for 131 person-weeks.
 
 | Milestone | Issues | Person-weeks | Main languages |
 |---|---|---|---|
@@ -205,7 +204,7 @@ Direct task effort totals 625 person-weeks across 97 issues. The 14 `path-b` iss
 | M1 Core services | 17 | 103 | C++ |
 | M2 Station control | 10 | 73 | C++, firmware, Python |
 | M3 Python models | 16 | 101 | Python |
-| M4 Algorithms | 24 | 190 | C++ |
+| M4 Algorithms | 23 | 187 | C++ |
 | M5 Front end | 10 | 57 | TypeScript |
 | M6 Integration and release | 6 | 70 | All |
-| Total | 97 | 625 |  |
+| Total | 96 | 622 |  |
