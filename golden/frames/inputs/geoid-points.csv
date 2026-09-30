@@ -1,0 +1,16 @@
+id,latitude_deg,longitude_deg,msl_height_m
+equator-prime-meridian,0,0,0
+range-origin,40,-100,700
+southern-hemisphere,-35,150,50
+high-latitude,80,20,100
+near-north-pole,89.9,45,300
+near-south-pole,-89.9,0,2800
+new-guinea-high,-8.4,147.4,1000
+indian-ocean-low,4.7,78.8,0
+himalaya,27.99,86.93,8848
+antimeridian-east,10,179.99,20
+antimeridian-west,10,-179.99,20
+mid-latitude-east,51.5,0.5,45
+south-pacific,-60,-120,0
+north-atlantic,30,-60,5000
+grid-node,40,-100.0833333333333,700

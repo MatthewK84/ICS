@@ -8,13 +8,15 @@ name: C++ toolchain
 # no suppressions, clean -Werror builds, clang-tidy and cppcheck. Each stage
 # must also reject its seeded defect. Images are published to GHCR from main,
 # signed by digest with cosign, with a CycloneDX SBOM and SLSA provenance
-# attached (ICS-009, deploy/evidence/README.md).
+# attached (ICS-009, deploy/evidence/README.md). The image's GeographicLib must
+# also reproduce the golden frame vectors in golden/frames (ICS-014).
 
 on:
   pull_request:
     paths:
       - cpp/**
       - golden/proto/**
+      - golden/frames/**
       - deploy/toolchain/**
       - deploy/evidence/**
       - .github/scripts/evidence.py
@@ -24,6 +26,7 @@ on:
     paths:
       - cpp/**
       - golden/proto/**
+      - golden/frames/**
       - deploy/toolchain/**
       - deploy/evidence/**
       - .github/scripts/evidence.py
@@ -64,6 +67,10 @@ jobs:
 
       - name: Build the ics-cpp image
         run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
+
+      # GeographicLib in the image must reproduce golden/frames exactly (ICS-014).
+      - name: Golden frame vectors are current
+        run: ${RUN} golden/frames/generate.sh --check
 
       - name: Restore the Conan package cache
         id: conan-cache

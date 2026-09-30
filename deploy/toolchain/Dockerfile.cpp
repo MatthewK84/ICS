@@ -6,7 +6,7 @@
 FROM ubuntu:24.04@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3
 
 ARG UBUNTU_SNAPSHOT=20260926T000000Z
-COPY deploy/toolchain/install-toolchain.sh deploy/toolchain/apt-packages.txt deploy/toolchain/requirements-build.txt deploy/toolchain/requirements-conan.txt /tmp/toolchain/
+COPY deploy/toolchain/install-toolchain.sh deploy/toolchain/install-geoids.sh deploy/toolchain/tools.txt deploy/toolchain/apt-packages.txt deploy/toolchain/requirements-build.txt deploy/toolchain/requirements-conan.txt /tmp/toolchain/
 RUN --mount=type=secret,id=extra_ca,required=false \
     bash /tmp/toolchain/install-toolchain.sh "${UBUNTU_SNAPSHOT}" && rm -rf /tmp/toolchain
 

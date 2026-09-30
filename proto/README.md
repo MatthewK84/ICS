@@ -44,7 +44,7 @@ buf's COMMENTS rules require a comment on every message, field and enum value; t
 
 Fields inside a shared type (`EnuVector`, `EnuCovariance`) take their unit from the field that holds them: `position_enu_m` is in metres and `velocity_covariance_m2_per_s2` in square metres per second squared. A measurement whose unit is data (`RunRecord.Measurement`, `KillAssessment.Threshold`) carries a UCUM unit code.
 
-**Frames are types.** `GeodeticPoint` is WGS84 latitude, longitude and height above the ellipsoid. `EnuVector` and `EnuCovariance` are in the range's east-north-up frame, whose origin is the defended asset (`RunRecord.range_origin`). A geodetic point cannot be passed where an ENU vector is expected. The one exception is `PliRecord.Attitude`, which keeps MAVLink's body-to-north-east-down quaternion. [ICS-014](https://github.com/MatthewK84/ICS/issues/14) documents the frames and time scale and publishes golden conversion vectors.
+**Frames are types.** `GeodeticPoint` is WGS84 latitude, longitude and height above the ellipsoid. `EnuVector` and `EnuCovariance` are in the range's east-north-up frame, whose origin is the defended asset (`RunRecord.range_origin`). A geodetic point cannot be passed where an ENU vector is expected. The one exception is `PliRecord.Attitude`, which keeps MAVLink's body-to-north-east-down quaternion. [`docs/frames-and-time.md`](../docs/frames-and-time.md) defines the frames, heights and time scale, and [`golden/frames/`](../golden/frames) holds GeographicLib's conversion vectors for them (ICS-014).
 
 **Time is UTC as `int64` nanoseconds** since the Unix epoch, without leap seconds, as POSIX time counts them. `google.protobuf.Timestamp` is not used.
 
