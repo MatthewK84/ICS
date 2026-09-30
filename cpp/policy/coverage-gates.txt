@@ -1,0 +1,11 @@
+# C++ code held to full coverage and an assertion-density floor (ICS-015).
+# cpp/policy/check-dynamic.sh coverage checks each path below with
+# .github/scripts/cpp_coverage.py; test folders are never gated. One per line:
+#
+#   <path from the repository root> <floor>
+#
+# Every line and branch of the code under the path must be covered by tests.
+# The floor is the lowest average number of ics::check calls per function
+# longer than three lines. It only ratchets up: when CI reports a density
+# above the floor, raise the floor to match. Never lower it.
+cpp/common 0.50

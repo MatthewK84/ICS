@@ -169,6 +169,19 @@
         "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined",
         "ICS_FUZZ": "ON"
       }
+    },
+    {
+      "name": "clang-coverage",
+      "displayName": "Clang 17 source-based coverage",
+      "inherits": [
+        "base"
+      ],
+      "toolchainFile": "${sourceDir}/build/conan/clang17-Debug/conan_toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS": "-fprofile-instr-generate -fcoverage-mapping",
+        "CMAKE_EXE_LINKER_FLAGS": "-fprofile-instr-generate"
+      }
     }
   ],
   "buildPresets": [
@@ -215,6 +228,10 @@
     {
       "name": "clang-fuzz",
       "configurePreset": "clang-fuzz"
+    },
+    {
+      "name": "clang-coverage",
+      "configurePreset": "clang-coverage"
     }
   ],
   "testPresets": [
@@ -311,6 +328,16 @@
     {
       "name": "clang-ubsan",
       "configurePreset": "clang-ubsan",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "clang-coverage",
+      "configurePreset": "clang-coverage",
       "output": {
         "outputOnFailure": true
       },

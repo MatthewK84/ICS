@@ -51,6 +51,23 @@ reviewed = 2026-09-27
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
+[[project]]
+name = "tl-expected"
+ecosystem = "conan"
+packages = ["tl-expected"]
+used_for = "tl::expected, behind ics::Result, the return type of every fallible ICS call (cpp/common, ICS-015); header-only"
+ships = true
+license = "CC0-1.0"
+source = "https://github.com/TartanLlama/expected"
+governance = "Maintained by Sy Brand (GitHub: TartanLlama), who reviews contributions and makes every release; nearly all commits come from that account. The Conan recipe comes from Conan Center."
+sustainment = "Mature and stable: one header implementing the C++23 std::expected interface. Version 1.2.0 (July 2025), pinned in cpp/conan.lock. std::expected replaces it once every ICS compiler provides it; Clang 17 with libstdc++ 13 does not."
+foreign_influence = "No controlling organization: its author maintains it, and their jurisdiction was not established from the project's pages."
+single_maintainer = true
+maintainers = "Sy Brand, the author"
+reviewed = 2026-09-30
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
 # --- Python (PyPI) -----------------------------------------------------------
 
 [[project]]
