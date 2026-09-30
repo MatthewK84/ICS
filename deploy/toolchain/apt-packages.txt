@@ -15,3 +15,6 @@ cppcheck
 python3
 python3-venv
 git
+# GeographicLib's CartConvert and GeoidEval, which generate the golden frame
+# vectors (ICS-014, golden/frames); install-geoids.sh adds the geoid grid.
+geographiclib-tools

@@ -8,6 +8,7 @@ Start here:
 
 - [Build plan](docs/build-plan.md): phases, language boundaries, coding standards, task card and Definition of Done.
 - [GitHub issues (Path B)](docs/github-issues-path-b.md): the 96 issues, ICS-001 through ICS-097 (ICS-080 was dropped), by milestone.
+- [Frames and time](docs/frames-and-time.md): WGS84, the range ENU frame, heights (EGM96 for MSL) and UTC nanoseconds.
 - [Contributing](CONTRIBUTING.md): the workflow, task card, Definition of Done, branch naming and review rules.
 - [Repository protection](docs/repository-protection.md): the rules on `main` and how changes get merged.
 

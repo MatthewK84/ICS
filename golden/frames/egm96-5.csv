@@ -1,0 +1,16 @@
+id,latitude_deg,longitude_deg,msl_height_m,geoid_height_m,height_ellipsoid_m
+equator-prime-meridian,0,0,0,17.1630,17.1630
+range-origin,40,-100,700,-25.0527,674.9473
+southern-hemisphere,-35,150,50,20.4207,70.4207
+high-latitude,80,20,100,29.8050,129.8050
+near-north-pole,89.9,45,300,13.6111,313.6111
+near-south-pole,-89.9,0,2800,-29.4763,2770.5237
+new-guinea-high,-8.4,147.4,1000,85.1115,1085.1115
+indian-ocean-low,4.7,78.8,0,-107.0281,-107.0281
+himalaya,27.99,86.93,8848,-28.7433,8819.2567
+antimeridian-east,10,179.99,20,12.6928,32.6928
+antimeridian-west,10,-179.99,20,12.6758,32.6758
+mid-latitude-east,51.5,0.5,45,45.3571,90.3571
+south-pacific,-60,-120,0,-23.6461,-23.6461
+north-atlantic,30,-60,5000,-40.7939,4959.2061
+grid-node,40,-100.0833333333333,700,-24.9876,675.0124

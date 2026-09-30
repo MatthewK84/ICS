@@ -1,0 +1,9 @@
+# Pinned data downloads for the ics-cpp and ics-cuda images (ICS-014), one per
+# line: name, version, sha256 of the download, URL. install-geoids.sh refuses
+# a download whose checksum does not match. Every entry needs an entry in
+# docs/dependency-register.toml.
+#
+# egm96-5: GeographicLib's 5-arcminute grid of the EGM96 geoid, which defines
+# MSL heights in ICS (docs/frames-and-time.md). The version is the date of the
+# grid file in the archive.
+egm96-5 2009-08-29 c46224f8f723dc915d97179f4e1580a98d6c742fe2b82cd8fef0ecaaad13e614 https://sourceforge.net/projects/geographiclib/files/geoids-distrib/egm96-5.tar.bz2/download

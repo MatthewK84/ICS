@@ -5,7 +5,8 @@
 #
 # Every Ubuntu package listed in apt-packages.txt comes from snapshot.ubuntu.com
 # at SNAPSHOT_ID, so a rebuild installs the same package versions. Conan is installed into
-# /opt/conan from a hash-pinned requirements file. If the build passes a
+# /opt/conan from a hash-pinned requirements file, and the geoid grids pinned in
+# tools.txt into /usr/share/GeographicLib/geoids (ICS-014). If the build passes a
 # BuildKit secret named extra_ca (a PEM bundle), it is trusted for apt, pip and
 # the finished image; use it behind TLS-inspecting proxies.
 set -euo pipefail
@@ -15,7 +16,9 @@ readonly EXTRA_CA_SECRET="/run/secrets/extra_ca"
 # apt downloads as the unprivileged _apt user, which cannot read the root-only secret.
 readonly EXTRA_CA_COPY="/tmp/ics-extra-ca.pem"
 readonly SYSTEM_CA="/etc/ssl/certs/ca-certificates.crt"
-readonly HERE="$(cd "$(dirname "$0")" && pwd)"
+readonly GEOID_DIR="/usr/share/GeographicLib/geoids"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+readonly HERE
 mapfile -t PACKAGES < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "${HERE}/apt-packages.txt")
 readonly PACKAGES
 if ((${#PACKAGES[@]} == 0)); then
@@ -92,6 +95,8 @@ report_versions() {
   cmake --version | head -n 1
   echo "ninja $(ninja --version)"
   conan --version
+  CartConvert --version
+  sha256sum "${GEOID_DIR}"/*.pgm
   dpkg-query -W -f '${Package}=${Version}\n' "${PACKAGES[@]}" > /usr/local/share/ics-toolchain-packages.txt
 }
 
@@ -103,6 +108,7 @@ main() {
   trust_extra_ca
   select_default_compilers
   install_conan
+  bash "${HERE}/install-geoids.sh" "${GEOID_DIR}" "${SYSTEM_CA}"
   report_versions
   rm -f "${EXTRA_CA_COPY}"
 }

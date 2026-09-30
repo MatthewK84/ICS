@@ -4,7 +4,7 @@ Pinned build environments for ICS C++ code (ICS-004). CI builds both images and 
 
 | Image | Base | Contents | Used for |
 |---|---|---|---|
-| `ghcr.io/matthewk84/ics-cpp` | Ubuntu 24.04 | GCC 13.3, Clang 17.0.6 (with sanitizer and libFuzzer runtimes and clang-tidy), cppcheck 2.13, CMake 3.28, Ninja 1.11, Conan 2.27 | Every C++ build and test |
+| `ghcr.io/matthewk84/ics-cpp` | Ubuntu 24.04 | GCC 13.3, Clang 17.0.6 (with sanitizer and libFuzzer runtimes and clang-tidy), cppcheck 2.13, CMake 3.28, Ninja 1.11, Conan 2.27, GeographicLib 2.3 tools and the EGM96 `egm96-5` geoid grid | Every C++ build and test, and the golden frame vectors |
 | `ghcr.io/matthewk84/ics-cuda` | NVIDIA CUDA 12.9.1 developer image, Ubuntu 24.04 | CUDA 12.9 plus everything in `ics-cpp` | GPU modules, from ICS-062 |
 
 ## How the images are pinned
@@ -12,6 +12,7 @@ Pinned build environments for ICS C++ code (ICS-004). CI builds both images and 
 - **Base images** are pinned by digest in [`Dockerfile.cpp`](Dockerfile.cpp) and [`Dockerfile.cuda`](Dockerfile.cuda).
 - **Ubuntu packages** are listed in [`apt-packages.txt`](apt-packages.txt), each with an entry in the [dependency register](../../docs/dependency-register.md). They come from Ubuntu's snapshot service at the date in `UBUNTU_SNAPSHOT`, so a rebuild installs the same versions. Each image lists them in `/usr/local/share/ics-toolchain-packages.txt`.
 - **Conan** and its Python dependencies are installed from [`requirements-conan.txt`](requirements-conan.txt), with every file hash-pinned. Conan ships only as source, so its build tool is pinned the same way in [`requirements-build.txt`](requirements-build.txt).
+- **Data downloads** are pinned by sha256 in [`tools.txt`](tools.txt). Today that is GeographicLib's `egm96-5` grid of the EGM96 geoid, which defines MSL heights in ICS ([`docs/frames-and-time.md`](../../docs/frames-and-time.md)). It is installed in `/usr/share/GeographicLib/geoids`, where GeographicLib looks for it.
 
 To move to newer packages, change `UBUNTU_SNAPSHOT` (any `YYYYMMDDTHHMMSSZ` date that [snapshot.ubuntu.com](https://snapshot.ubuntu.com) serves). To upgrade Conan, edit `requirements-conan.in` and regenerate:
 
@@ -38,3 +39,4 @@ Behind a TLS-inspecting proxy, pass its CA bundle as a build secret: `--secret i
 - [`conan-install.sh PRESET...`](conan-install.sh): installs the Conan dependencies that one or more CMake presets need, from `cpp/conan.lock`. For the `asan`, `tsan` and `fuzz` presets it builds them with the matching sanitizer, from the [`asan`](../../cpp/conan/profiles/asan) and [`tsan`](../../cpp/conan/profiles/tsan) profiles.
 - [`check-reproducible.sh gcc|clang`](check-reproducible.sh): builds the `toolchain_check` sample twice in different build folders and fails unless every output is byte-identical. This is the ICS-004 "Done when" test, run in CI for both compilers.
 - [`install-toolchain.sh SNAPSHOT_ID`](install-toolchain.sh): used by both Dockerfiles.
+- [`install-geoids.sh TARGET_DIR [CA_BUNDLE]`](install-geoids.sh): downloads each geoid grid pinned in `tools.txt`, refuses one whose checksum does not match, and unpacks it into `TARGET_DIR`. `install-toolchain.sh` runs it.

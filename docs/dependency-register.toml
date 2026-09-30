@@ -726,6 +726,23 @@ reviewed = 2026-09-27
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
+[[project]]
+name = "GeographicLib"
+ecosystem = "apt"
+packages = ["geographiclib-tools"]
+used_for = "CartConvert and GeoidEval generate the golden frame and geoid vectors in golden/frames (ICS-014)"
+ships = false
+license = "MIT"
+source = "https://github.com/geographiclib/geographiclib"
+governance = "Written and maintained by its author, Charles Karney, who reviews contributions and makes every release; packaged for Ubuntu by Debian and Ubuntu maintainers."
+sustainment = "Mature and maintained, the reference implementation for these conversions. Version 2.3 from Ubuntu 24.04, pinned through the Ubuntu snapshot date. PROJ could generate comparable vectors."
+foreign_influence = "No controlling organization: its author maintains it, and his jurisdiction was not established from the project's pages. Packaged by Canonical Ltd. (UK) for Ubuntu."
+single_maintainer = true
+maintainers = "Charles Karney, the author"
+reviewed = 2026-09-30
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
 # --- Evidence tools (deploy/evidence/tools.txt) -------------------------------
 
 [[project]]
@@ -795,5 +812,24 @@ foreign_influence = "Steward: Google LLC (US)."
 single_maintainer = false
 maintainers = "Google protobuf team"
 reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+# --- Toolchain data (deploy/toolchain/tools.txt) -----------------------------
+
+[[project]]
+name = "EGM96 5-minute geoid grid"
+ecosystem = "tool"
+packages = ["egm96-5"]
+used_for = "The EGM96 geoid that defines MSL heights in ICS; GeoidEval reads it to generate golden/frames/egm96-5.csv (ICS-014), and the C++ frames module will read it (ICS-017)"
+ships = true
+license = "LicenseRef-Public-Domain"
+source = "https://sourceforge.net/projects/geographiclib/files/geoids-distrib/"
+governance = "EGM96 is a US Government geoid model; the grid file names NGA's EGM96 page as its source. GeographicLib's author sampled it on a 5-arcminute grid for GeographicLib's Geoid class and distributes it with GeographicLib."
+sustainment = "Static data: the grid file is dated 2009-08-29 and will not change. Pinned by sha256 in deploy/toolchain/tools.txt. EGM2008 grids from the same distribution would replace it if ICS moved to EGM2008."
+foreign_influence = "US Government data (NGA); the grid is prepared and hosted by GeographicLib's author."
+single_maintainer = true
+maintainers = "Charles Karney (GeographicLib), distributing NGA's EGM96"
+reviewed = 2026-09-30
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
