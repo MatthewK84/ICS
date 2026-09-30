@@ -8,6 +8,12 @@ foreach(seed IN ITEMS asan_heap_overflow ubsan_signed_overflow tsan_data_race)
   add_executable(seed_${seed} EXCLUDE_FROM_ALL ${seed}.cpp)
 endforeach()
 
+# Caught by the coverage stage (ICS-015): a branch no test takes, and a function
+# with no ics::check under a density floor of 1.
+foreach(seed IN ITEMS coverage_gap assertion_density_drop)
+  add_executable(seed_${seed} EXCLUDE_FROM_ALL ${seed}.cpp)
+endforeach()
+
 # Caught by libFuzzer within its time budget; linked only in the clang-fuzz build.
 if(ICS_FUZZ)
   add_executable(seed_fuzz_planted_bug EXCLUDE_FROM_ALL fuzz_planted_bug.cpp)

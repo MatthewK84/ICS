@@ -9,7 +9,9 @@ name: C++ toolchain
 # must also reject its seeded defect. Images are published to GHCR from main,
 # signed by digest with cosign, with a CycloneDX SBOM and SLSA provenance
 # attached (ICS-009, deploy/evidence/README.md). The image's GeographicLib must
-# also reproduce the golden frame vectors in golden/frames (ICS-014).
+# also reproduce the golden frame vectors in golden/frames (ICS-014). The code
+# listed in cpp/policy/coverage-gates.txt must keep full line and branch
+# coverage and its assertion-density floor (ICS-015).
 
 on:
   pull_request:
@@ -20,6 +22,7 @@ on:
       - deploy/toolchain/**
       - deploy/evidence/**
       - .github/scripts/evidence.py
+      - .github/scripts/cpp_coverage.py
       - .github/workflows/cpp-toolchain.yml
   push:
     branches: [main]
@@ -30,6 +33,7 @@ on:
       - deploy/toolchain/**
       - deploy/evidence/**
       - .github/scripts/evidence.py
+      - .github/scripts/cpp_coverage.py
       - .github/workflows/cpp-toolchain.yml
   workflow_dispatch:
 
@@ -120,6 +124,9 @@ jobs:
 
       - name: Fuzzing (one minute per target)
         run: ${RUN} cpp/policy/check-dynamic.sh fuzz 60
+
+      - name: Coverage and assertion density
+        run: ${RUN} cpp/policy/check-dynamic.sh coverage
 
       - name: Power-of-Ten policy (clang-tidy, cppcheck, warnings)
         run: ${RUN} cpp/policy/check-policy.sh

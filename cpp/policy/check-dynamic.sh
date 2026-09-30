@@ -4,6 +4,7 @@
 #
 # Usage: check-dynamic.sh sanitizers
 #        check-dynamic.sh fuzz SECONDS
+#        check-dynamic.sh coverage
 #
 #   sanitizers  Builds and tests the ICS code under ASan, UBSan and TSan with
 #               GCC 13 and Clang 17; every test must pass. Then each sanitizer's
@@ -13,21 +14,36 @@
 #               in <build>/fuzzers.txt for SECONDS from its seed corpus; any
 #               crash fails. The seeded fuzz target must then crash within
 #               min(SECONDS, 120) seconds.
+#   coverage    Builds the clang-coverage preset, runs every test and gates the
+#               code listed in cpp/policy/coverage-gates.txt: full line and
+#               branch coverage, and an assertion density at or above its
+#               floor (ICS-015; see .github/scripts/cpp_coverage.py). Each
+#               coverage seed must then be rejected.
 #
 # Crash inputs from real fuzz targets go to $ARTIFACT_DIR (default: a temporary
 # folder). Set SKIP_CONAN_INSTALL=1 when dependencies are already installed.
 set -euo pipefail
 
-readonly ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+readonly ROOT
 readonly CPP="${ROOT}/cpp"
 readonly SEEDS="${CPP}/policy/seeded-runtime"
-readonly WORK="$(mktemp -d)"
+WORK="$(mktemp -d)"
+readonly WORK
 readonly ARTIFACTS="${ARTIFACT_DIR:-${WORK}/artifacts}"
 readonly COMPILERS=(gcc clang)
 readonly SANITIZERS=(asan ubsan tsan)
 readonly SANITIZER_SEEDS=(asan_heap_overflow.cpp ubsan_signed_overflow.cpp tsan_data_race.cpp)
 readonly FUZZ_SEED="fuzz_planted_bug.cpp"
 readonly SEED_FUZZ_BUDGET=120
+readonly COVERAGE_PRESET="clang-coverage"
+readonly COVERAGE_GATES="${CPP}/policy/coverage-gates.txt"
+readonly COVERAGE_SCRIPT="${ROOT}/.github/scripts/cpp_coverage.py"
+# cpp/cmake/Reproducible.cmake records ICS sources as build/src/<path under cpp>.
+readonly RECORDED_SOURCES="build/src=cpp"
+readonly COVERAGE_SEEDS=(coverage_gap.cpp assertion_density_drop.cpp)
+# The assertion-density floor each coverage seed is gated at.
+readonly COVERAGE_SEED_FLOORS=(0 1)
 trap 'rm -rf "${WORK}"' EXIT
 
 fail() {
@@ -36,7 +52,7 @@ fail() {
 }
 
 usage() {
-  fail "usage: check-dynamic.sh sanitizers | check-dynamic.sh fuzz SECONDS"
+  fail "usage: check-dynamic.sh sanitizers | check-dynamic.sh fuzz SECONDS | check-dynamic.sh coverage"
 }
 
 # Run a command, showing its output only if it fails.
@@ -67,7 +83,7 @@ expect_rejected() {
 # Every seed file must be in exactly one of the lists above.
 check_seed_list() {
   local listed actual
-  listed="$(printf '%s\n' "${SANITIZER_SEEDS[@]}" "${FUZZ_SEED}" | LC_ALL=C sort)"
+  listed="$(printf '%s\n' "${SANITIZER_SEEDS[@]}" "${FUZZ_SEED}" "${COVERAGE_SEEDS[@]}" | LC_ALL=C sort)"
   actual="$(find "${SEEDS}" -type f -name '*.cpp' -printf '%f\n' | LC_ALL=C sort)"
   [[ "${listed}" == "${actual}" ]] || fail "check-dynamic.sh must list every seed; listed:"$'\n'"${listed}"$'\n'"found:"$'\n'"${actual}"
 }
@@ -130,6 +146,56 @@ check_fuzzers() {
   expect_rejected "libFuzzer" "${SEEDS}/${FUZZ_SEED}" "${status}" "${output}"
 }
 
+# Merge the raw profiles in a folder, then export the coverage of the given
+# binaries as JSON.
+export_coverage() {
+  local profiles="$1" output="$2" binary objects=()
+  shift 2
+  for binary in "${@:2}"; do
+    objects+=(-object "${binary}")
+  done
+  quietly llvm-profdata-17 merge -sparse -o "${profiles}.profdata" "${profiles}"/*.profraw \
+    || fail "no coverage profiles in ${profiles}"
+  llvm-cov-17 export -format=text -instr-profile="${profiles}.profdata" "$1" "${objects[@]}" >"${output}" \
+    || fail "llvm-cov could not export ${profiles}.profdata"
+}
+
+# Gate a coverage export; extra arguments choose the gates.
+gate_coverage() {
+  local export="$1"
+  shift
+  python3 "${COVERAGE_SCRIPT}" check "${export}" --root "${ROOT}" --path-map "${RECORDED_SOURCES}" "$@"
+}
+
+check_coverage_seed() {
+  local index="$1"
+  local seed="${COVERAGE_SEEDS[index]}" build="${WORK}/${COVERAGE_PRESET}"
+  local target="seed_${seed%.cpp}" profiles="${WORK}/seed-profiles-${index}" output status=0
+  quietly cmake --build "${build}" --target "${target}" || fail "${target} does not build"
+  quietly env LLVM_PROFILE_FILE="${profiles}/%p.profraw" "${build}/policy/seeded-runtime/${target}" \
+    || fail "${target} does not run"
+  export_coverage "${profiles}" "${profiles}.json" "${build}/policy/seeded-runtime/${target}"
+  output="$(gate_coverage "${profiles}.json" --gate "cpp/policy/seeded-runtime/${seed}" \
+    "${COVERAGE_SEED_FLOORS[index]}" 2>&1)" || status=$?
+  expect_rejected "the coverage gate" "${SEEDS}/${seed}" "${status}" "${output}"
+}
+
+check_coverage() {
+  local build="${WORK}/${COVERAGE_PRESET}" binaries=() index
+  build_preset "${COVERAGE_PRESET}"
+  quietly env LLVM_PROFILE_FILE="${WORK}/profiles/%p-%m.profraw" ctest --test-dir "${build}" --output-on-failure \
+    || fail "tests fail under ${COVERAGE_PRESET}"
+  mapfile -t binaries < <(ctest --test-dir "${build}" --show-only=json-v1 | python3 "${COVERAGE_SCRIPT}" binaries)
+  ((${#binaries[@]} > 0)) || fail "ctest lists no test binaries under ${COVERAGE_PRESET}"
+  export_coverage "${WORK}/profiles" "${WORK}/coverage.json" "${binaries[@]}"
+  gate_coverage "${WORK}/coverage.json" --gates "${COVERAGE_GATES}" \
+    || fail "coverage or assertion density is short of cpp/policy/coverage-gates.txt; see above"
+  echo "Clean code: ok under ${COVERAGE_PRESET}"
+  for index in "${!COVERAGE_SEEDS[@]}"; do
+    check_coverage_seed "${index}"
+  done
+}
+
 main() {
   local mode="${1:-}"
   check_seed_list
@@ -139,6 +205,7 @@ main() {
       [[ "${2:-}" =~ ^[1-9][0-9]*$ ]] || usage
       check_fuzzers "$2"
       ;;
+    coverage) check_coverage ;;
     *) usage ;;
   esac
   echo "Dynamic checks (${mode}): ok; every seeded defect was caught"

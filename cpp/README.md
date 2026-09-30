@@ -17,7 +17,7 @@ cpp/
 
 Rules (enforced in CI by [ICS-005](https://github.com/MatthewK84/ICS/issues/5) and [ICS-008](https://github.com/MatthewK84/ICS/issues/8); see [Power-of-Ten checks](#power-of-ten-checks)):
 
-- No exceptions on real-time paths; fallible calls return `tl::expected` and are `[[nodiscard]]`.
+- No exceptions on real-time paths; fallible calls return `ics::Result` (a `tl::expected`), which is `[[nodiscard]]`. See [Common library](#common-library).
 - No recursion, functions of 50 lines or fewer, no owning raw pointers, no mutable globals, no `NOLINT`.
 - No allocation after initialization on real-time paths.
 - Mount motion, the sun interlock and triggering live only here, never in the web UI.
@@ -40,6 +40,24 @@ Builds are reproducible: `deploy/toolchain/check-reproducible.sh gcc` (or `clang
 The protobuf messages generated from [`proto/`](../proto/README.md) are the `ics::proto` library in [`proto/`](proto/CMakeLists.txt). Its code is generated and committed, never edited, and it is built without the ICS warning flags, like a dependency.
 
 Dependencies are pinned in `conan.lock`. After changing `conanfile.py`, regenerate it with `conan lock create cpp --profile:all cpp/conan/profiles/gcc13 --lockfile-out cpp/conan.lock` and record the new dependency in the [dependency register](../docs/dependency-register.md).
+
+## Common library
+
+[`common/`](common) is `ics::common` ([ICS-015](https://github.com/MatthewK84/ICS/issues/15)), which every real-time component links:
+
+| Header | Provides |
+|---|---|
+| [`error.hpp`](common/include/ics/common/error.hpp) | `ics::Error`, one enum of failure codes for all of ICS; `Result<T>` (`tl::expected<T, Error>`), `Status` (`Result<void>`) and `fail(error)`. A result is `[[nodiscard]]`, so ignoring one does not compile. It cannot hold a reference: return a `std::reference_wrapper` |
+| [`check.hpp`](common/include/ics/common/check.hpp) | `ics::check(condition)`, the ICS assertion. It returns the condition and, when it is false, writes the caller's file, line and function to stderr without allocating; the caller recovers, normally by returning an error |
+| [`static_vector.hpp`](common/include/ics/common/static_vector.hpp), [`ring_buffer.hpp`](common/include/ics/common/ring_buffer.hpp), [`fixed_pool.hpp`](common/include/ics/common/fixed_pool.hpp) | Fixed-capacity containers that never allocate: `StaticVector<T, N>`, the first-in, first-out `RingBuffer<T, N>`, and `FixedPool<T, N>`, whose handles carry a generation so a released one is refused. A full, empty, out-of-range or stale case returns an error; nothing throws or overwrites |
+| [`storable.hpp`](common/include/ics/common/storable.hpp) | `Storable`, what the containers need from an element type: default construction, move construction and move assignment that cannot throw |
+
+How to use them:
+
+- Use `ics::check` for a condition that holds unless there is a bug or an overload the system was sized to avoid, such as a push to a full buffer. An outcome the caller expects, such as a polling reader finding the ring buffer empty, is an ordinary branch.
+- The containers are not thread-safe.
+- Tests instantiate each container template explicitly (`template class ics::RingBuffer<int, 3>;`), so a member no test calls shows up as uncovered.
+- The headers build with `-fno-exceptions`, as real-time targets will; [`common/test/no_exceptions_check.cpp`](common/test/no_exceptions_check.cpp) proves it.
 
 ## Power-of-Ten checks
 
@@ -68,7 +86,7 @@ Two exceptions are deliberate:
 - The allocation hook, [`testing/alloc_guard/src/allocation_hook.cpp`](testing/alloc_guard/src/allocation_hook.cpp), is the only file allowed to call `malloc`; its own `.clang-tidy` turns off `cppcoreguidelines-no-malloc` there and nowhere else. It marks ownership with `gsl::owner`, so `cppcoreguidelines-owning-memory` still applies.
 - The `clang-tsan` preset links Clang's shared TSan runtime (`-shared-libsan`), because the static runtime defines `operator new` and `delete` itself and would clash with the allocation hook. GCC's TSan runtime is already shared.
 
-Not enforced here: "no exceptions on real-time paths" needs `-fno-exceptions` on the real-time targets once they exist (ICS-015 onward), and CI does not yet measure C++ test coverage against the Definition of Done's 90%.
+Not enforced here: "no exceptions on real-time paths" needs `-fno-exceptions` on the real-time targets once they exist; the common headers already build that way. Coverage is gated only for the code listed in [`policy/coverage-gates.txt`](policy/coverage-gates.txt) (see [Test stages](#test-stages)), so other code is not yet measured against the Definition of Done's 90%.
 
 ## Test stages
 
@@ -80,11 +98,15 @@ The dynamic stages run in CI on every change to `cpp/` (ICS-008), through [`poli
 | UndefinedBehaviorSanitizer | `gcc-ubsan` and `clang-ubsan` presets, stopping at the first undefined behaviour | a signed integer overflow |
 | ThreadSanitizer | `gcc-tsan` and `clang-tsan` presets | a data race |
 | libFuzzer | `clang-fuzz` preset (libFuzzer with ASan and UBSan): one minute per fuzz target per change, and an hour per target nightly ([`fuzz-nightly.yml`](../.github/workflows/fuzz-nightly.yml)) | a heap overflow behind a four-byte magic prefix, which must be found within two minutes |
+| Coverage (ICS-015) | `clang-coverage` preset (Clang source-based coverage): every line and branch of each path in [`policy/coverage-gates.txt`](policy/coverage-gates.txt) covered, and its assertion density at or above its floor | a branch no test takes, and a function with no `ics::check` under a floor of 1 |
 
 ```sh
 cpp/policy/check-dynamic.sh sanitizers
 cpp/policy/check-dynamic.sh fuzz 60        # seconds per fuzz target
+cpp/policy/check-dynamic.sh coverage
 ```
+
+The assertion density of a gated path is the number of `ics::check` calls in its functions longer than three lines, divided by the number of those functions. Power of Ten rule 5 asks for two per function; container code, with one failure mode per operation, sits near 0.5. So each path has a floor that only rises: CI fails below it, and asks for the floor to be raised when the density rises above it. [`.github/scripts/cpp_coverage.py`](../.github/scripts/cpp_coverage.py) reads function extents from `llvm-cov export`, so a template member counts only once some test instantiates it. Add a library to the gates file when it is written, at its measured density.
 
 The seeded defects live in [`policy/seeded-runtime/`](policy/seeded-runtime), each naming on its first line the report it must produce.
 
@@ -94,4 +116,4 @@ Add a fuzz target with `ics_add_fuzzer(name SOURCES … LIBRARIES … CORPUS fol
 
 CodeQL analyzes the C++ code too, with the Python and TypeScript code; see [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml).
 
-Next issue: [ICS-009](https://github.com/MatthewK84/ICS/issues/9) (CI evidence: SBOMs, signing and provenance), then [ICS-015](https://github.com/MatthewK84/ICS/issues/15) (common).
+Next issue: [ICS-016](https://github.com/MatthewK84/ICS/issues/16) (common units, logging and config).

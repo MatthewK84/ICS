@@ -18,6 +18,9 @@ class IcsConan(ConanFile):
         # The runtime for the generated messages in cpp/proto (ICS-011); its
         # version must match the protoc in proto/tools.txt (35.0).
         self.requires("protobuf/7.35.0")
+        # Result types for ics::common (ICS-015). 1.2.0 makes tl::expected
+        # [[nodiscard]], so an ignored result does not compile.
+        self.requires("tl-expected/1.2.0")
 
     def generate(self) -> None:
         CMakeDeps(self).generate()

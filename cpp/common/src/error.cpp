@@ -1,0 +1,21 @@
+#include "ics/common/error.hpp"
+
+namespace ics {
+
+std::string_view to_string(const Error error) noexcept {
+  switch (error) {
+    case Error::kInvalidArgument:
+      return "invalid argument";
+    case Error::kOutOfRange:
+      return "out of range";
+    case Error::kFull:
+      return "full";
+    case Error::kEmpty:
+      return "empty";
+    case Error::kStaleHandle:
+      return "stale handle";
+  }
+  return "unknown";
+}
+
+}  // namespace ics

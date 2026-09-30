@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Install the Conan dependencies that CMake presets need (ICS-004).
 #
-# Usage: conan-install.sh PRESET...   (for example gcc-release, clang-asan or clang-fuzz)
+# Usage: conan-install.sh PRESET...   (for example gcc-release, clang-asan, clang-fuzz or clang-coverage)
 #
 # Dependencies come from cpp/conan.lock and land in
 # cpp/build/conan/<profile>-<build type>[-<sanitizer>]/, where the preset's
@@ -24,13 +24,14 @@ profile_for() {
 build_type_for() {
   case "${1#*-}" in
     release) echo Release ;;
-    debug | asan | tsan | ubsan | fuzz) echo Debug ;;
+    debug | asan | tsan | ubsan | fuzz | coverage) echo Debug ;;
     *) return 1 ;;
   esac
 }
 
 # The sanitizer the dependencies need; empty when they are built plainly.
-# UBSan checks only instrumented code and needs nothing from the dependencies.
+# UBSan checks only instrumented code and needs nothing from the dependencies,
+# and coverage (ICS-015) measures only ICS code.
 # libFuzzer runs with ASan, so the fuzz preset shares the ASan dependencies.
 sanitizer_for() {
   case "${1#*-}" in
