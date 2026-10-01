@@ -56,8 +56,8 @@ jobs:
   toolchain:
     name: ics-cpp image and reproducibility
     runs-on: ubuntu-24.04
-    # A run that must build every dependency from source takes about 100
-    # minutes; with the Conan cache it takes about 25.
+    # A run that must build every dependency from source takes about 90
+    # minutes; with the Conan cache it takes about 15.
     timeout-minutes: 120
     permissions:
       contents: read
@@ -69,12 +69,14 @@ jobs:
         with:
           persist-credentials: false
 
+      # Before any docker run: Docker creates a missing bind-mount source as
+      # root, and actions/cache, which runs as the runner user, then cannot
+      # extract into it. It only warns, so every dependency was rebuilt.
+      - name: Create the Conan cache folder
+        run: mkdir -p /tmp/conan-home
+
       - name: Build the ics-cpp image
         run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
-
-      # GeographicLib in the image must reproduce golden/frames exactly (ICS-014).
-      - name: Golden frame vectors are current
-        run: ${RUN} golden/frames/generate.sh --check
 
       - name: Restore the Conan package cache
         id: conan-cache
@@ -83,6 +85,23 @@ jobs:
           path: /tmp/conan-home
           key: conan-cpp-toolchain-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
           restore-keys: conan-cpp-toolchain-
+
+      # A cache that matched but did not arrive fails here, rather than as a
+      # silent rebuild of every dependency.
+      - name: Check the restored Conan cache
+        if: steps.conan-cache.outputs.cache-matched-key != ''
+        env:
+          MATCHED_KEY: ${{ steps.conan-cache.outputs.cache-matched-key }}
+        run: |
+          if [ -z "$(ls -A /tmp/conan-home/p 2>/dev/null)" ]; then
+            echo "::error::Conan cache ${MATCHED_KEY} matched, but nothing was restored into /tmp/conan-home"
+            exit 1
+          fi
+          echo "Restored ${MATCHED_KEY}: $(du -sh /tmp/conan-home | cut -f1)"
+
+      # GeographicLib in the image must reproduce golden/frames exactly (ICS-014).
+      - name: Golden frame vectors are current
+        run: ${RUN} golden/frames/generate.sh --check
 
       - name: Require the Conan lockfile
         run: |
