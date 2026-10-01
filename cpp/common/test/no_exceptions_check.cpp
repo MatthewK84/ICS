@@ -6,6 +6,7 @@
 #include "ics/common/fixed_pool.hpp"
 #include "ics/common/ring_buffer.hpp"
 #include "ics/common/static_vector.hpp"
+#include "ics/common/units.hpp"
 
 template class ics::StaticVector<int, 4>;
 template class ics::RingBuffer<int, 4>;

@@ -12,6 +12,15 @@ from conan.tools.cmake import CMakeDeps, CMakeToolchain
 class IcsConan(ConanFile):
     name = "ics"
     settings = "os", "arch", "compiler", "build_type"
+    # Header-only packages have one binary for every preset, so Conan builds
+    # nothing new for them (ICS-016). Neither library throws: real-time code
+    # builds without exceptions, and errors come back as values.
+    default_options = {
+        "fmt/*:header_only": True,
+        "spdlog/*:header_only": True,
+        "spdlog/*:no_exceptions": True,
+        "tomlplusplus/*:exceptions": False,
+    }
 
     def requirements(self) -> None:
         self.requires("gtest/1.15.0")
@@ -21,6 +30,10 @@ class IcsConan(ConanFile):
         # Result types for ics::common (ICS-015). 1.2.0 makes tl::expected
         # [[nodiscard]], so an ignored result does not compile.
         self.requires("tl-expected/1.2.0")
+        # Structured logging for ics::logging (ICS-016); brings fmt 12.1.0.
+        self.requires("spdlog/1.17.0")
+        # TOML config files for ics::config (ICS-016).
+        self.requires("tomlplusplus/3.4.0")
 
     def generate(self) -> None:
         CMakeDeps(self).generate()

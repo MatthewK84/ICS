@@ -1,0 +1,19 @@
+title = "every TOML type"
+count = 42
+ratio = 0.5
+huge = 1e308
+not_a_number = nan
+infinite = -inf
+flag = false
+when = 2026-10-01T09:53:50.123456789Z
+day = 2026-10-01
+list = [1, 2.0, "three", [4]]
+inline = { a = 1, b = { c = "d" } }
+
+[log]
+level = "debug"
+service = "ics-test"
+
+[[stations]]
+name = "north"
+height_m = 12.5

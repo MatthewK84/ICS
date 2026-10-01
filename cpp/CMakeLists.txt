@@ -20,6 +20,8 @@ include(cmake/Testing.cmake)
 include(cmake/Fuzzing.cmake)
 add_subdirectory(testing/alloc_guard)
 add_subdirectory(common)
+add_subdirectory(logging)
+add_subdirectory(config)
 add_subdirectory(toolchain_check)
 add_subdirectory(proto/test)
 

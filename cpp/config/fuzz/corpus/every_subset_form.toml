@@ -1,0 +1,17 @@
+# Every form in the ICS TOML subset.
+title = "subset"
+literal = 'C:\path'
+escapes = "tab\there \"quoted\" \\ \b\f\n\r"
+count = -1_000
+ratio = 3.14e-2
+special = [inf, -nan, +inf]
+flags = [true, false,]
+mixed = [1, 'two', "three"]
+
+[log]
+level = "debug"
+service = "ics-test"
+
+[stations.north]
+height_m = 12.5
+dotted.key = 1
