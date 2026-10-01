@@ -1,5 +1,5 @@
-# ics::common (ICS-015): the ICS error type, the ics::check assertion and the
-# fixed-capacity containers that real-time code builds on.
+# ics::common (ICS-015, ICS-016): the ICS error type, the ics::check assertion,
+# the fixed-capacity containers that real-time code builds on, and the unit types.
 find_package(tl-expected CONFIG REQUIRED)
 
 add_library(ics_common STATIC src/check.cpp src/error.cpp)
@@ -14,6 +14,7 @@ ics_add_gtest(common_test
     test/fixed_pool_test.cpp
     test/ring_buffer_test.cpp
     test/static_vector_test.cpp
+    test/units_test.cpp
   LIBRARIES ics::common)
 
 # Real-time targets will build without exceptions, so the headers must too.

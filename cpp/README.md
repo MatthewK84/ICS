@@ -8,7 +8,8 @@ Planned layout:
 
 ```text
 cpp/
-  common/ camera_io/ timing/ trigger/ pli/ mount/ tracker/ encoder/
+  common/ logging/ config/ camera_io/ timing/ trigger/ pli/ mount/
+  tracker/ encoder/
   endgame/ registration/ detection/ association/ estimation/
   killclass/ footprint/ record/ api/
   services/   ics-timingd ics-plid ics-mountd ics-trigd ics-camd
@@ -43,7 +44,7 @@ Dependencies are pinned in `conan.lock`. After changing `conanfile.py`, regenera
 
 ## Common library
 
-[`common/`](common) is `ics::common` ([ICS-015](https://github.com/MatthewK84/ICS/issues/15)), which every real-time component links:
+[`common/`](common) is `ics::common` ([ICS-015](https://github.com/MatthewK84/ICS/issues/15), [ICS-016](https://github.com/MatthewK84/ICS/issues/16)), which every real-time component links:
 
 | Header | Provides |
 |---|---|
@@ -51,6 +52,7 @@ Dependencies are pinned in `conan.lock`. After changing `conanfile.py`, regenera
 | [`check.hpp`](common/include/ics/common/check.hpp) | `ics::check(condition)`, the ICS assertion. It returns the condition and, when it is false, writes the caller's file, line and function to stderr without allocating; the caller recovers, normally by returning an error |
 | [`static_vector.hpp`](common/include/ics/common/static_vector.hpp), [`ring_buffer.hpp`](common/include/ics/common/ring_buffer.hpp), [`fixed_pool.hpp`](common/include/ics/common/fixed_pool.hpp) | Fixed-capacity containers that never allocate: `StaticVector<T, N>`, the first-in, first-out `RingBuffer<T, N>`, and `FixedPool<T, N>`, whose handles carry a generation so a released one is refused. A full, empty, out-of-range or stale case returns an error; nothing throws or overwrites |
 | [`storable.hpp`](common/include/ics/common/storable.hpp) | `Storable`, what the containers need from an element type: default construction, move construction and move assignment that cannot throw |
+| [`units.hpp`](common/include/ics/common/units.hpp) | Strong unit types: `Meters`, `Radians` and `Degrees` are a `double` tagged with its unit, so mixing units, or passing a bare `double`, does not compile; `to_radians`, `to_degrees` and `wrap_to_pi` convert. Time is `std::chrono`: `UtcTime` (`sys_time<nanoseconds>`, POSIX-counted UTC as in [docs/frames-and-time.md](../docs/frames-and-time.md)) and `Duration` (`nanoseconds`), with `utc_from_ns` and `to_utc_ns` for `_utc_ns` fields |
 
 How to use them:
 
@@ -58,6 +60,36 @@ How to use them:
 - The containers are not thread-safe.
 - Tests instantiate each container template explicitly (`template class ics::RingBuffer<int, 3>;`), so a member no test calls shows up as uncovered.
 - The headers build with `-fno-exceptions`, as real-time targets will; [`common/test/no_exceptions_check.cpp`](common/test/no_exceptions_check.cpp) proves it.
+
+## Logging
+
+[`logging/`](logging) is `ics::logging` (ICS-016). A service makes one `Logger` at start-up, with `Logger::to_stderr(service, threshold)`, and passes it by reference; there is no global logger. Each call writes one JSON line through spdlog to stderr, which journald captures:
+
+```cpp
+logger.warn("frame_dropped", {{"camera", "north"}, {"count", 3}});
+// {"ts":"2026-10-01T09:53:50.123456789Z","level":"warn","service":"ics-camd","event":"frame_dropped","camera":"north","count":3}
+```
+
+- Field values are integers, floating-point numbers, booleans or text. Keys are `lower_snake_case` and must not repeat `ts`, `level`, `service` or `event`; a field with a bad key fails an `ics::check` and is left out.
+- Logging formats text and may allocate, so it is not for real-time paths. Real-time code counts or queues what happened, and a non-real-time thread logs it.
+
+## Config
+
+[`config/`](config) is `ics::config` (ICS-016). A service reads its TOML file once at start-up against a schema written as code, and exits when it is invalid, naming every bad field:
+
+```cpp
+const auto config = ics::config::read_file(path, &ics::config::read_logging);
+if (!config) {
+  std::fputs(ics::config::format_errors(path.string(), config.error()).c_str(), stderr);
+  return EXIT_FAILURE;
+}
+// app.toml: log.level: must be one of debug, info, warn, error, not "verbose"
+// app.toml: log.colour: is not a known setting
+```
+
+- A schema is a function that takes a `Reader&`. Its getters check type and range, and a setting with a unit must carry the unit in its name, as proto fields do: `duration("timeout_ns", …)`, `meters`, `radians`, `degrees`. Every setting is required, and one the schema never reads is reported as unknown, since it is likely a typo.
+- Files are written in a TOML subset, defined in [`subset.hpp`](config/include/ics/config/subset.hpp): printable ASCII, tables of bare keys, and settings holding text, decimal numbers, booleans or one-line lists of those. `parse()` checks the subset before toml++ reads the text. Fuzzing found that toml++ 3.4.0 has undefined behaviour on some invalid TOML, such as a non-ASCII character or `=` straight after a table's `[`, and its unreleased main branch and toml11 4.4.0 failed fuzzing too.
+- [`logging_config.hpp`](config/include/ics/config/logging_config.hpp) reads the `[log]` table every service has: `level` and `service`.
 
 ## Power-of-Ten checks
 
@@ -106,7 +138,7 @@ cpp/policy/check-dynamic.sh fuzz 60        # seconds per fuzz target
 cpp/policy/check-dynamic.sh coverage
 ```
 
-The assertion density of a gated path is the number of `ics::check` calls in its functions longer than three lines, divided by the number of those functions. Power of Ten rule 5 asks for two per function; container code, with one failure mode per operation, sits near 0.5. So each path has a floor that only rises: CI fails below it, and asks for the floor to be raised when the density rises above it. [`.github/scripts/cpp_coverage.py`](../.github/scripts/cpp_coverage.py) reads function extents from `llvm-cov export`, so a template member counts only once some test instantiates it. Add a library to the gates file when it is written, at its measured density.
+The assertion density of a gated path is the number of `ics::check` calls in its functions longer than three lines, divided by the number of those functions. Power of Ten rule 5 asks for two per function; container code, with one failure mode per operation, sits near 0.5, and logging and config, where bad input is an expected outcome rather than a bug, sit lower. So each path has a floor that only rises: CI fails below it, and asks for the floor to be raised when the density rises above it. [`.github/scripts/cpp_coverage.py`](../.github/scripts/cpp_coverage.py) reads function extents from `llvm-cov export`, so a template member counts only once some test instantiates it. Add a library to the gates file when it is written, at its measured density. Test and fuzz folders are never gated. Comparisons in gated code are written out rather than defaulted, because Clang 17's coverage miscounts the branches of a defaulted comparison.
 
 The seeded defects live in [`policy/seeded-runtime/`](policy/seeded-runtime), each naming on its first line the report it must produce.
 
@@ -116,4 +148,4 @@ Add a fuzz target with `ics_add_fuzzer(name SOURCES … LIBRARIES … CORPUS fol
 
 CodeQL analyzes the C++ code too, with the Python and TypeScript code; see [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml).
 
-Next issue: [ICS-016](https://github.com/MatthewK84/ICS/issues/16) (common units, logging and config).
+Next issue: [ICS-017](https://github.com/MatthewK84/ICS/issues/17) (common frames).

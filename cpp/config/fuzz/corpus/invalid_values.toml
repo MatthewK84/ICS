@@ -1,0 +1,4 @@
+[log]
+level = "verbose"
+service = ""
+colour = true

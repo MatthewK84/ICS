@@ -68,6 +68,40 @@ reviewed = 2026-09-30
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
+[[project]]
+name = "spdlog"
+ecosystem = "conan"
+packages = ["spdlog"]
+used_for = "The sink behind ics::logging, which writes structured JSON log lines (cpp/logging, ICS-016); header-only, built without exceptions. It brings fmt (MIT) as a header-only transitive dependency."
+ships = true
+license = "MIT"
+source = "https://github.com/gabime/spdlog"
+governance = "Maintained by its author, Gabi Melman (GitHub: gabime), who reviews contributions and makes every release; many outside contributors. The Conan recipe comes from Conan Center."
+sustainment = "Active and widely used, with several releases a year. Version 1.17.0, pinned in cpp/conan.lock. ics::logging formats each line itself and hands spdlog only finished text, so another sink library could replace it behind the same interface."
+foreign_influence = "No controlling organization: its author maintains it, and their jurisdiction was not established from the project's pages."
+single_maintainer = true
+maintainers = "Gabi Melman, the author"
+reviewed = 2026-10-01
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "toml++"
+ecosystem = "conan"
+packages = ["tomlplusplus"]
+used_for = "Parses the TOML config files that ics::config checks against each service's schema (cpp/config, ICS-016); header-only, built without exceptions."
+ships = true
+license = "MIT"
+source = "https://github.com/marzer/tomlplusplus"
+governance = "Maintained by its author, Mark Gillard (GitHub: marzer), who reviews contributions and makes every release. The Conan recipe comes from Conan Center."
+sustainment = "Stable and feature-complete for TOML 1.0; releases are infrequent, and 3.4.0 is the newest on Conan Center. Pinned in cpp/conan.lock. 3.4.0 reaches __builtin_unreachable() on some non-ASCII characters outside strings (found by the ICS-016 fuzz target), so ics::config accepts only ASCII files until a release fixes it. ics::config keeps toml++ behind its own Reader, so toml11 could replace it."
+foreign_influence = "No controlling organization: its author maintains it, and their jurisdiction was not established from the project's pages."
+single_maintainer = true
+maintainers = "Mark Gillard, the author"
+reviewed = 2026-10-01
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
 # --- Python (PyPI) -----------------------------------------------------------
 
 [[project]]

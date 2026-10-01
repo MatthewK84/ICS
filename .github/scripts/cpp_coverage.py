@@ -5,8 +5,9 @@
   cpp_coverage.py check EXPORT --root ROOT --path-map RECORDED=REPO (--gates FILE | --gate PATH FLOOR ...)
       gates the code in an `llvm-cov export -format=text` file
 
-Each gate names a path under the repository root and a floor. Test folders
-(any path with a test/ component) are never gated. For each gate:
+Each gate names a path under the repository root and a floor. Test and fuzz
+folders (any path with a test/ or fuzz/ component) are never gated: fuzz
+targets run under libFuzzer, not ctest (ICS-016). For each gate:
 
 - every line and every branch of its code must be covered, and every .cpp
   file under it must be in the export, that is, linked into some test;
@@ -39,6 +40,7 @@ CHECK_CALL: re.Pattern[str] = re.compile(r"(?<![\w.>:])(?:ics::)?check\(")
 MAX_TRIVIAL_LINES: int = 3
 HUNDRED: int = 100
 MAX_FLOOR: Decimal = Decimal(100)
+UNGATED_FOLDERS: frozenset[str] = frozenset({"test", "fuzz"})
 GATE_FIELDS: int = 2
 REGION_FIELDS: int = 6
 FILE_ID: int = 5
@@ -54,7 +56,7 @@ class Gate:
     floor_hundredths: int
 
     def covers(self, path: str) -> bool:
-        if "test" in PurePosixPath(path).parts:
+        if UNGATED_FOLDERS.intersection(PurePosixPath(path).parts):
             return False
         return path == self.path or path.startswith(self.path + "/")
 

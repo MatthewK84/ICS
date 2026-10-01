@@ -94,11 +94,13 @@ class GateTests(unittest.TestCase):
         with self.assertRaisesRegex(cc.CoverageError, "gated twice"):
             cc.parse_gates([("cpp/a", "1"), ("cpp/a/", "2")])
 
-    def test_covers_its_path_but_never_tests(self) -> None:
+    def test_covers_its_path_but_never_tests_or_fuzz_targets(self) -> None:
         gate = cc.Gate("cpp/common", 0)
         self.assertTrue(gate.covers("cpp/common/src/a.cpp"))
         self.assertTrue(gate.covers("cpp/common"))
+        self.assertTrue(gate.covers("cpp/common/src/fuzzy.cpp"))
         self.assertFalse(gate.covers("cpp/common/test/a_test.cpp"))
+        self.assertFalse(gate.covers("cpp/common/fuzz/a_fuzz.cpp"))
         self.assertFalse(gate.covers("cpp/commonplace/a.cpp"))
 
 
@@ -179,6 +181,8 @@ class CoverageTests(unittest.TestCase):
             (root / "cpp" / "lib" / "unlinked.cpp").write_text("int u() { return 0; }\n", encoding="utf-8")
             (root / "cpp" / "lib" / "test").mkdir()
             (root / "cpp" / "lib" / "test" / "f_test.cpp").write_text("\n", encoding="utf-8")
+            (root / "cpp" / "lib" / "fuzz").mkdir()
+            (root / "cpp" / "lib" / "fuzz" / "f_fuzz.cpp").write_text("\n", encoding="utf-8")
             files = [cc.FileCoverage("cpp/lib/f.cpp", 12, 12, 1, 2)]
             report = cc.coverage_report(cc.Gate("cpp/lib", 0), files, root)
         self.assertEqual(
