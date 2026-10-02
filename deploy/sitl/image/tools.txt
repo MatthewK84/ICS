@@ -1,0 +1,6 @@
+# Autopilot sources compiled into the SITL rig images (ICS-018), one per line:
+# name, release tag, commit, repository. fetch-source.sh clones the tag and
+# refuses it unless it resolves to the commit. Every entry needs an entry in
+# docs/dependency-register.toml.
+px4-autopilot v1.17.0 d6f12ad1c4f70ad3230afd7d86e971421e02fef4 https://github.com/PX4/PX4-Autopilot
+ardupilot Copter-4.7.1 dbe792162d06cab66c3475fd5556bf7a120f119e https://github.com/ArduPilot/ardupilot

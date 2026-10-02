@@ -12,7 +12,10 @@ python/
   ics_models/   pointing, calibration, trajectory, drag, footprint, killclass, uncertainty
   ics_synth/    synthetic engagement generator
   ics_stats/    Pk, timeline analysis, validation scorer
+  ics_sitl/     the SITL rig's ground station (ICS-018, deploy/sitl): MAVLink, missions, engagement checks
 ```
+
+`ics_sitl` is test equipment, not a model: it flies the SITL rig's scripted engagements ([`deploy/sitl`](../deploy/sitl/README.md)). It uses only the standard library, so the rig runs on any Python 3.12 without `uv`.
 
 Rules (enforced in CI by [ICS-006](https://github.com/MatthewK84/ICS/issues/6)):
 

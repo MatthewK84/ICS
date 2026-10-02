@@ -1,0 +1,5 @@
+# Python tools ArduPilot's SITL build runs (ICS-018): waf's code generators
+# for MAVLink and DroneCAN, and pexpect, which waf's SITL build imports. The
+# subset of ArduPilot's install-prereqs list that the build needs.
+empy==3.3.4
+pexpect

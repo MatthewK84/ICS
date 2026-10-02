@@ -1,0 +1,8 @@
+# Ubuntu packages the SITL rig needs on the machine that runs it (ICS-018),
+# one per line: ip for the TAP's veth pair and network namespace, nft for the
+# mirroring, and tcpdump for the capture (tap.sh). The workflow installs them
+# from the runner's Ubuntu archive. Every package here needs an entry in
+# docs/dependency-register.toml (ICS-010).
+iproute2
+nftables
+tcpdump

@@ -1,0 +1,13 @@
+# Ubuntu packages installed into the SITL rig's build stages (ICS-018), one
+# per line. install-builder.sh installs them from the Ubuntu snapshot, and
+# every package here needs an entry in docs/dependency-register.toml (ICS-010).
+# The published images keep only the compiled autopilot on the base image.
+ca-certificates
+git
+gcc
+g++
+make
+cmake
+ninja-build
+python3
+python3-venv

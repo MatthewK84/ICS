@@ -1,0 +1,46 @@
+# The SITL rig's two autopilots (ICS-018), each on a fixed address of one
+# bridge network, ics-range. The rig itself (python -m ics_sitl) runs on the
+# host at the bridge's gateway address, and each autopilot sends its MAVLink
+# to its own port there. The network lives only inside the machine running
+# the rig; it is not a range network.
+#
+# run-engagements.sh starts it with an env file from `python -m ics_sitl env`,
+# which places each vehicle's home for the engagement. Each image's start
+# script refuses to run without them.
+name: ics-sitl
+
+services:
+  px4:
+    image: ${ICS_PX4_IMAGE:-ics-sitl-px4:local}
+    container_name: ics-sitl-px4
+    environment:
+      ICS_HOME_LAT: ${ICS_PX4_LAT:-}
+      ICS_HOME_LON: ${ICS_PX4_LON:-}
+      ICS_HOME_ALT: ${ICS_GROUND_MSL:-}
+      ICS_RIG_ADDRESS: 172.30.18.1
+      ICS_RIG_PORT: "14551"
+    networks:
+      range:
+        ipv4_address: 172.30.18.10
+
+  ardupilot:
+    image: ${ICS_ARDUPILOT_IMAGE:-ics-sitl-ardupilot:local}
+    container_name: ics-sitl-ardupilot
+    environment:
+      ICS_HOME_LAT: ${ICS_ARDUPILOT_LAT:-}
+      ICS_HOME_LON: ${ICS_ARDUPILOT_LON:-}
+      ICS_HOME_ALT: ${ICS_GROUND_MSL:-}
+      ICS_RIG_ADDRESS: 172.30.18.1
+      ICS_RIG_PORT: "14550"
+    networks:
+      range:
+        ipv4_address: 172.30.18.20
+
+networks:
+  range:
+    name: ics-range
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.18.0/24
+          gateway: 172.30.18.1

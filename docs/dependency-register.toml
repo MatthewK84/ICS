@@ -244,7 +244,7 @@ approved_by = "MatthewK84"
 name = "setuptools"
 ecosystem = "pypi"
 packages = ["setuptools"]
-used_for = "Builds Conan's source distribution while the toolchain image is built"
+used_for = "Builds Conan's source distribution while the toolchain image is built, and EmPy's in the SITL rig's build stages (deploy/sitl/image, ICS-018)"
 ships = false
 license = "MIT"
 source = "https://github.com/pypa/setuptools"
@@ -288,6 +288,125 @@ foreign_influence = "No corporate steward; community maintainers under the Pytho
 single_maintainer = false
 maintainers = "typeshed maintainers"
 reviewed = 2026-09-27
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "EmPy"
+ecosystem = "pypi"
+packages = ["empy"]
+used_for = "Python tool in the SITL rig's image build stages (deploy/sitl/image, ICS-018), run by PX4's and ArduPilot's code generators; it never reaches the published images"
+ships = false
+license = "LGPL-2.0-or-later"
+source = "http://www.alcyone.com/software/empy/"
+governance = "Written and released by its author, Erik Max Francis. Version 3.3.4 states its license only as 'LGPL', which lets the licensee choose any published LGPL version."
+sustainment = "Version 3.3.4 (2019) is the version both autopilots pin, because EmPy 4 changed its syntax; it is stable and not expected to change. Hash-pinned in deploy/sitl/image/requirements-*.txt. Moving off it is the autopilots' decision."
+foreign_influence = "No controlling organization: its author maintains it, and their jurisdiction was not established from the project's pages."
+single_maintainer = true
+maintainers = "Erik Max Francis, the author"
+reviewed = 2026-10-02
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "Jinja"
+ecosystem = "pypi"
+packages = ["jinja2"]
+used_for = "Python tool in the SITL rig's image build stages (deploy/sitl/image, ICS-018), run by PX4's uORB and parameter code generators"
+ships = false
+license = "BSD-3-Clause"
+source = "https://github.com/pallets/jinja"
+governance = "Pallets project: a team of maintainers reviews changes and makes releases."
+sustainment = "Active, widely used. Hash-pinned in deploy/sitl/image/requirements-px4.txt; PX4 requires it."
+foreign_influence = "Pallets, a community organization fiscally hosted by the Python Software Foundation (US non-profit); international maintainers."
+single_maintainer = false
+maintainers = "The Pallets team"
+reviewed = 2026-10-02
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "Kconfiglib"
+ecosystem = "pypi"
+packages = ["kconfiglib"]
+used_for = "Python tool in the SITL rig's image build stages (deploy/sitl/image, ICS-018), run by PX4's Kconfig board configuration"
+ships = false
+license = "ISC"
+source = "https://github.com/ulfalizer/Kconfiglib"
+governance = "Written and released by its author, Ulf Magnusson."
+sustainment = "Little activity since version 14.1.0 (2020), which PX4 uses; it is feature-complete for PX4's needs. Hash-pinned in deploy/sitl/image/requirements-px4.txt. Replacing it is PX4's decision."
+foreign_influence = "No controlling organization: its author maintains it, and their jurisdiction was not established from the project's pages."
+single_maintainer = true
+maintainers = "Ulf Magnusson, the author"
+reviewed = 2026-10-02
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "packaging"
+ecosystem = "pypi"
+packages = ["packaging"]
+used_for = "Python tool in the SITL rig's image build stages (deploy/sitl/image, ICS-018), run by PX4's build scripts to compare versions"
+ships = false
+license = "Apache-2.0 OR BSD-2-Clause"
+source = "https://github.com/pypa/packaging"
+governance = "Python Packaging Authority (PyPA) project; its maintainers review changes and make releases."
+sustainment = "Active; a core Python packaging library. Hash-pinned in deploy/sitl/image/requirements-px4.txt."
+foreign_influence = "PyPA, a working group associated with the Python Software Foundation (US non-profit); international maintainers."
+single_maintainer = false
+maintainers = "PyPA maintainers"
+reviewed = 2026-10-02
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "Pexpect"
+ecosystem = "pypi"
+packages = ["pexpect"]
+used_for = "Python tool in the SITL rig's image build stages (deploy/sitl/image, ICS-018), run by ArduPilot's waf build, which imports it for SITL"
+ships = false
+license = "ISC"
+source = "https://github.com/pexpect/pexpect"
+governance = "Maintained by a small team in the pexpect GitHub organization, who review changes and make releases."
+sustainment = "Maintained, with infrequent releases; 4.9.0 is current. Hash-pinned in deploy/sitl/image/requirements-ardupilot.txt."
+foreign_influence = "No controlling organization; maintained by volunteers whose jurisdictions were not established."
+single_maintainer = false
+maintainers = "Thomas Kluyver, Jeff Quast and others in the pexpect organization"
+reviewed = 2026-10-02
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "genmsg (ROS)"
+ecosystem = "pypi"
+packages = ["pyros-genmsg"]
+used_for = "Python tool in the SITL rig's image build stages (deploy/sitl/image, ICS-018), run by PX4's uORB message generator, which parses ROS-style message files"
+ships = false
+license = "BSD-3-Clause"
+source = "https://github.com/ros/genmsg"
+governance = "ROS project package maintained by Open Robotics (now the Open Source Robotics Foundation); PyPI releases are packaged from it."
+sustainment = "Stable, with rare releases. Hash-pinned in deploy/sitl/image/requirements-px4.txt; PX4 requires it."
+foreign_influence = "Open Source Robotics Foundation (US non-profit)."
+single_maintainer = false
+maintainers = "Open Robotics / OSRF maintainers"
+reviewed = 2026-10-02
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "PyYAML"
+ecosystem = "pypi"
+packages = ["pyyaml"]
+used_for = "Python tool in the SITL rig's image build stages (deploy/sitl/image, ICS-018), run by PX4's code generators to read YAML module and parameter definitions"
+ships = false
+license = "MIT"
+source = "https://github.com/yaml/pyyaml"
+governance = "YAML project organization on GitHub; a small group of maintainers reviews changes and makes releases."
+sustainment = "Active, with releases for new Python versions. Hash-pinned in deploy/sitl/image/requirements-px4.txt."
+foreign_influence = "No controlling organization; volunteer maintainers in the YAML organization, whose jurisdictions were not established."
+single_maintainer = false
+maintainers = "The YAML project's PyYAML maintainers"
+reviewed = 2026-10-02
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
@@ -592,7 +711,7 @@ approved_by = "MatthewK84"
 name = "Ubuntu base image"
 ecosystem = "container"
 packages = ["docker.io/library/ubuntu"]
-used_for = "Base of the ics-cpp toolchain image"
+used_for = "Base of the ics-cpp toolchain image and of the SITL rig's autopilot images (deploy/sitl/image, ICS-018)"
 ships = false
 license = "LicenseRef-Ubuntu-archive"
 source = "https://hub.docker.com/_/ubuntu"
@@ -639,13 +758,13 @@ reviewed = 2026-09-27
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
-# --- Ubuntu packages in the toolchain images -----------------------------------
+# --- Ubuntu packages: toolchain and SITL images, and the SITL host -----------
 
 [[project]]
 name = "ca-certificates"
 ecosystem = "apt"
 packages = ["ca-certificates"]
-used_for = "Trusted certificate authorities for HTTPS in the toolchain images"
+used_for = "Trusted certificate authorities for HTTPS in the toolchain images and the SITL rig's build stages"
 ships = false
 license = "GPL-2.0-or-later AND MPL-2.0"
 source = "https://launchpad.net/ubuntu/+source/ca-certificates"
@@ -661,8 +780,8 @@ approved_by = "MatthewK84"
 [[project]]
 name = "GCC 13"
 ecosystem = "apt"
-packages = ["gcc-13", "g++-13"]
-used_for = "C and C++ compiler for every ICS build"
+packages = ["gcc-13", "g++-13", "gcc", "g++"]
+used_for = "C and C++ compiler for every ICS build; gcc and g++, Ubuntu's default compiler packages (GCC 13), compile PX4 and ArduPilot in the SITL rig's build stages (deploy/sitl/image, ICS-018)"
 ships = false
 license = "GPL-3.0-or-later WITH GCC-exception-3.1"
 source = "https://gcc.gnu.org"
@@ -696,7 +815,7 @@ approved_by = "MatthewK84"
 name = "CMake"
 ecosystem = "apt"
 packages = ["cmake"]
-used_for = "Configures every C++ build (presets in cpp/CMakePresets.json)"
+used_for = "Configures every C++ build (presets in cpp/CMakePresets.json), and PX4's build in the SITL rig (deploy/sitl/image, ICS-018)"
 ships = false
 license = "BSD-3-Clause"
 source = "https://gitlab.kitware.com/cmake/cmake"
@@ -713,7 +832,7 @@ approved_by = "MatthewK84"
 name = "Ninja"
 ecosystem = "apt"
 packages = ["ninja-build"]
-used_for = "Build system that CMake generates for"
+used_for = "Build system that CMake generates for, in ICS and in PX4's SITL build (deploy/sitl/image, ICS-018)"
 ships = false
 license = "Apache-2.0"
 source = "https://github.com/ninja-build/ninja"
@@ -747,7 +866,7 @@ approved_by = "MatthewK84"
 name = "Python 3 (Ubuntu)"
 ecosystem = "apt"
 packages = ["python3", "python3-venv"]
-used_for = "Python 3.12 in the toolchain images; runs Conan"
+used_for = "Python 3.12 in the toolchain images, where it runs Conan, and in the SITL rig's build stages, where it runs the autopilots' code generators (deploy/sitl/image, ICS-018)"
 ships = false
 license = "PSF-2.0"
 source = "https://launchpad.net/ubuntu/+source/python3-defaults"
@@ -764,7 +883,7 @@ approved_by = "MatthewK84"
 name = "Git"
 ecosystem = "apt"
 packages = ["git"]
-used_for = "Version control inside the toolchain images"
+used_for = "Version control inside the toolchain images; clones the pinned autopilot sources in the SITL rig's build stages (deploy/sitl/image, ICS-018)"
 ships = false
 license = "GPL-2.0-only"
 source = "https://git.kernel.org/pub/scm/git/git.git"
@@ -790,6 +909,74 @@ sustainment = "Mature and maintained, the reference implementation for these con
 foreign_influence = "No controlling organization: its author maintains it, and their jurisdiction was not established from the project's pages. Packaged by Canonical Ltd. (UK) for Ubuntu."
 single_maintainer = true
 maintainers = "Charles Karney, the author"
+reviewed = 2026-10-02
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "iproute2"
+ecosystem = "apt"
+packages = ["iproute2"]
+used_for = "The ip command on the machine that runs the SITL rig: the emulated TAP's veth pair and network namespace (deploy/sitl/tap.sh, ICS-018)"
+ships = false
+license = "GPL-2.0-only"
+source = "https://git.kernel.org/pub/scm/network/iproute2/iproute2.git"
+governance = "Part of the Linux kernel networking community: maintainers review patches on the netdev mailing list and release alongside the kernel."
+sustainment = "Very active, released with each kernel. Installed from the runner's Ubuntu archive (deploy/sitl/apt-packages.txt)."
+foreign_influence = "Linux kernel community, hosted on kernel.org by the Linux Foundation (US non-profit); international contributors."
+single_maintainer = false
+maintainers = "Stephen Hemminger and David Ahern with the netdev community"
+reviewed = 2026-10-02
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "GNU Make"
+ecosystem = "apt"
+packages = ["make"]
+used_for = "Runs PX4's build in the SITL rig's PX4 build stage (deploy/sitl/image, ICS-018)"
+ships = false
+license = "GPL-3.0-or-later"
+source = "https://git.savannah.gnu.org/git/make.git"
+governance = "GNU project of the Free Software Foundation; its maintainer reviews changes and makes releases."
+sustainment = "Mature and maintained, with releases every year or two. Pinned through the Ubuntu snapshot date."
+foreign_influence = "Free Software Foundation (US non-profit)."
+single_maintainer = true
+maintainers = "Paul Smith, the long-time maintainer"
+reviewed = 2026-10-02
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "nftables"
+ecosystem = "apt"
+packages = ["nftables"]
+used_for = "The nft command on the machine that runs the SITL rig: copies each autopilot's traffic to the emulated TAP (deploy/sitl/tap.sh, ICS-018)"
+ships = false
+license = "GPL-2.0-only"
+source = "https://git.netfilter.org/nftables"
+governance = "netfilter project: a core team reviews patches on its mailing list and makes releases."
+sustainment = "Active; the Linux kernel's packet-filtering framework. Installed from the runner's Ubuntu archive (deploy/sitl/apt-packages.txt)."
+foreign_influence = "netfilter core team, international volunteers and company developers; no controlling organization."
+single_maintainer = false
+maintainers = "The netfilter core team, led by Pablo Neira Ayuso"
+reviewed = 2026-10-02
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "tcpdump"
+ecosystem = "apt"
+packages = ["tcpdump"]
+used_for = "Captures the emulated TAP port to a pcap file on the machine that runs the SITL rig (deploy/sitl/tap.sh, ICS-018)"
+ships = false
+license = "BSD-3-Clause"
+source = "https://github.com/the-tcpdump-group/tcpdump"
+governance = "The Tcpdump Group, a small team of maintainers who review changes and make releases."
+sustainment = "Active, with regular releases. Installed from the runner's Ubuntu archive (deploy/sitl/apt-packages.txt). Wireshark's dumpcap could replace it."
+foreign_influence = "The Tcpdump Group, international volunteers; no controlling organization."
+single_maintainer = false
+maintainers = "The Tcpdump Group"
 reviewed = 2026-10-02
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
@@ -882,5 +1069,41 @@ foreign_influence = "US Government data (NGA); the grid is prepared and hosted b
 single_maintainer = true
 maintainers = "Charles Karney (GeographicLib), distributing NGA's EGM96"
 reviewed = 2026-09-30
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+# --- SITL autopilots (deploy/sitl/image/tools.txt) ----------------------------
+
+[[project]]
+name = "PX4 Autopilot"
+ecosystem = "tool"
+packages = ["px4-autopilot"]
+used_for = "Flight stack compiled into the SITL rig's PX4 image (deploy/sitl, ICS-018): flies a quadrotor with its built-in simulator and emits MAVLink. A test tool; ICS neither links nor publishes it."
+ships = false
+license = "BSD-3-Clause"
+source = "https://github.com/PX4/PX4-Autopilot"
+governance = "Hosted by the Dronecode Foundation, a Linux Foundation project; maintainers review changes and a release team makes releases."
+sustainment = "Very active, with a release every few months. Pinned to v1.17.0 by commit in deploy/sitl/image/tools.txt. ArduPilot, also in the rig, is the alternative."
+foreign_influence = "Dronecode Foundation under the Linux Foundation (US non-profit); international contributors, many from drone companies."
+single_maintainer = false
+maintainers = "The PX4 maintainers and the Dronecode Foundation"
+reviewed = 2026-10-02
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "ArduPilot"
+ecosystem = "tool"
+packages = ["ardupilot"]
+used_for = "Flight stack compiled into the SITL rig's ArduPilot image (deploy/sitl, ICS-018): flies ArduCopter in its built-in physics model and emits MAVLink. A test tool: ICS neither links it nor publishes the image, so its GPL places no obligation on ICS code."
+ships = false
+license = "GPL-3.0-or-later"
+source = "https://github.com/ArduPilot/ardupilot"
+governance = "The ArduPilot development team, with maintainers for each vehicle and library, reviews changes and makes releases; the project has a non-profit organization."
+sustainment = "Very active, with several releases a year. Pinned to Copter-4.7.1 by commit in deploy/sitl/image/tools.txt. PX4, also in the rig, is the alternative."
+foreign_influence = "ArduPilot's non-profit organization, whose jurisdiction was not established from the project's pages; international development team."
+single_maintainer = false
+maintainers = "The ArduPilot development team"
+reviewed = 2026-10-02
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"

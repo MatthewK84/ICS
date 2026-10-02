@@ -1,0 +1,11 @@
+#!/bin/sh
+# PX4's MAVLink links for the ICS SITL rig (ICS-018), in place of PX4's own
+# etc/init.d-posix/px4-rc.mavlink: rcS sources the first px4-rc.mavlink on
+# its PATH, and the image puts this one first.
+#
+# One ground-station link on UDP port 18570, whose partner is the rig, named
+# by ICS_RIG_ADDRESS and ICS_RIG_PORT, as ArduPilot's is. PX4's own script
+# leaves the partner open and takes the first sender after start-up for good,
+# so a stray datagram at boot would cut the rig off. The rig asks for the
+# streams it records (python/ics_sitl/vehicle.py), so none are set here.
+mavlink start -x -u 18570 -r 4000000 -f -t "${ICS_RIG_ADDRESS}" -o "${ICS_RIG_PORT}"
