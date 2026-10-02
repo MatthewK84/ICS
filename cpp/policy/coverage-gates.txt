@@ -14,3 +14,5 @@ cpp/common 0.50
 cpp/logging 0.14
 cpp/config 0.05
 cpp/frames 0.00
+cpp/timing 0.03
+cpp/services/timingd 0.20

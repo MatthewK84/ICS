@@ -758,7 +758,7 @@ reviewed = 2026-09-27
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
-# --- Ubuntu packages: toolchain and SITL images, and the SITL host -----------
+# --- Ubuntu packages: images, the SITL host and the timing bench -------------
 
 [[project]]
 name = "ca-certificates"
@@ -917,12 +917,12 @@ approved_by = "MatthewK84"
 name = "iproute2"
 ecosystem = "apt"
 packages = ["iproute2"]
-used_for = "The ip command on the machine that runs the SITL rig: the emulated TAP's veth pair and network namespace (deploy/sitl/tap.sh, ICS-018)"
+used_for = "The ip command on the machines that run the SITL rig and the timing bench: veth pairs and network namespaces for the emulated TAP (deploy/sitl/tap.sh, ICS-018) and for the PTP grandmaster and station (deploy/timing-bench/run-bench.sh, ICS-019)"
 ships = false
 license = "GPL-2.0-only"
 source = "https://git.kernel.org/pub/scm/network/iproute2/iproute2.git"
 governance = "Part of the Linux kernel networking community: maintainers review patches on the netdev mailing list and release alongside the kernel."
-sustainment = "Very active, released with each kernel. Installed from the runner's Ubuntu archive (deploy/sitl/apt-packages.txt)."
+sustainment = "Very active, released with each kernel. Installed from the runner's Ubuntu archive (deploy/sitl/apt-packages.txt, deploy/timing-bench/apt-packages.txt)."
 foreign_influence = "Linux kernel community, hosted on kernel.org by the Linux Foundation (US non-profit); international contributors."
 single_maintainer = false
 maintainers = "Stephen Hemminger and David Ahern with the netdev community"
@@ -977,6 +977,23 @@ sustainment = "Active, with regular releases. Installed from the runner's Ubuntu
 foreign_influence = "The Tcpdump Group, international volunteers; no controlling organization."
 single_maintainer = false
 maintainers = "The Tcpdump Group"
+reviewed = 2026-10-02
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "linuxptp"
+ecosystem = "apt"
+packages = ["linuxptp"]
+used_for = "ptp4l and pmc on the machine that runs the timing bench: a software grandmaster and the station clock ics-timingd polls, and the management commands that emulate GNSS loss (deploy/timing-bench/run-bench.sh, ICS-019). Station hosts run the same ptp4l from their distribution; ics-timingd only speaks to its management socket and links none of it."
+ships = false
+license = "GPL-2.0-or-later"
+source = "https://git.code.sf.net/p/linuxptp/code"
+governance = "Patches are reviewed on the linuxptp-devel mailing list; the lead maintainer merges them and makes releases."
+sustainment = "Active, with releases about once a year; the reference PTP implementation for Linux, packaged by every major distribution. Installed from the runner's Ubuntu archive (deploy/timing-bench/apt-packages.txt). No drop-in replacement: ics-timingd's management client would need porting to another PTP daemon."
+foreign_influence = "International volunteer and company contributors; no controlling organization."
+single_maintainer = true
+maintainers = "Richard Cochran (lead maintainer), with regular contributors from several companies"
 reviewed = 2026-10-02
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
