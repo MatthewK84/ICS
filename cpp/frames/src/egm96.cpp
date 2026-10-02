@@ -131,7 +131,7 @@ Result<Header> read_header(const std::string_view text) {
 bool valid(const Header& header, const std::size_t file_size) {
   const bool numbers = header.offset.has_value() && std::isfinite(*header.offset) && header.scale.has_value() &&
                        std::isfinite(*header.scale) && *header.scale > 0.0;
-  const bool shape = header.width >= 2 && header.width % 2 == 0 && header.height >= 3 && header.height % 2 == 1;
+  const bool shape = header.width >= 2 && header.width % 2 == 0 && header.height >= 3 && header.height % 2 != 0;
   return numbers && shape && header.data_start <= file_size &&
          file_size - header.data_start == static_cast<std::size_t>(header.width) *
                                                static_cast<std::size_t>(header.height) * kBytesPerSample;
