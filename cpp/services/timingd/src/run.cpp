@@ -80,12 +80,11 @@ int serve(const Config& config, const logging::Logger& logger) {
   return kExitStopped;
 }
 
-int run(const std::span<const char* const> args) {
-  if (args.size() != 2) {
-    std::fputs("usage: ics-timingd CONFIG\n", stderr);
+int run(const std::span<const char* const> args, const std::filesystem::path& path) {
+  if (args.size() != 1) {
+    std::fprintf(stderr, "usage: ics-timingd\nThe config file is %s.\n", path.c_str());
     return kExitUsage;
   }
-  const std::filesystem::path path(args[1]);
   const auto config = config::read_file(path, &read_config);
   if (!config) {
     std::fputs(config::format_errors(path.native(), config.error()).c_str(), stderr);

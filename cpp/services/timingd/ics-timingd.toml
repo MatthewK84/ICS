@@ -1,5 +1,5 @@
-# An example ics-timingd config (ICS-019); see cpp/README.md. Every setting is
-# required.
+# An example ics-timingd config (ICS-019); see cpp/README.md. ics-timingd reads
+# its config from /etc/ics/ics-timingd.toml. Every setting is required.
 
 [log]
 level = "info"

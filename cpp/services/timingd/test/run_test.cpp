@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <csignal>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -47,7 +48,9 @@ class BlockedSigterm {
   sigset_t saved_{};
 };
 
-int run(const std::vector<const char*>& args) { return ics::timingd::run(args); }
+int run(const std::vector<const char*>& args, const std::filesystem::path& config) {
+  return ics::timingd::run(args, config);
+}
 
 struct Logged {
   std::ostringstream out;
@@ -56,13 +59,13 @@ struct Logged {
 };
 
 TEST(Run, RejectsABadCommandLine) {
-  EXPECT_EQ(run({"ics-timingd"}), ics::timingd::kExitUsage);
-  EXPECT_EQ(run({"ics-timingd", "a.toml", "b.toml"}), ics::timingd::kExitUsage);
+  EXPECT_EQ(run({}, "ics-timingd.toml"), ics::timingd::kExitUsage);
+  EXPECT_EQ(run({"ics-timingd", "other.toml"}, "ics-timingd.toml"), ics::timingd::kExitUsage);
 }
 
 TEST(Run, RejectsABadConfigFile) {
   const TempDir dir;
-  EXPECT_EQ(run({"ics-timingd", (dir / "missing.toml").c_str()}), ics::timingd::kExitUsage);
+  EXPECT_EQ(run({"ics-timingd"}, dir / "missing.toml"), ics::timingd::kExitUsage);
 }
 
 TEST(Run, ServesTheConfigFileUntilSigterm) {
@@ -76,7 +79,7 @@ TEST(Run, ServesTheConfigFileUntilSigterm) {
                       << "holdover_drift_ns_per_s = 50.0\n";
   const BlockedSigterm blocked;
   ::kill(::getpid(), SIGTERM);
-  EXPECT_EQ(run({"ics-timingd", path.c_str()}), ics::timingd::kExitStopped);
+  EXPECT_EQ(run({"ics-timingd"}, path), ics::timingd::kExitStopped);
 }
 
 TEST(Run, StepsEachIntervalUntilSigterm) {

@@ -18,7 +18,8 @@ ics_add_gtest(timingd_test
 target_include_directories(timingd_test PRIVATE ${PROJECT_SOURCE_DIR}/timing/test test)
 target_compile_definitions(timingd_test PRIVATE ICS_TIMINGD_EXAMPLE="${CMAKE_CURRENT_SOURCE_DIR}/ics-timingd.toml")
 
-# The executable itself, run without a config: it prints its usage. This also
-# covers main.cpp.
-add_test(NAME ics-timingd_usage COMMAND ics-timingd)
-set_tests_properties(ics-timingd_usage PROPERTIES PASS_REGULAR_EXPRESSION "^usage: ics-timingd CONFIG\n$")
+# The executable itself, given an argument it does not take: it prints its
+# usage. This also covers main.cpp.
+add_test(NAME ics-timingd_usage COMMAND ics-timingd --help)
+set_tests_properties(ics-timingd_usage PROPERTIES PASS_REGULAR_EXPRESSION
+                     "^usage: ics-timingd\nThe config file is /etc/ics/ics-timingd.toml.\n$")

@@ -15,9 +15,15 @@
 # next trial waits for "locked" again. Fails unless every trial is flagged
 # within 1 s.
 #
-# Run as root: network namespaces need it. Needs ip, ptp4l and pmc
-# (apt-packages.txt). Prints one line per trial, and writes trials.csv and the
-# logs of ptp4l and ics-timingd to $BENCH_OUT, if set.
+# ics-timingd reads its config from /etc/ics/ics-timingd.toml. The bench runs
+# it in its own mount namespace with the bench's config mounted there, so the
+# host's /etc/ics is never changed. An empty /etc/ics is made for the mount if
+# there is none, and removed afterwards.
+#
+# Run as root: network and mount namespaces need it. Needs ip, ptp4l and pmc
+# (apt-packages.txt), and unshare and mount. Prints one line per trial, and
+# writes trials.csv and the logs of ptp4l and ics-timingd to $BENCH_OUT, if
+# set.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -35,7 +41,9 @@ WORK="$(mktemp -d /tmp/ics-tb.XXXXXX)"
 readonly WORK
 readonly LOG="${WORK}/ics-timingd.log"
 readonly CSV="${WORK}/trials.csv"
+readonly ETC_ICS="/etc/ics"
 PIDS=()
+MADE_ETC_ICS=0
 PMC_CALLS=0
 
 fail() {
@@ -51,6 +59,9 @@ cleanup() {
   wait 2>/dev/null || true
   ip netns del "${GM_NS}" 2>/dev/null || true
   ip netns del "${ST_NS}" 2>/dev/null || true
+  if ((MADE_ETC_ICS == 1)); then
+    rmdir "${ETC_ICS}" 2>/dev/null || true
+  fi
   if [[ -n "${BENCH_OUT:-}" ]]; then
     mkdir -p "${BENCH_OUT}"
     cp "${WORK}"/*.log "${WORK}"/*.csv "${BENCH_OUT}/" 2>/dev/null || true
@@ -137,8 +148,11 @@ last_state_ns() {
   date -u -d "${ts}" +%s%N
 }
 
+# Starts ics-timingd in its own mount namespace, with $WORK/etc-ics mounted
+# over /etc/ics there.
 start_timingd() {
-  cat >"${WORK}/ics-timingd.toml" <<EOF
+  mkdir -p "${WORK}/etc-ics"
+  cat >"${WORK}/etc-ics/ics-timingd.toml" <<EOF
 [log]
 level = "info"
 service = "ics-timingd"
@@ -153,7 +167,12 @@ poll_interval_ns = 100_000_000
 asymmetry_bound_ns = 1_000
 holdover_drift_ns_per_s = 50.0
 EOF
-  "${TIMINGD}" "${WORK}/ics-timingd.toml" 2>"${LOG}" &
+  if [[ ! -d "${ETC_ICS}" ]]; then
+    mkdir "${ETC_ICS}"
+    MADE_ETC_ICS=1
+  fi
+  unshare --mount --propagation private sh -c "mount --bind \"\$1\" \"\$2\" && exec \"\$3\"" \
+    sh "${WORK}/etc-ics" "${ETC_ICS}" "${TIMINGD}" 2>"${LOG}" &
   PIDS+=("$!")
 }
 

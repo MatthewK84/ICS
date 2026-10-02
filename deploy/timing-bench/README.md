@@ -41,7 +41,7 @@ deploy/toolchain/conan-install.sh gcc-release
 sudo env BENCH_OUT=/tmp/timing-bench deploy/timing-bench/run-bench.sh cpp/build/gcc-release/services/timingd/ics-timingd 20
 ```
 
-It prints each trial's latency and the worst one. With `BENCH_OUT` set, it keeps `trials.csv` (trial, latency in ns) and the `ptp4l` and `ics-timingd` logs there. It removes its namespaces and processes when it exits, pass or fail.
+`ics-timingd` reads its config from `/etc/ics/ics-timingd.toml`, so the bench runs it in its own mount namespace with the bench's config mounted over `/etc/ics`; the host's `/etc/ics` is never changed. It prints each trial's latency and the worst one. With `BENCH_OUT` set, it keeps `trials.csv` (trial, latency in ns) and the `ptp4l` and `ics-timingd` logs there. It removes its namespaces and processes when it exits, pass or fail.
 
 ## On real hardware
 
@@ -49,6 +49,6 @@ The same check on a station, with its grandmaster:
 
 1. **Grandmaster.** A GNSS-disciplined PTP grandmaster that announces clock class 6 when locked and 7 in holdover, and announces at least twice a second (`logAnnounceInterval` −1 or lower). A slower announce interval eats into the 1 s budget one-for-one.
 2. **GNSS loss on demand.** An RF switch in the antenna line, or a GNSS simulator, that the station host controls, so the host stamps the moment of loss on the same clock as the log. Pulling the antenna by hand adds the operator's reaction time to the measurement.
-3. **Station.** `ptp4l` on the PTP interface with hardware time stamps, in the grandmaster's domain, with its read-only management socket at the default `/var/run/ptp4l-ro`. Then `ics-timingd` with `poll_interval_ns` of 100 ms or less ([example config](../../cpp/services/timingd/ics-timingd.toml)).
+3. **Station.** `ptp4l` on the PTP interface with hardware time stamps, in the grandmaster's domain, with its read-only management socket at the default `/var/run/ptp4l-ro`. Then `ics-timingd`, with `/etc/ics/ics-timingd.toml` setting `poll_interval_ns` to 100 ms or less ([example config](../../cpp/services/timingd/ics-timingd.toml)).
 4. **Trials.** Wait for `"state":"locked"` in the `ics-timingd` log. Then, 20 times: stamp the time and cut GNSS; record the `ts` of the next `"state":"holdover"` line; restore GNSS and wait for `"state":"locked"`. Write the latencies as `trials.csv`, as the bench does.
 5. **Pass.** All 20 latencies at 1 s or less. A capture of the station's PTP port (`tcpdump -i <interface> ether proto 0x88f7`) shows when the first announce with class 7 arrived, which splits each latency into the grandmaster's detection and `ics-timingd`'s.

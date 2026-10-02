@@ -74,7 +74,7 @@ struct Answers {
 
 }  // namespace
 
-PtpClient::PtpClient(Fd socket, const sockaddr_un server, std::filesystem::path client,
+PtpClient::PtpClient(Fd socket, const sockaddr_un& server, std::filesystem::path client,
                      const std::uint8_t domain) noexcept
     : socket_(std::move(socket)), server_(server), client_(std::move(client)), domain_(domain) {}
 

@@ -38,7 +38,7 @@ class PtpClient {
   [[nodiscard]] Result<Snapshot> poll(Duration timeout) noexcept;
 
  private:
-  PtpClient(Fd socket, sockaddr_un server, std::filesystem::path client, std::uint8_t domain) noexcept;
+  PtpClient(Fd socket, const sockaddr_un& server, std::filesystem::path client, std::uint8_t domain) noexcept;
 
   [[nodiscard]] Status send_requests(std::uint16_t first) const noexcept;
 
