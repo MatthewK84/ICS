@@ -14,6 +14,10 @@ std::string_view to_string(const Error error) noexcept {
       return "empty";
     case Error::kStaleHandle:
       return "stale handle";
+    case Error::kUnreadable:
+      return "unreadable";
+    case Error::kMalformed:
+      return "malformed";
   }
   return "unknown";
 }

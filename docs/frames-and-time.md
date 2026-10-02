@@ -106,9 +106,10 @@ The cases cover:
 - points below the ellipsoid and at 12 km;
 - EGM96's highest and lowest geoid heights.
 
-The C++ frames module must reproduce every vector within 1 mm ([ICS-017](https://github.com/MatthewK84/ICS/issues/17)). CI checks the vectors in two ways:
+The C++ frames module, [`cpp/frames`](../cpp/README.md#frames), reproduces every vector within 1 mm ([ICS-017](https://github.com/MatthewK84/ICS/issues/17)). Its geodetic to ECEF and ENU results agree to the vectors' printed nanometre, and its geoid heights to their printed 0.1 mm. CI checks the vectors in three ways:
 
 - **C++ toolchain workflow:** it regenerates them in the image and requires an exact match.
 - **Python test** ([`python/tests/test_frame_vectors.py`](../python/tests/test_frame_vectors.py)): it recomputes geodetic to ECEF and ENU in closed form, requires agreement within 1 µm, and checks that h = H + N in every geoid row.
+- **C++ test** ([`cpp/frames/test/golden_test.cpp`](../cpp/frames/test/golden_test.cpp)): `ics::frames` reproduces every vector, including the ECEF to geodetic inverse.
 
 To add a case, add a row to an input list, then run `golden/frames/generate.sh` in the ics-cpp image and commit the regenerated files.
