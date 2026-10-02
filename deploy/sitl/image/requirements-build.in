@@ -1,0 +1,4 @@
+# empy ships only as source, so its build tool is hash-pinned and installed
+# first; the autopilots' requirements then install without build isolation,
+# so nothing unpinned is fetched (as in deploy/toolchain).
+setuptools

@@ -1,0 +1,10 @@
+# Python tools PX4's SITL build runs (ICS-018): its code generators for uORB
+# topics, parameters, events and MAVLink, and its Kconfig board configuration.
+# The subset of PX4's Tools/setup/requirements.txt that the build needs.
+empy<4
+jinja2
+jsonschema
+kconfiglib
+packaging
+pyros-genmsg
+pyyaml

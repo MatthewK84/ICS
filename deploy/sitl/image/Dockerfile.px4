@@ -1,0 +1,34 @@
+# syntax=docker/dockerfile:1.7
+# PX4 SITL with its built-in simulator (SIH) for the ICS SITL rig (ICS-018):
+# PX4 v1.17.0, pinned in tools.txt, flying a quadrotor with no Gazebo.
+# Build from the repository root:
+#   docker build -f deploy/sitl/image/Dockerfile.px4 -t ics-sitl-px4 .
+# Behind a TLS-inspecting proxy, add: --secret id=extra_ca,src=<ca-bundle.pem>
+FROM ubuntu:24.04@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3 AS build
+
+ARG UBUNTU_SNAPSHOT=20260926T000000Z
+COPY deploy/sitl/image/install-builder.sh deploy/sitl/image/fetch-source.sh deploy/sitl/image/tools.txt deploy/sitl/image/apt-packages.txt deploy/sitl/image/requirements-build.txt deploy/sitl/image/requirements-px4.txt /tmp/sitl/
+RUN --mount=type=secret,id=extra_ca,required=false \
+    bash /tmp/sitl/install-builder.sh "${UBUNTU_SNAPSHOT}" /tmp/sitl/requirements-px4.txt
+# The submodules the SITL build compiles; the build itself fetches nothing.
+RUN bash /tmp/sitl/fetch-source.sh px4-autopilot /src \
+      src/modules/mavlink/mavlink src/drivers/gps/devices src/lib/events/libevents \
+      src/modules/uxrce_dds_client/Micro-XRCE-DDS-Client src/lib/heatshrink/heatshrink
+ENV PATH=/opt/sitl-python/bin:${PATH} \
+    GIT_SUBMODULES_ARE_EVIL=1
+WORKDIR /src
+RUN make px4_sitl_default
+
+FROM ubuntu:24.04@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3
+COPY --from=build /src/build/px4_sitl_default/bin /opt/px4/bin
+COPY --from=build /src/build/px4_sitl_default/etc /opt/px4/etc
+COPY deploy/sitl/image/px4-start.sh /opt/px4/bin/ics-px4-start
+# Ahead of PX4's own etc/init.d-posix on the PATH, where rcS looks for it.
+COPY deploy/sitl/image/px4-rc.mavlink /opt/px4/ics/px4-rc.mavlink
+RUN install -d -o ubuntu -g ubuntu /var/lib/px4
+ENV PATH=/opt/px4/ics:/opt/px4/bin:${PATH}
+LABEL org.opencontainers.image.source="https://github.com/MatthewK84/ICS" \
+      org.opencontainers.image.description="ICS SITL rig: PX4 v1.17.0 SITL with SIH, quadrotor"
+USER ubuntu
+WORKDIR /var/lib/px4
+ENTRYPOINT ["/opt/px4/bin/ics-px4-start"]

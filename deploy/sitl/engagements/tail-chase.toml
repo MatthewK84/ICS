@@ -1,0 +1,33 @@
+# Tail chase: the interceptor comes up behind the target along the same
+# line, twice as fast and 10 m higher, and overtakes it. The closest approach
+# is the height difference whenever the overtake happens.
+#
+# Points are [latitude_deg, longitude_deg, height_m above home] around a
+# made-up range origin at 40 N, 100 W (golden/frames, range-origin). East and
+# north offsets from it, in metres, are noted beside each point.
+name = "tail-chase"
+description = "The interceptor overtakes the target from behind, 10 m above it"
+ground_msl_m = 700.0
+time_limit_s = 300.0
+miss_distance_m = [6.0, 20.0]
+waypoint_tolerance_m = 10.0
+
+[target]
+autopilot = "px4"
+home = [40.0000000, -100.0004684]            # (-40, 0)
+speed_m_s = 4.0
+start = [40.0004503, -100.0000000, 30.0]     # (0, 50)
+path = [
+  [40.0022515, -100.0000000, 30.0],          # (0, 250)
+  [40.0040528, -100.0000000, 30.0],          # (0, 450)
+]
+
+[interceptor]
+autopilot = "ardupilot"
+home = [39.9994596, -99.9995316]             # (40, -60)
+speed_m_s = 8.0
+start = [39.9995497, -100.0000000, 40.0]     # (0, -50)
+path = [
+  [40.0022515, -100.0000000, 40.0],          # (0, 250)
+  [40.0040528, -100.0000000, 40.0],          # (0, 450)
+]

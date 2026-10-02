@@ -1,0 +1,108 @@
+name: SITL rig
+
+# Flies the SITL rig's three scripted engagements every night (ICS-018,
+# deploy/sitl/README.md): PX4 and ArduPilot SITL in containers, one flying a
+# target and the other an interceptor, their MAVLink mirrored to an emulated
+# TAP port and captured there. A run fails if any engagement fails or the
+# capture is missing a datagram the rig counted. It also runs on pull requests
+# that change the rig.
+#
+# The autopilot images are compiled only when deploy/sitl/image changes, and
+# are otherwise restored from the Actions cache. Each run writes their
+# CycloneDX SBOMs. The images are not published: ArduPilot is GPL-3.0, and
+# ICS does not distribute it. Each engagement's truth log, summary, TAP
+# capture and container logs, and the SBOMs, are kept as the sitl-<run id>
+# artifact for 30 days.
+
+on:
+  schedule:
+    - cron: "41 4 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - deploy/sitl/**
+      - deploy/evidence/image-sbom.sh
+      - python/ics_sitl/**
+      - .github/workflows/sitl.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sitl-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  engagements:
+    name: Fly the scripted engagements
+    runs-on: ubuntu-24.04
+    # Compiling both autopilots takes about 15 minutes; each engagement about 3.
+    timeout-minutes: 60
+    env:
+      IMAGES: /tmp/sitl-images
+      RECORDS: /tmp/sitl-records
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Restore the autopilot images
+        id: images
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.IMAGES }}
+          key: sitl-images-${{ hashFiles('deploy/sitl/image/**') }}
+
+      - name: Build the autopilot images
+        if: steps.images.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "${IMAGES}"
+          for autopilot in px4 ardupilot; do
+            docker build -f "deploy/sitl/image/Dockerfile.${autopilot}" -t "ics-sitl-${autopilot}:local" .
+          done
+          docker save ics-sitl-px4:local ics-sitl-ardupilot:local -o "${IMAGES}/images.tar"
+
+      - name: Save the autopilot images
+        if: steps.images.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.IMAGES }}
+          key: ${{ steps.images.outputs.cache-primary-key }}
+
+      - name: Load the autopilot images
+        if: steps.images.outputs.cache-hit == 'true'
+        run: docker load -i "${IMAGES}/images.tar"
+
+      - name: Install the rig's host tools
+        run: |
+          mapfile -t packages < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' deploy/sitl/apt-packages.txt)
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends "${packages[@]}"
+
+      - name: Install Syft
+        run: |
+          deploy/evidence/install-tools.sh "${RUNNER_TEMP}/bin"
+          echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
+
+      # The images hold the base image's Ubuntu packages and the compiled
+      # autopilot; the autopilot source pins are in deploy/sitl/image/tools.txt.
+      - name: SBOMs of the images
+        run: |
+          mkdir -p "${RECORDS}"
+          for autopilot in px4 ardupilot; do
+            deploy/evidence/image-sbom.sh "ics-sitl-${autopilot}:local" "ics-sitl-${autopilot}" \
+              "${RECORDS}/ics-sitl-${autopilot}.cdx.json" deb
+          done
+
+      - name: Fly the engagements
+        run: deploy/sitl/run-engagements.sh "${RECORDS}"
+
+      - name: Keep the engagement records
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sitl-${{ github.run_id }}
+          path: ${{ env.RECORDS }}/
+          if-no-files-found: warn
+          retention-days: 30

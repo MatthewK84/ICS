@@ -1,0 +1,33 @@
+# Head-on: the target and the interceptor fly toward each other along the
+# same line, the interceptor 15 m higher, and pass. The closest approach is
+# the height difference wherever they pass.
+#
+# Points are [latitude_deg, longitude_deg, height_m above home] around a
+# made-up range origin at 40 N, 100 W (golden/frames, range-origin). East and
+# north offsets from it, in metres, are noted beside each point.
+name = "head-on"
+description = "The target and the interceptor pass head-on, 15 m apart in height"
+ground_msl_m = 700.0
+time_limit_s = 300.0
+miss_distance_m = [10.0, 25.0]
+waypoint_tolerance_m = 10.0
+
+[target]
+autopilot = "ardupilot"
+home = [40.0028820, -100.0004684]            # (-40, 320)
+speed_m_s = 5.0
+start = [40.0027019, -100.0000000, 30.0]     # (0, 300)
+path = [
+  [40.0009006, -100.0000000, 30.0],          # (0, 100)
+  [39.9990994, -100.0000000, 30.0],          # (0, -100)
+]
+
+[interceptor]
+autopilot = "px4"
+home = [39.9993696, -99.9995316]             # (40, -70)
+speed_m_s = 6.0
+start = [39.9995497, -100.0000000, 45.0]     # (0, -50)
+path = [
+  [40.0013509, -100.0000000, 45.0],          # (0, 150)
+  [40.0031522, -100.0000000, 45.0],          # (0, 350)
+]

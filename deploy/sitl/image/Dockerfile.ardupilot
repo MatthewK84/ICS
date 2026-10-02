@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1.7
+# ArduPilot SITL for the ICS SITL rig (ICS-018): ArduCopter 4.7.1, pinned in
+# tools.txt, flying a quadrotor in ArduPilot's built-in physics model.
+# Build from the repository root:
+#   docker build -f deploy/sitl/image/Dockerfile.ardupilot -t ics-sitl-ardupilot .
+# Behind a TLS-inspecting proxy, add: --secret id=extra_ca,src=<ca-bundle.pem>
+FROM ubuntu:24.04@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3 AS build
+
+ARG UBUNTU_SNAPSHOT=20260926T000000Z
+COPY deploy/sitl/image/install-builder.sh deploy/sitl/image/fetch-source.sh deploy/sitl/image/tools.txt deploy/sitl/image/apt-packages.txt deploy/sitl/image/requirements-build.txt deploy/sitl/image/requirements-ardupilot.txt /tmp/sitl/
+RUN --mount=type=secret,id=extra_ca,required=false \
+    bash /tmp/sitl/install-builder.sh "${UBUNTU_SNAPSHOT}" /tmp/sitl/requirements-ardupilot.txt
+# The submodules the SITL build compiles; the build itself fetches nothing.
+RUN bash /tmp/sitl/fetch-source.sh ardupilot /src \
+      modules/waf modules/mavlink modules/lwip modules/littlefs modules/DroneCAN/DSDL modules/DroneCAN/dronecan_dsdlc \
+      modules/DroneCAN/libcanard modules/DroneCAN/pydronecan
+ENV PATH=/opt/sitl-python/bin:${PATH}
+WORKDIR /src
+RUN ./waf configure --board sitl --no-submodule-update && ./waf copter
+
+FROM ubuntu:24.04@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3
+COPY --from=build /src/build/sitl/bin/arducopter /opt/ardupilot/bin/arducopter
+COPY --from=build /src/Tools/autotest/default_params/copter.parm /opt/ardupilot/copter.parm
+COPY deploy/sitl/image/ardupilot-start.sh /opt/ardupilot/bin/ics-ardupilot-start
+RUN install -d -o ubuntu -g ubuntu /var/lib/ardupilot
+ENV PATH=/opt/ardupilot/bin:${PATH}
+LABEL org.opencontainers.image.source="https://github.com/MatthewK84/ICS" \
+      org.opencontainers.image.description="ICS SITL rig: ArduCopter 4.7.1 SITL, quadrotor"
+USER ubuntu
+WORKDIR /var/lib/ardupilot
+ENTRYPOINT ["/opt/ardupilot/bin/ics-ardupilot-start"]

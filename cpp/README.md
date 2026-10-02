@@ -163,4 +163,6 @@ Add a fuzz target with `ics_add_fuzzer(name SOURCES … LIBRARIES … CORPUS fol
 
 CodeQL analyzes the C++ code too, with the Python and TypeScript code; see [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml).
 
-Next issue: [ICS-018](https://github.com/MatthewK84/ICS/issues/18) (the SITL rig).
+The SITL rig that the MAVLink adapter ([ICS-021](https://github.com/MatthewK84/ICS/issues/21)) is tested against is in [`deploy/sitl`](../deploy/sitl/README.md) ([ICS-018](https://github.com/MatthewK84/ICS/issues/18)).
+
+Next issue: [ICS-019](https://github.com/MatthewK84/ICS/issues/19) (ics-timingd).

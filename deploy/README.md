@@ -14,3 +14,4 @@ Contents:
 
 - [`toolchain/`](toolchain/README.md): the C++ and CUDA build images ([ICS-004](https://github.com/MatthewK84/ICS/issues/4)).
 - [`evidence/`](evidence/README.md): the signed SBOMs and provenance published for every merge and image ([ICS-009](https://github.com/MatthewK84/ICS/issues/9)).
+- [`sitl/`](sitl/README.md): the SITL rig, PX4 and ArduPilot simulators flying scripted engagements with their MAVLink mirrored to an emulated TAP port ([ICS-018](https://github.com/MatthewK84/ICS/issues/18)). Test equipment: its images are built in CI with SBOMs and never published.

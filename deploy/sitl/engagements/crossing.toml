@@ -1,0 +1,34 @@
+# Crossing: the target flies east and the interceptor north, both reaching
+# the crossing point about 40 s after the engagement starts, the target 10 m
+# higher. The closest approach is the height difference if they arrive
+# together, and grows as one arrives later than the other.
+#
+# Points are [latitude_deg, longitude_deg, height_m above home] around a
+# made-up range origin at 40 N, 100 W (golden/frames, range-origin). East and
+# north offsets from it, in metres, are noted beside each point.
+name = "crossing"
+description = "The target crosses the interceptor's path at right angles, 10 m above it"
+ground_msl_m = 700.0
+time_limit_s = 300.0
+miss_distance_m = [8.0, 35.0]
+waypoint_tolerance_m = 10.0
+
+[target]
+autopilot = "px4"
+home = [39.9997298, -100.0025763]            # (-220, -30)
+speed_m_s = 5.0
+start = [40.0000000, -100.0023421, 35.0]     # (-200, 0)
+path = [
+  [40.0000000, -100.0000000, 35.0],          # (0, 0)
+  [40.0000000, -99.9976579, 35.0],           # (200, 0)
+]
+
+[interceptor]
+autopilot = "ardupilot"
+home = [39.9980186, -99.9996487]             # (30, -220)
+speed_m_s = 5.0
+start = [39.9981988, -100.0000000, 25.0]     # (0, -200)
+path = [
+  [40.0000000, -100.0000000, 25.0],          # (0, 0)
+  [40.0018012, -100.0000000, 25.0],          # (0, 200)
+]
