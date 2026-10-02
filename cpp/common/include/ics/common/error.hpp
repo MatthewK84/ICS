@@ -16,6 +16,8 @@ enum class Error : std::uint16_t {
   kFull = 3,             // No room for another element.
   kEmpty = 4,            // Nothing to take.
   kStaleHandle = 5,      // A handle whose object was already released.
+  kUnreadable = 6,       // A file that cannot be opened or read (ICS-017).
+  kMalformed = 7,        // Data that does not follow its format, such as a corrupt geoid grid.
 };
 
 // The name of an error, such as "full"; "unknown" for a value not listed above.

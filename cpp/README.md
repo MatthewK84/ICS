@@ -8,8 +8,8 @@ Planned layout:
 
 ```text
 cpp/
-  common/ logging/ config/ camera_io/ timing/ trigger/ pli/ mount/
-  tracker/ encoder/
+  common/ logging/ config/ frames/ camera_io/ timing/ trigger/ pli/
+  mount/ tracker/ encoder/
   endgame/ registration/ detection/ association/ estimation/
   killclass/ footprint/ record/ api/
   services/   ics-timingd ics-plid ics-mountd ics-trigd ics-camd
@@ -91,6 +91,21 @@ if (!config) {
 - Files are written in a TOML subset, defined in [`subset.hpp`](config/include/ics/config/subset.hpp): printable ASCII, tables of bare keys, and settings holding text, decimal numbers, booleans or one-line lists of those. `parse()` checks the subset before toml++ reads the text. Fuzzing found that toml++ 3.4.0 has undefined behaviour on some invalid TOML, such as a non-ASCII character or `=` straight after a table's `[`, and its unreleased main branch and toml11 4.4.0 failed fuzzing too.
 - [`logging_config.hpp`](config/include/ics/config/logging_config.hpp) reads the `[log]` table every service has: `level` and `service`.
 
+## Frames
+
+[`frames/`](frames) is `ics::frames` (ICS-017). It converts positions between the frames that [docs/frames-and-time.md](../docs/frames-and-time.md) defines, and matches GeographicLib's golden vectors in [`golden/frames/`](../golden/frames) to within their printed precision:
+
+| Header | Provides |
+|---|---|
+| [`geodetic.hpp`](frames/include/ics/frames/geodetic.hpp) | `Geodetic`, a WGS84 point made only through `Geodetic::make`. It refuses a value that is not finite or a latitude beyond a pole, and wraps longitude into [−180°, 180°). Also `to_ecef` and `to_geodetic`; the inverse is exact everywhere, including at the poles and near the Earth's centre |
+| [`enu.hpp`](frames/include/ics/frames/enu.hpp) | `EnuFrame`, the range east-north-up frame of an origin (GeographicLib's `LocalCartesian`). It converts positions, and `rotate` turns vectors of any unit, such as velocities, between ECEF and ENU axes |
+| [`egm96.hpp`](frames/include/ics/frames/egm96.hpp) | `Egm96`, the geoid that defines MSL. `Egm96::load` reads the `egm96-5` grid that the images install at `Egm96::kDefaultPath`. Then `geoid_height`, `from_msl` (h = H + N) and `msl_height` give heights |
+| [`wgs84.hpp`](frames/include/ics/frames/wgs84.hpp) | The ellipsoid's constants |
+
+- **Real-time use:** the conversions and geoid lookups are `noexcept`, allocate nothing (the tests run them inside `NoAllocationScope`) and are safe from several threads. Load the 19 MB grid once at start-up.
+- **Ported code:** the angle reductions, the inverse conversion and the geoid interpolation are ported from GeographicLib 2.3, under its MIT License ([`frames/GEOGRAPHICLIB-LICENSE.txt`](frames/GEOGRAPHICLIB-LICENSE.txt)). The interpolation is GeographicLib's 12-point cubic fit, with its stencil tables copied unchanged. Bilinear interpolation would be off by up to 0.14 m, against the 1 mm the golden vectors require.
+- **Tests:** the frames tests read the golden CSV files and the installed grid, at paths CMake passes in (`ICS_GEOID_DIR`, which defaults to the images' `/usr/share/GeographicLib/geoids`). They fail rather than skip when the grid is missing.
+
 ## Power-of-Ten checks
 
 The C++ rules from the coding-standards table in [docs/build-plan.md](../docs/build-plan.md) are enforced by tools, not review (ICS-005):
@@ -138,7 +153,7 @@ cpp/policy/check-dynamic.sh fuzz 60        # seconds per fuzz target
 cpp/policy/check-dynamic.sh coverage
 ```
 
-The assertion density of a gated path is the number of `ics::check` calls in its functions longer than three lines, divided by the number of those functions. Power of Ten rule 5 asks for two per function; container code, with one failure mode per operation, sits near 0.5, and logging and config, where bad input is an expected outcome rather than a bug, sit lower. So each path has a floor that only rises: CI fails below it, and asks for the floor to be raised when the density rises above it. [`.github/scripts/cpp_coverage.py`](../.github/scripts/cpp_coverage.py) reads function extents from `llvm-cov export`, so a template member counts only once some test instantiates it. Add a library to the gates file when it is written, at its measured density. Test and fuzz folders are never gated. Comparisons in gated code are written out rather than defaulted, because Clang 17's coverage miscounts the branches of a defaulted comparison.
+The assertion density of a gated path is the number of `ics::check` calls in its functions longer than three lines, divided by the number of those functions. Power of Ten rule 5 asks for two per function; container code, with one failure mode per operation, sits near 0.5, and logging and config, where bad input is an expected outcome rather than a bug, sit lower. Frames code sits at 0: its inputs are checked once, where they are made, and any further check could never fail, so its failure branch could never be covered. So each path has a floor that only rises: CI fails below it, and asks for the floor to be raised when the density rises above it. [`.github/scripts/cpp_coverage.py`](../.github/scripts/cpp_coverage.py) reads function extents from `llvm-cov export`, so a template member counts only once some test instantiates it. Add a library to the gates file when it is written, at its measured density. Test and fuzz folders are never gated. Comparisons in gated code are written out rather than defaulted, because Clang 17's coverage miscounts the branches of a defaulted comparison.
 
 The seeded defects live in [`policy/seeded-runtime/`](policy/seeded-runtime), each naming on its first line the report it must produce.
 
@@ -148,4 +163,4 @@ Add a fuzz target with `ics_add_fuzzer(name SOURCES … LIBRARIES … CORPUS fol
 
 CodeQL analyzes the C++ code too, with the Python and TypeScript code; see [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml).
 
-Next issue: [ICS-017](https://github.com/MatthewK84/ICS/issues/17) (common frames).
+Next issue: [ICS-018](https://github.com/MatthewK84/ICS/issues/18) (the SITL rig).

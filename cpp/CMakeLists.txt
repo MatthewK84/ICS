@@ -22,6 +22,7 @@ add_subdirectory(testing/alloc_guard)
 add_subdirectory(common)
 add_subdirectory(logging)
 add_subdirectory(config)
+add_subdirectory(frames)
 add_subdirectory(toolchain_check)
 add_subdirectory(proto/test)
 
