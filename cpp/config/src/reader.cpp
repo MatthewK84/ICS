@@ -218,6 +218,43 @@ std::string Reader::text(const std::string_view key) {
   return std::move(*value);
 }
 
+std::vector<std::string> Reader::texts(const std::string_view key, const std::size_t min_count,
+                                       const std::size_t max_count) {
+  const toml::node* node = find(key);
+  if (!check(min_count <= max_count)) {
+    add_error(key, "has an empty range in the schema");
+    return {};
+  }
+  const toml::array* list = node == nullptr ? nullptr : node->as_array();
+  if (node != nullptr && list == nullptr) {
+    add_error(key, "must be a list of text");
+    return {};
+  }
+  if (list == nullptr) {
+    return {};
+  }
+  return text_list(key, *list, min_count, max_count);
+}
+
+std::vector<std::string> Reader::text_list(const std::string_view key, const toml::array& list,
+                                           const std::size_t min_count, const std::size_t max_count) {
+  if (list.size() < min_count || list.size() > max_count) {
+    add_error(key, "must hold from " + std::to_string(min_count) + " to " + std::to_string(max_count) +
+                       " entries, not " + std::to_string(list.size()));
+    return {};
+  }
+  std::vector<std::string> out;
+  for (const toml::node& entry : list) {
+    const toml::value<std::string>* value = entry.as_string();
+    if (value == nullptr || value->get().empty()) {
+      add_error(key, "must hold only text that is not empty");
+      return {};
+    }
+    out.push_back(value->get());
+  }
+  return out;
+}
+
 std::size_t Reader::choose(const std::string_view key, const std::span<const std::string_view> names) {
   const std::optional<std::string> value = string_value(key);
   if (!value.has_value()) {

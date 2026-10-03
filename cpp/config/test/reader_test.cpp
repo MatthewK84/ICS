@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <gtest/gtest.h>
 #include <tl/expected.hpp>
@@ -121,6 +122,34 @@ TEST(Reader, ReadsTextThatIsNotEmpty) {
                                  {"number", "must be text"},
                                  {"missing", "is required"},
                              }));
+}
+
+TEST(Reader, ReadsAListOfText) {
+  const Table table = table_of(
+      "two = [\"tap0\", \"tap1\"]\nnone = []\nthree = [\"a\", \"b\", \"c\"]\n"
+      "number = 3\nmixed = [\"a\", 2]\nblank = [\"a\", \"\"]");
+  Reader reader(table);
+  EXPECT_EQ(reader.texts("two", 1, 2), (std::vector<std::string>{"tap0", "tap1"}));
+  EXPECT_EQ(reader.texts("none", 1, 2), std::vector<std::string>{});
+  EXPECT_EQ(reader.texts("three", 1, 2), std::vector<std::string>{});
+  EXPECT_EQ(reader.texts("number", 1, 2), std::vector<std::string>{});
+  EXPECT_EQ(reader.texts("mixed", 1, 2), std::vector<std::string>{});
+  EXPECT_EQ(reader.texts("blank", 1, 2), std::vector<std::string>{});
+  EXPECT_EQ(reader.texts("missing", 1, 2), std::vector<std::string>{});
+  EXPECT_EQ(reader.finish(), (Errors{
+                                 {"none", "must hold from 1 to 2 entries, not 0"},
+                                 {"three", "must hold from 1 to 2 entries, not 3"},
+                                 {"number", "must be a list of text"},
+                                 {"mixed", "must hold only text that is not empty"},
+                                 {"blank", "must hold only text that is not empty"},
+                                 {"missing", "is required"},
+                             }));
+}
+
+TEST(Reader, ReportsAnEmptyListRangeInTheSchema) {
+  EXPECT_EQ(errors_with_failed_check(table_of("names = [\"a\"]"),
+                                     [](Reader& reader) { return reader.texts("names", 2, 1); }),
+            one("names", "has an empty range in the schema"));
 }
 
 TEST(Reader, ReadsAChoiceByName) {

@@ -47,10 +47,10 @@ ics/
   schemas/        run-record JSON Schema keyed to C4 IDs
   golden/         cross-language golden test vectors
   cpp/
-    common/ camera_io/ timing/ trigger/ pli/ mount/ tracker/ encoder/
+    common/ camera_io/ timing/ capture/ trigger/ pli/ mount/ tracker/ encoder/
     endgame/ registration/ detection/ association/ estimation/
     killclass/ footprint/ record/ api/
-    services/     ics-timingd ics-plid ics-mountd ics-trigd ics-camd
+    services/     ics-timingd ics-capd ics-plid ics-mountd ics-trigd ics-camd
                   ics-api ics-recordd ics-pipeline
   firmware/
     encoder_tagger/

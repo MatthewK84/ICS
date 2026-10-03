@@ -102,6 +102,40 @@ reviewed = 2026-10-01
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
+[[project]]
+name = "libpcap"
+ecosystem = "conan"
+packages = ["libpcap"]
+used_for = "Captures packets from the station's TAP ports, with NIC hardware time stamps, for ics::capture and ics-capd (cpp/capture, cpp/services/capd, ICS-020); also reads capture files back in the capture bench."
+ships = true
+license = "BSD-3-Clause"
+source = "https://github.com/the-tcpdump-group/libpcap"
+governance = "The Tcpdump Group, a volunteer team that reviews changes on GitHub and makes releases. The Conan recipe comes from Conan Center and builds with Conan's bison and flex."
+sustainment = "Active and the reference capture library on Linux for decades, with several releases a year. 1.10.6 is the newest on Conan Center. Pinned in cpp/conan.lock. ics::capture keeps it behind its Capture class, so Linux AF_PACKET (TPACKET_V3) used directly could replace it."
+foreign_influence = "No controlling organization: The Tcpdump Group is an informal volunteer team with international contributors."
+single_maintainer = false
+maintainers = "The Tcpdump Group (Guy Harris, Denis Ovsienko, Francois-Xavier Le Bail and others)"
+reviewed = 2026-10-03
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "OpenSSL"
+ecosystem = "conan"
+packages = ["openssl"]
+used_for = "SHA-256 of each capture file as ics-capd writes it, through the EVP interface (cpp/capture, ICS-020); the run-record manifests (CPP-32) will need the same."
+ships = true
+license = "Apache-2.0"
+source = "https://github.com/openssl/openssl"
+governance = "The OpenSSL Foundation and OpenSSL Corporation steer the project; committers review every change on GitHub under a published policy, and the OpenSSL Technical Advisory Committee sets technical direction."
+sustainment = "Very active, with a published release policy; 3.5 is the long-term support release, supported until April 2030. OpenSSL's FIPS provider has FIPS 140-3 validations, so a station can compute the hashes in a validated module. Pinned in cpp/conan.lock. ics::capture keeps it behind its Sha256 class, so another validated module could replace it."
+foreign_influence = "Stewards: the OpenSSL Foundation (Switzerland) and OpenSSL Corporation (US); international contributors."
+single_maintainer = false
+maintainers = "The OpenSSL committers, with the OpenSSL Foundation and OpenSSL Corporation"
+reviewed = 2026-10-03
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
 # --- Python (PyPI) -----------------------------------------------------------
 
 [[project]]
@@ -917,12 +951,12 @@ approved_by = "MatthewK84"
 name = "iproute2"
 ecosystem = "apt"
 packages = ["iproute2"]
-used_for = "The ip command on the machines that run the SITL rig and the timing bench: veth pairs and network namespaces for the emulated TAP (deploy/sitl/tap.sh, ICS-018) and for the PTP grandmaster and station (deploy/timing-bench/run-bench.sh, ICS-019)"
+used_for = "The ip command on the machines that run the SITL rig and the timing and capture benches: veth pairs and network namespaces for the emulated TAP (deploy/sitl/tap.sh, ICS-018), for the PTP grandmaster and station (deploy/timing-bench/run-bench.sh, ICS-019), and for the capture bench's sender and capture (deploy/capture-bench/run-bench.sh, ICS-020)"
 ships = false
 license = "GPL-2.0-only"
 source = "https://git.kernel.org/pub/scm/network/iproute2/iproute2.git"
 governance = "Part of the Linux kernel networking community: maintainers review patches on the netdev mailing list and release alongside the kernel."
-sustainment = "Very active, released with each kernel. Installed from the runner's Ubuntu archive (deploy/sitl/apt-packages.txt, deploy/timing-bench/apt-packages.txt)."
+sustainment = "Very active, released with each kernel. Installed from the runner's Ubuntu archive (deploy/sitl/apt-packages.txt, deploy/timing-bench/apt-packages.txt, deploy/capture-bench/apt-packages.txt)."
 foreign_influence = "Linux kernel community, hosted on kernel.org by the Linux Foundation (US non-profit); international contributors."
 single_maintainer = false
 maintainers = "Stephen Hemminger and David Ahern with the netdev community"

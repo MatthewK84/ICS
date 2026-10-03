@@ -12,6 +12,7 @@
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include <tl/expected.hpp>
 
@@ -50,6 +51,9 @@ class Reader {
   [[nodiscard]] bool boolean(std::string_view key);
   // Text that is not empty.
   [[nodiscard]] std::string text(std::string_view key);
+  // A list of min_count to max_count texts, none of them empty, such as
+  // interfaces = ["tap0", "tap1"] (ICS-020).
+  [[nodiscard]] std::vector<std::string> texts(std::string_view key, std::size_t min_count, std::size_t max_count);
 
   // Settings with a unit carry it in their name, as proto fields do: the key
   // must end in _ns, _m, _rad or _deg. A key without it is a schema bug.
@@ -82,6 +86,8 @@ class Reader {
   void require_unit(std::string_view key, std::string_view suffix);
   [[nodiscard]] const toml::node* find(std::string_view key);
   [[nodiscard]] std::optional<std::string> string_value(std::string_view key);
+  [[nodiscard]] std::vector<std::string> text_list(std::string_view key, const toml::array& list,
+                                                   std::size_t min_count, std::size_t max_count);
   [[nodiscard]] std::size_t choose(std::string_view key, std::span<const std::string_view> names);
 
   std::shared_ptr<detail::ReadState> state_;
