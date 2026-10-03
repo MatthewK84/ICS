@@ -106,6 +106,8 @@ jobs:
       # When the lockfile is missing, or cpp/conanfile.py requires a package it
       # does not pin, print the lockfile to commit. An existing lockfile keeps
       # every pin; only the new packages are resolved (--lockfile-partial).
+      # conan graph info enforces the lockfile as conan install does; conan
+      # lock create would extend it instead.
       - name: Require a current Conan lockfile
         run: |
           lock=(conan lock create cpp --profile:all cpp/conan/profiles/gcc13 --lockfile-out /tmp/conan.lock)
@@ -115,7 +117,8 @@ jobs:
             echo "::error::cpp/conan.lock is missing. Decode the base64 line above into cpp/conan.lock and commit it."
             exit 1
           fi
-          if ${RUN} "${lock[@]}" --lockfile cpp/conan.lock >"${RUNNER_TEMP}/lock-check.log" 2>&1; then
+          if ${RUN} conan graph info cpp --profile:all cpp/conan/profiles/gcc13 --lockfile cpp/conan.lock \
+            >"${RUNNER_TEMP}/lock-check.log" 2>&1; then
             exit 0
           fi
           tail -n 20 "${RUNNER_TEMP}/lock-check.log"
