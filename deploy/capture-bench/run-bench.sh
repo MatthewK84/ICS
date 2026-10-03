@@ -15,7 +15,7 @@
 #
 # The accelerated soak sends what 24 h at 2,000 packets a second would
 # (172,800,000) at 100,000 a second, rotating every 72 s for the 24 hourly
-# files a day makes. Hourly rotation is ics-capd's default.
+# files a day makes. Hourly rotation is what the example config sets.
 #
 # ics-capd reads /etc/ics/ics-capd.toml, so it runs in its own mount namespace
 # with the bench's config mounted there; the host's /etc/ics is never
