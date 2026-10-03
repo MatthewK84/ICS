@@ -1,0 +1,27 @@
+# An example ics-capd config (ICS-020); see cpp/README.md. ics-capd reads its
+# config from /etc/ics/ics-capd.toml. Every setting is required.
+
+[log]
+level = "info"
+service = "ics-capd"
+
+[capture]
+# The TAP ports to capture, 1 to 4.
+interfaces = ["tap0"]
+# Where the pcap files and their .sha256 files go. It must exist.
+output_dir = "/var/lib/ics/capture"
+# Bytes kept from each packet, 64 to 262_144.
+snaplen = 65_535
+# The kernel ring each port's packets wait in, 1 MiB to 1 GiB.
+ring_bytes = 67_108_864
+# "adapter" stamps packets with the NIC's PTP hardware clock; "host" with the
+# kernel's clock, for interfaces without hardware time stamps.
+timestamps = "adapter"
+# A file is closed after this long or this many bytes, whichever comes first.
+rotate_interval_ns = 3_600_000_000_000
+rotate_bytes = 1_073_741_824
+# With "adapter": ptp4l's read-only management socket, from which ics-capd
+# reads TAI-UTC at start, this end of it, and ptp4l's domainNumber.
+ptp4l_socket = "/var/run/ptp4l-ro"
+client_socket = "/run/ics-capd/ptp4l-client"
+ptp_domain = 0

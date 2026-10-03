@@ -12,7 +12,7 @@ cpp/
   mount/ tracker/ encoder/
   endgame/ registration/ detection/ association/ estimation/
   killclass/ footprint/ record/ api/
-  services/   ics-timingd ics-plid ics-mountd ics-trigd ics-camd
+  services/   ics-timingd ics-capd ics-plid ics-mountd ics-trigd ics-camd
               ics-api ics-recordd ics-pipeline
 ```
 
@@ -125,6 +125,27 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
 - **Running.** `ics-timingd` takes no arguments. It reads `/etc/ics/ics-timingd.toml`, a config like [`ics-timingd.toml`](services/timingd/ics-timingd.toml); the path is fixed so the service only ever opens that one file (CodeQL's path-injection rule rejects a path taken from the command line). It runs until SIGINT or SIGTERM and exits 0. It exits 1 when it cannot open a socket, and 2 for an argument or a bad config file, which it reports field by field.
 - **Allocation.** Once running, a poll that changes nothing allocates nothing: the tests run one inside `NoAllocationScope`. Only log lines allocate.
 - **Bench.** The [timing bench](../deploy/timing-bench/README.md) checks, every night, that holdover is flagged within 1 s of GNSS loss, and describes the same check on real hardware.
+
+## Capture
+
+[`services/capd/`](services/capd) is `ics-capd` (ICS-020), built on `ics::capture` in [`capture/`](capture). It captures the station's TAP ports, up to four, to pcap files that rotate on time or size and are SHA-256 hashed as they are written.
+
+- **Capture.** [`live_capture.hpp`](capture/include/ics/capture/live_capture.hpp) opens each port with libpcap: promiscuous, non-blocking, with a kernel ring of `ring_bytes`, and nanosecond time stamps.
+  - With `timestamps = "adapter"`, stamps come from the NIC's hardware clock, which `ptp4l` keeps on TAI. `ics-capd` reads TAI−UTC from `ptp4l` at start (as `ics-timingd` does) and subtracts it, so the files hold UTC; a leap second needs a restart.
+  - An interface without hardware time stamps is refused at start rather than falling back. `"host"` uses the kernel's clock.
+  - Capturing needs `CAP_NET_RAW`, and hardware time stamps `CAP_NET_ADMIN`.
+- **Files.** [`rotating_writer.hpp`](capture/include/ics/capture/rotating_writer.hpp) writes classic pcap with nanosecond time stamps ([`pcap_file.hpp`](capture/include/ics/capture/pcap_file.hpp)), which libpcap, tcpdump and Wireshark read.
+  - Each file is named for its port and its first packet's UTC time, such as `tap0-20261003T170000.123456789Z.pcap`, and is never overwritten.
+  - A file closes after `rotate_interval_ns` from its first packet, even on a quiet port, or before it would pass `rotate_bytes`. It is flushed, synced and hashed, and its SHA-256 goes to `<file>.sha256` in `sha256sum`'s format.
+  - The hash is computed over the bytes as they are written, with OpenSSL's EVP SHA-256 ([`sha256.hpp`](capture/include/ics/capture/sha256.hpp)), so nothing is read back.
+  - Writing a packet that does not close a file allocates nothing.
+- **Logs.**
+  - `started`.
+  - `file_closed` for each file, with its path, SHA-256, packets, bytes, and the drops libpcap counted while it was open (`dropped` in the ring, `interface_dropped` at the NIC). Any drop makes the line an error.
+  - `start_failed`, `capture_failed`, and `stopped` with the `signal`.
+- **Failures.** A port or file that fails while capturing stops `ics-capd`: it closes its open files and exits 1, for systemd to restart and alert on. A drop is logged but capture goes on.
+- **Running.** `ics-capd` takes no arguments and reads `/etc/ics/ics-capd.toml`, a config like [`ics-capd.toml`](services/capd/ics-capd.toml). It exits 0 on SIGINT or SIGTERM, 1 on a failure, and 2 for an argument or a bad config file.
+- **Bench.** The [capture bench](../deploy/capture-bench/README.md) checks zero drops and an exact packet count every night with an accelerated 24 h soak, and gives the 24 h acceptance run for a station. [`tools/loadgen`](tools/loadgen/main.cpp) is its load generator.
 
 ## Power-of-Ten checks
 

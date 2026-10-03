@@ -11,7 +11,12 @@
 #include <system_error>
 #include <vector>
 
+#include <csignal>
+#include <ctime>
+
 #include <fcntl.h>
+#include <poll.h>
+#include <signal.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -117,6 +122,28 @@ class FakePtp4l {
     }
   }
 
+  // Answers the four requests of one poll as they come, each with the
+  // matching answer and the request's sequence number, waiting up to a
+  // second for each; for a client that opens just before it polls.
+  void respond(const Answers& answers = kLocked) const {
+    for (const std::string_view hex : answers) {
+      std::array<std::byte, 512> request{};
+      sockaddr_un from{};
+      socklen_t size = sizeof(from);
+      pollfd ready{socket_.get(), POLLIN, 0};
+      const bool waiting = ::poll(&ready, 1, 1000) > 0;
+      const ssize_t got = waiting ? ::recvfrom(socket_.get(), request.data(), request.size(), 0,
+                                               reinterpret_cast<sockaddr*>(&from), &size)
+                                  : -1;
+      std::vector<std::byte> reply = bytes(hex);
+      reply.at(30) = request[30];
+      reply.at(31) = request[31];
+      if (got > 0) {
+        ::sendto(socket_.get(), reply.data(), reply.size(), 0, reinterpret_cast<const sockaddr*>(&from), size);
+      }
+    }
+  }
+
   std::vector<std::vector<std::byte>> requests() const {
     std::vector<std::vector<std::byte>> received;
     std::array<std::byte, 512> buffer{};
@@ -128,6 +155,30 @@ class FakePtp4l {
 
  private:
   Fd socket_;
+};
+
+// Blocks SIGTERM in this thread, and in threads it starts, while it lives;
+// then discards a SIGTERM left pending and restores the signal mask.
+class BlockedSigterm {
+ public:
+  BlockedSigterm() {
+    sigemptyset(&sigterm_);
+    sigaddset(&sigterm_, SIGTERM);
+    ::pthread_sigmask(SIG_BLOCK, &sigterm_, &saved_);
+  }
+  ~BlockedSigterm() {
+    const timespec now{};
+    ::sigtimedwait(&sigterm_, nullptr, &now);
+    ::pthread_sigmask(SIG_SETMASK, &saved_, nullptr);
+  }
+  BlockedSigterm(const BlockedSigterm&) = delete;
+  BlockedSigterm& operator=(const BlockedSigterm&) = delete;
+  BlockedSigterm(BlockedSigterm&&) = delete;
+  BlockedSigterm& operator=(BlockedSigterm&&) = delete;
+
+ private:
+  sigset_t sigterm_{};
+  sigset_t saved_{};
 };
 
 // Lowers the process's descriptor limit while it lives, so the next socket

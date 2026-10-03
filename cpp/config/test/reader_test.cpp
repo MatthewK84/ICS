@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <gtest/gtest.h>
 #include <tl/expected.hpp>
@@ -121,6 +122,37 @@ TEST(Reader, ReadsTextThatIsNotEmpty) {
                                  {"number", "must be text"},
                                  {"missing", "is required"},
                              }));
+}
+
+TEST(Reader, ReadsAListOfDifferentTexts) {
+  const Table table = table_of(R"(two = ["tap0", "tap1"]
+text = "tap0"
+none = []
+many = ["a", "b", "c"]
+number = ["tap0", 3]
+empty = ["tap0", ""]
+again = ["tap0", "tap0"])");
+  Reader reader(table);
+  EXPECT_EQ(reader.texts("two", 2), (std::vector<std::string>{"tap0", "tap1"}));
+  for (const std::string_view key : {"text", "none", "many", "number", "empty", "again", "missing"}) {
+    EXPECT_TRUE(reader.texts(key, 2).empty()) << key;
+  }
+  const std::string shape = "must be a list of 1 to 2 different texts, none empty";
+  EXPECT_EQ(reader.finish(), (Errors{
+                                 {"text", shape},
+                                 {"none", shape},
+                                 {"many", shape},
+                                 {"number", shape},
+                                 {"empty", shape},
+                                 {"again", shape},
+                                 {"missing", "is required"},
+                             }));
+}
+
+TEST(Reader, RejectsASchemaThatAllowsNoTexts) {
+  const Table table = table_of(R"(list = ["tap0"])");
+  EXPECT_EQ(errors_with_failed_check(table, [](Reader& reader) { static_cast<void>(reader.texts("list", 0)); }),
+            one("list", "allows no entries in the schema"));
 }
 
 TEST(Reader, ReadsAChoiceByName) {

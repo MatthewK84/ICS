@@ -21,32 +21,9 @@
 
 namespace {
 
+using ics::timing::testing::BlockedSigterm;
 using ics::timing::testing::TempDir;
 using ics::timingd::Config;
-
-// Blocks SIGTERM in this thread, and in threads it starts, while it lives;
-// then discards a SIGTERM left pending and restores the signal mask.
-class BlockedSigterm {
- public:
-  BlockedSigterm() {
-    sigemptyset(&sigterm_);
-    sigaddset(&sigterm_, SIGTERM);
-    ::pthread_sigmask(SIG_BLOCK, &sigterm_, &saved_);
-  }
-  ~BlockedSigterm() {
-    const timespec now{};
-    ::sigtimedwait(&sigterm_, nullptr, &now);
-    ::pthread_sigmask(SIG_SETMASK, &saved_, nullptr);
-  }
-  BlockedSigterm(const BlockedSigterm&) = delete;
-  BlockedSigterm& operator=(const BlockedSigterm&) = delete;
-  BlockedSigterm(BlockedSigterm&&) = delete;
-  BlockedSigterm& operator=(BlockedSigterm&&) = delete;
-
- private:
-  sigset_t sigterm_{};
-  sigset_t saved_{};
-};
 
 int run(const std::vector<const char*>& args, const std::filesystem::path& config) {
   return ics::timingd::run(args, config);

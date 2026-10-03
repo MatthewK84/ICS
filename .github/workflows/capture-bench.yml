@@ -1,0 +1,125 @@
+name: Capture bench
+
+# Runs the capture bench (ICS-020, deploy/capture-bench/README.md): ics-capd,
+# built with GCC 13 in the ics-cpp image, captures one end of a veth pair
+# while ics-loadgen sends a fixed number of UDP datagrams into the other. A
+# run fails unless every file matches its .sha256, ics-capd counts no drops,
+# and the files hold exactly the datagrams sent.
+#
+# Nightly, an accelerated soak sends what 24 h at 2,000 packets a second
+# would, 172,800,000, at 100,000 a second, rotating every 72 s for the 24
+# files a day of hourly rotation makes: about 30 minutes. Pull requests that
+# change the capture code or the bench run 2 minutes of the same. A manual
+# run takes its own count, rate and rotation, up to the 6 h a job may last.
+# The summary, the per-file counts and the ics-capd log are kept as the
+# capture-bench-<run id> artifact for 30 days; the pcap files are not.
+
+on:
+  schedule:
+    - cron: "29 5 * * *"
+  workflow_dispatch:
+    inputs:
+      packets:
+        description: Datagrams to send
+        type: number
+        default: 7200000
+      rate:
+        description: Datagrams a second
+        type: number
+        default: 2000
+      rotate_seconds:
+        description: Seconds per file
+        type: number
+        default: 3600
+  pull_request:
+    paths:
+      - cpp/capture/**
+      - cpp/services/capd/**
+      - cpp/tools/loadgen/**
+      - deploy/capture-bench/**
+      - .github/workflows/capture-bench.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: capture-bench-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # The Conan package cache the C++ toolchain workflow saves, as it mounts it.
+  RUN: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home ics-cpp:ci
+  RECORDS: /tmp/capture-bench
+
+jobs:
+  bench:
+    name: Capture with zero drops
+    runs-on: ubuntu-24.04
+    # Building takes about 10 minutes with the Conan cache, and about 40
+    # without it; the nightly soak about 30. A manual run may take the rest.
+    timeout-minutes: 360
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      # Before any docker run, so the runner user owns it (see cpp-toolchain.yml).
+      - name: Create the Conan cache folder
+        run: mkdir -p /tmp/conan-home
+
+      - name: Build the ics-cpp image
+        run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
+
+      # Restored only: the C++ toolchain workflow owns the cache and saves it.
+      - name: Restore the Conan package cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/conan-home
+          key: conan-cpp-toolchain-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
+          restore-keys: conan-cpp-toolchain-
+
+      - name: Build ics-capd and ics-loadgen
+        run: >-
+          ${RUN} bash -c 'deploy/toolchain/conan-install.sh gcc-release
+          && cd cpp && cmake --preset gcc-release >/dev/null
+          && cmake --build build/gcc-release --target ics-capd ics-loadgen'
+
+      - name: Install the bench's host tools
+        run: |
+          mapfile -t packages < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' deploy/capture-bench/apt-packages.txt)
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends "${packages[@]}"
+
+      - name: Choose the soak
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_PACKETS: ${{ inputs.packets }}
+          INPUT_RATE: ${{ inputs.rate }}
+          INPUT_ROTATE: ${{ inputs.rotate_seconds }}
+        run: |
+          case "${EVENT}" in
+            pull_request) soak=(12000000 100000 10) ;;
+            schedule) soak=(172800000 100000 72) ;;
+            *) soak=("${INPUT_PACKETS}" "${INPUT_RATE}" "${INPUT_ROTATE}") ;;
+          esac
+          {
+            echo "PACKETS=${soak[0]}"
+            echo "RATE=${soak[1]}"
+            echo "ROTATE_SECONDS=${soak[2]}"
+          } >>"${GITHUB_ENV}"
+
+      - name: Run the bench
+        run: >-
+          sudo env BENCH_OUT="${RECORDS}" deploy/capture-bench/run-bench.sh
+          cpp/build/gcc-release/services/capd/ics-capd cpp/build/gcc-release/tools/loadgen/ics-loadgen
+          "${PACKETS}" "${RATE}" "${ROTATE_SECONDS}"
+
+      - name: Keep the bench records
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: capture-bench-${{ github.run_id }}
+          path: ${{ env.RECORDS }}/
+          if-no-files-found: warn
+          retention-days: 30

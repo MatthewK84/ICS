@@ -19,6 +19,7 @@ enum class Error : std::uint16_t {
   kUnreadable = 6,       // A file that cannot be opened or read (ICS-017).
   kMalformed = 7,        // Data that does not follow its format, such as a corrupt geoid grid.
   kUnavailable = 8,      // A peer that did not answer in time, or refused, such as ptp4l (ICS-019).
+  kUnwritable = 9,       // A file that cannot be created or written, such as on a full disk (ICS-020).
 };
 
 // The name of an error, such as "full"; "unknown" for a value not listed above.

@@ -102,6 +102,40 @@ reviewed = 2026-10-01
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
+[[project]]
+name = "libpcap"
+ecosystem = "conan"
+packages = ["libpcap"]
+used_for = "Captures the TAP ports in ics::capture and ics-capd: promiscuous capture with hardware or host time stamps at nanosecond precision, and the drop counters (ICS-020)"
+ships = true
+license = "BSD-3-Clause"
+source = "https://github.com/the-tcpdump-group/libpcap"
+governance = "The Tcpdump Group, a small team of maintainers who review changes and make releases. The Conan recipe comes from Conan Center."
+sustainment = "Active, with regular releases; the capture library under tcpdump and Wireshark. Pinned in cpp/conan.lock. Linux's AF_PACKET ring, which libpcap uses, could replace it."
+foreign_influence = "The Tcpdump Group, international volunteers; no controlling organization."
+single_maintainer = false
+maintainers = "The Tcpdump Group"
+reviewed = 2026-10-03
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "OpenSSL"
+ecosystem = "conan"
+packages = ["openssl"]
+used_for = "SHA-256 of each capture file, through the EVP interface, in ics::capture (ICS-020); a FIPS 140-validatable module for the run-record hashes and signatures to come (CPP-32)"
+ships = true
+license = "Apache-2.0"
+source = "https://github.com/openssl/openssl"
+governance = "The OpenSSL Foundation and the OpenSSL Corporation steward the project; its committers review every change, and releases follow a published policy. The Conan recipe comes from Conan Center."
+sustainment = "Very active, with long-term-support releases. Pinned in cpp/conan.lock. Releases of the OpenSSL 3 FIPS provider have FIPS 140 validations; ics-capd uses the default provider."
+foreign_influence = "International committers; stewarded by the OpenSSL Foundation and the OpenSSL Corporation, with no single corporate owner."
+single_maintainer = false
+maintainers = "The OpenSSL committers and technical committee"
+reviewed = 2026-10-03
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
 # --- Python (PyPI) -----------------------------------------------------------
 
 [[project]]
@@ -917,12 +951,12 @@ approved_by = "MatthewK84"
 name = "iproute2"
 ecosystem = "apt"
 packages = ["iproute2"]
-used_for = "The ip command on the machines that run the SITL rig and the timing bench: veth pairs and network namespaces for the emulated TAP (deploy/sitl/tap.sh, ICS-018) and for the PTP grandmaster and station (deploy/timing-bench/run-bench.sh, ICS-019)"
+used_for = "The ip command on the machines that run the SITL rig and the timing and capture benches: veth pairs and network namespaces for the emulated TAP (deploy/sitl/tap.sh, ICS-018), the PTP grandmaster and station (deploy/timing-bench/run-bench.sh, ICS-019), and the capture bench's load and capture ends (deploy/capture-bench/run-bench.sh, ICS-020)"
 ships = false
 license = "GPL-2.0-only"
 source = "https://git.kernel.org/pub/scm/network/iproute2/iproute2.git"
 governance = "Part of the Linux kernel networking community: maintainers review patches on the netdev mailing list and release alongside the kernel."
-sustainment = "Very active, released with each kernel. Installed from the runner's Ubuntu archive (deploy/sitl/apt-packages.txt, deploy/timing-bench/apt-packages.txt)."
+sustainment = "Very active, released with each kernel. Installed from the runner's Ubuntu archive (deploy/sitl/apt-packages.txt, deploy/timing-bench/apt-packages.txt, deploy/capture-bench/apt-packages.txt)."
 foreign_influence = "Linux kernel community, hosted on kernel.org by the Linux Foundation (US non-profit); international contributors."
 single_maintainer = false
 maintainers = "Stephen Hemminger and David Ahern with the netdev community"

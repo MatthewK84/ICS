@@ -34,6 +34,10 @@ class IcsConan(ConanFile):
         self.requires("spdlog/1.17.0")
         # TOML config files for ics::config (ICS-016).
         self.requires("tomlplusplus/3.4.0")
+        # Packet capture for ics::capture (ICS-020).
+        self.requires("libpcap/[>=1.10.4 <2]")
+        # The SHA-256 of each capture file, through EVP, for ics::capture (ICS-020).
+        self.requires("openssl/[>=3.0 <4]")
 
     def generate(self) -> None:
         CMakeDeps(self).generate()

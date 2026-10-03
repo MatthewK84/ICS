@@ -218,6 +218,33 @@ std::string Reader::text(const std::string_view key) {
   return std::move(*value);
 }
 
+std::vector<std::string> Reader::texts(const std::string_view key, const std::size_t max_count) {
+  const toml::node* node = find(key);
+  if (!check(max_count > 0)) {
+    add_error(key, "allows no entries in the schema");
+    return {};
+  }
+  if (node == nullptr) {
+    return {};
+  }
+  const std::string shape = "must be a list of 1 to " + std::to_string(max_count) + " different texts, none empty";
+  const toml::array* list = node->as_array();
+  if (list == nullptr || list->empty() || list->size() > max_count) {
+    add_error(key, shape);
+    return {};
+  }
+  std::vector<std::string> out;
+  for (const toml::node& item : *list) {
+    const toml::value<std::string>* value = item.as_string();
+    if (value == nullptr || value->get().empty() || std::ranges::find(out, value->get()) != out.end()) {
+      add_error(key, shape);
+      return {};
+    }
+    out.push_back(value->get());
+  }
+  return out;
+}
+
 std::size_t Reader::choose(const std::string_view key, const std::span<const std::string_view> names) {
   const std::optional<std::string> value = string_value(key);
   if (!value.has_value()) {

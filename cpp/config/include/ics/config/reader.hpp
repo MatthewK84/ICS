@@ -12,6 +12,7 @@
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include <tl/expected.hpp>
 
@@ -50,6 +51,9 @@ class Reader {
   [[nodiscard]] bool boolean(std::string_view key);
   // Text that is not empty.
   [[nodiscard]] std::string text(std::string_view key);
+  // A list of 1 to max_count different texts, none empty, such as the
+  // interfaces a service captures (ICS-020).
+  [[nodiscard]] std::vector<std::string> texts(std::string_view key, std::size_t max_count);
 
   // Settings with a unit carry it in their name, as proto fields do: the key
   // must end in _ns, _m, _rad or _deg. A key without it is a schema bug.

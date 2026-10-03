@@ -20,6 +20,8 @@ std::string_view to_string(const Error error) noexcept {
       return "malformed";
     case Error::kUnavailable:
       return "unavailable";
+    case Error::kUnwritable:
+      return "unwritable";
   }
   return "unknown";
 }

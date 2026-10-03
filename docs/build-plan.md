@@ -50,7 +50,7 @@ ics/
     common/ camera_io/ timing/ trigger/ pli/ mount/ tracker/ encoder/
     endgame/ registration/ detection/ association/ estimation/
     killclass/ footprint/ record/ api/
-    services/     ics-timingd ics-plid ics-mountd ics-trigd ics-camd
+    services/     ics-timingd ics-capd ics-plid ics-mountd ics-trigd ics-camd
                   ics-api ics-recordd ics-pipeline
   firmware/
     encoder_tagger/
