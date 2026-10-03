@@ -60,18 +60,25 @@ std::optional<Plan> parse(const std::span<const char* const> args) {
   return plan;
 }
 
-// One batch of datagrams, sent with one sendmmsg call.
+// One batch of datagrams, sent with one sendmmsg call. The messages point
+// into the batch's own members, so it is neither copied nor moved.
 class Batch {
  public:
-  explicit Batch(sockaddr_in& to) {
+  explicit Batch(const sockaddr_in& to) : to_(to) {
     for (std::size_t i = 0; i < kBatch; ++i) {
       vectors_[i] = iovec{payloads_[i].data(), kPayloadBytes};
-      messages_[i].msg_hdr.msg_name = &to;
-      messages_[i].msg_hdr.msg_namelen = sizeof(to);
+      messages_[i].msg_hdr.msg_name = &to_;
+      messages_[i].msg_hdr.msg_namelen = sizeof(to_);
       messages_[i].msg_hdr.msg_iov = &vectors_[i];
       messages_[i].msg_hdr.msg_iovlen = 1;
     }
   }
+
+  Batch(const Batch&) = delete;
+  Batch& operator=(const Batch&) = delete;
+  Batch(Batch&&) = delete;
+  Batch& operator=(Batch&&) = delete;
+  ~Batch() = default;
 
   // Sends size datagrams numbered from first: true when all went.
   [[nodiscard]] bool send(const int socket, const std::uint64_t first, const std::size_t size) {
@@ -89,6 +96,7 @@ class Batch {
   }
 
  private:
+  sockaddr_in to_;
   std::array<std::array<std::byte, kPayloadBytes>, kBatch> payloads_{};
   std::array<iovec, kBatch> vectors_{};
   std::array<mmsghdr, kBatch> messages_{};
