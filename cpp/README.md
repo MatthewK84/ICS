@@ -8,11 +8,11 @@ Planned layout:
 
 ```text
 cpp/
-  common/ logging/ config/ frames/ camera_io/ timing/ trigger/ pli/
-  mount/ tracker/ encoder/
+  common/ logging/ config/ frames/ camera_io/ timing/ capture/ trigger/
+  pli/ mount/ tracker/ encoder/
   endgame/ registration/ detection/ association/ estimation/
   killclass/ footprint/ record/ api/
-  services/   ics-timingd ics-plid ics-mountd ics-trigd ics-camd
+  services/   ics-timingd ics-capd ics-plid ics-mountd ics-trigd ics-camd
               ics-api ics-recordd ics-pipeline
 ```
 
@@ -87,7 +87,7 @@ if (!config) {
 // app.toml: log.colour: is not a known setting
 ```
 
-- A schema is a function that takes a `Reader&`. Its getters check type and range, and a setting with a unit must carry the unit in its name, as proto fields do: `duration("timeout_ns", …)`, `meters`, `radians`, `degrees`. Every setting is required, and one the schema never reads is reported as unknown, since it is likely a typo.
+- A schema is a function that takes a `Reader&`. Its getters check type and range, and a setting with a unit must carry the unit in its name, as proto fields do: `duration("timeout_ns", …)`, `meters`, `radians`, `degrees`. `texts(key, min, max)` reads a list of text, such as `ics-capd`'s `interfaces`. Every setting is required, and one the schema never reads is reported as unknown, since it is likely a typo.
 - Files are written in a TOML subset, defined in [`subset.hpp`](config/include/ics/config/subset.hpp): printable ASCII, tables of bare keys, and settings holding text, decimal numbers, booleans or one-line lists of those. `parse()` checks the subset before toml++ reads the text. Fuzzing found that toml++ 3.4.0 has undefined behaviour on some invalid TOML, such as a non-ASCII character or `=` straight after a table's `[`, and its unreleased main branch and toml11 4.4.0 failed fuzzing too.
 - [`logging_config.hpp`](config/include/ics/config/logging_config.hpp) reads the `[log]` table every service has: `level` and `service`.
 
@@ -125,6 +125,26 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
 - **Running.** `ics-timingd` takes no arguments. It reads `/etc/ics/ics-timingd.toml`, a config like [`ics-timingd.toml`](services/timingd/ics-timingd.toml); the path is fixed so the service only ever opens that one file (CodeQL's path-injection rule rejects a path taken from the command line). It runs until SIGINT or SIGTERM and exits 0. It exits 1 when it cannot open a socket, and 2 for an argument or a bad config file, which it reports field by field.
 - **Allocation.** Once running, a poll that changes nothing allocates nothing: the tests run one inside `NoAllocationScope`. Only log lines allocate.
 - **Bench.** The [timing bench](../deploy/timing-bench/README.md) checks, every night, that holdover is flagged within 1 s of GNSS loss, and describes the same check on real hardware.
+
+## Capture
+
+[`services/capd/`](services/capd) is `ics-capd` (ICS-020), built on `ics::capture` in [`capture/`](capture). It captures every packet on the station's TAP ports to pcap files, so the PLI adapters (ICS-021 on) and the run record can replay exactly what arrived.
+
+| Header | Provides |
+|---|---|
+| [`capture.hpp`](capture/include/ics/capture/capture.hpp) | `Capture`: libpcap, live from an interface or replayed from a file, handing packets to a `PacketSink` without blocking, with libpcap's received and dropped counters |
+| [`rotating_writer.hpp`](capture/include/ics/capture/rotating_writer.hpp) | `RotatingWriter`: one interface's packets to a series of pcap files, each closed by age or size, SHA-256 hashed as it is written, with a `.sha256` file in `sha256sum` format beside it |
+| [`pcap_format.hpp`](capture/include/ics/capture/pcap_format.hpp) | The classic pcap headers, with the nanosecond magic number |
+| [`sha256.hpp`](capture/include/ics/capture/sha256.hpp), [`output_file.hpp`](capture/include/ics/capture/output_file.hpp) | SHA-256 through OpenSSL's EVP interface, so a FIPS provider computes it when the station loads one; a file created only if nothing is at its path, so a capture is never overwritten |
+
+- **Files.** One series per interface, named `<interface>-<UTC time it opened>.pcap`, such as `tap0-20261003T171500.123456789Z.pcap`, in `folder`. Classic pcap with nanosecond time stamps, which `tcpdump`, Wireshark and libpcap read. A file closes after `rotate_interval_ns`, or before a packet would take it past `rotate_bytes`; its bytes are synced, then its `.sha256` is written and synced. `ics-capd` writes the bytes itself rather than through `pcap_dump`, so it hashes them as they go, never reads a file back, and sees every write error. A file with no packets is still written: it shows the capture ran. Nothing is ever deleted; retention is the station's job.
+- **Time stamps.** `timestamps = "adapter"` takes each packet's time from the NIC's PTP hardware clock, which `ptp4l` keeps on TAI, and subtracts TAI − UTC, read once from `ptp4l` (`timePropertiesDS.currentUtcOffset`, which must be marked valid) at start-up; a leap second needs a restart. libpcap asks Linux for the raw hardware stamp (`adapter_unsynced`): the converted `adapter` stamp is no longer supported by the kernel. An interface that cannot give hardware stamps fails at start, never falling back to host stamps. `timestamps = "host"` uses the kernel's clock, for interfaces without a hardware clock, such as the bench's veth pair.
+- **Capture.** Promiscuous mode, since a TAP port's packets are addressed to other hosts, and `buffer_bytes` of kernel ring per interface. One thread polls every interface and writes what waits, up to 4,096 packets per interface per round. Up to 4 interfaces, all in one `ics-capd`.
+- **Logs.** `started`; `file_closed` with `interface`, `path`, `sha256`, `packets` and `bytes`, then `counters` with the packets the kernel `received`, `dropped` and `interface_dropped` while that file was open; `drops`, as an error, when any packet was dropped, but capture goes on; `capture_failed` and `close_failed`; `start_failed`, with libpcap's `reason`; and `stopped`, with the `signal`.
+- **Running.** `ics-capd` takes no arguments. It reads `/etc/ics/ics-capd.toml`, a config like [`ics-capd.toml`](services/capd/ics-capd.toml). It needs `CAP_NET_RAW`, and `CAP_NET_ADMIN` for hardware time stamps. It runs until SIGINT or SIGTERM, closes and hashes its files, and exits 0. A capture or write error, such as a full disk, also closes and hashes the files it can, and exits 1 so systemd restarts it; it exits 1 too when it cannot start, and 2 for an argument or a bad config file.
+- **Allocation.** Writing a packet allocates nothing; opening a file and logging do.
+- **Tests.** The live tests capture on the loopback interface, so they need `CAP_NET_RAW`, as the tests have when run as root in the `ics-cpp` container.
+- **Bench.** The [capture bench](../deploy/capture-bench/README.md) checks, every night, an accelerated 24 h capture with zero drops, every packet in the files and every hash matching, and describes the 24 h run on real hardware.
 
 ## Power-of-Ten checks
 

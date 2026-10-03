@@ -1,0 +1,128 @@
+name: Capture bench
+
+# Runs the capture bench (ICS-020, deploy/capture-bench/README.md): ics-capd,
+# built with GCC 13 in the ics-cpp image, captures one end of a veth pair while
+# ics-capture-send sends numbered UDP datagrams into the other, from another
+# network namespace. The bench fails unless every file's SHA-256 matches, the
+# files hold every datagram sent, in order, and ics-capd logs no drops.
+#
+# GitHub-hosted jobs stop at 6 h, so the 24 h acceptance capture runs
+# accelerated: every night, the 172.8 million packets a day carries at 2,000
+# packets/s, sent at 100,000/s, rotating every 72 s so it writes the same 24
+# files (about 30 minutes). Pull requests that change the capture code or the
+# bench run a 2-minute version. A manual run can instead capture in real time
+# at 2,000 packets/s, hourly files, for up to 5 h. The files list and the
+# ics-capd log are kept as the capture-bench-<run id> artifact for 30 days.
+
+on:
+  schedule:
+    - cron: "43 4 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "accelerated (the nightly run) or realtime"
+        type: choice
+        options:
+          - accelerated
+          - realtime
+        default: accelerated
+      hours:
+        description: "Hours to capture in real time, 1 to 5 (realtime only)"
+        type: number
+        default: 5
+  pull_request:
+    paths:
+      - cpp/capture/**
+      - cpp/services/capd/**
+      - cpp/testing/capture_bench/**
+      - deploy/capture-bench/**
+      - .github/workflows/capture-bench.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: capture-bench-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # The Conan package cache the C++ toolchain workflow saves, as it mounts it.
+  RUN: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home ics-cpp:ci
+  RECORDS: /tmp/capture-bench
+  BUILD: cpp/build/gcc-release
+
+jobs:
+  bench:
+    name: Capture every packet with zero drops
+    runs-on: ubuntu-24.04
+    # With the Conan cache, building takes about 10 minutes; without it,
+    # protobuf, abseil and OpenSSL build from source, about 50. The
+    # accelerated bench takes about 30 and a real-time one up to 5 h.
+    timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'realtime' && 355 || 100 }}
+    steps:
+      - name: Choose the run's size
+        id: size
+        env:
+          EVENT: ${{ github.event_name }}
+          MODE: ${{ inputs.mode }}
+          HOURS: ${{ inputs.hours }}
+        run: |
+          if [[ "${EVENT}" == pull_request ]]; then
+            echo "packets=12000000 rate=100000 rotate=5" | tr ' ' '\n' >>"${GITHUB_OUTPUT}"
+          elif [[ "${EVENT}" == workflow_dispatch && "${MODE}" == realtime ]]; then
+            [[ "${HOURS}" =~ ^[1-5]$ ]] || { echo "::error::hours must be 1 to 5, not ${HOURS}"; exit 1; }
+            echo "packets=$((HOURS * 3600 * 2000)) rate=2000 rotate=3600" | tr ' ' '\n' >>"${GITHUB_OUTPUT}"
+          else
+            echo "packets=172800000 rate=100000 rotate=72" | tr ' ' '\n' >>"${GITHUB_OUTPUT}"
+          fi
+
+      - name: Check out the repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      # Before any docker run, so the runner user owns it (see cpp-toolchain.yml).
+      - name: Create the Conan cache folder
+        run: mkdir -p /tmp/conan-home
+
+      - name: Build the ics-cpp image
+        run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
+
+      # Restored only: the C++ toolchain workflow owns the cache and saves it.
+      - name: Restore the Conan package cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/conan-home
+          key: conan-cpp-toolchain-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
+          restore-keys: conan-cpp-toolchain-
+
+      - name: Build ics-capd and the bench's tools
+        run: >-
+          ${RUN} bash -c 'deploy/toolchain/conan-install.sh gcc-release
+          && cd cpp && cmake --preset gcc-release >/dev/null
+          && cmake --build build/gcc-release --target ics-capd ics-capture-send ics-capture-verify'
+
+      - name: Install the bench's host tools
+        run: |
+          mapfile -t packages < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' deploy/capture-bench/apt-packages.txt)
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends "${packages[@]}"
+
+      - name: Run the bench
+        env:
+          PACKETS: ${{ steps.size.outputs.packets }}
+          RATE: ${{ steps.size.outputs.rate }}
+          ROTATE: ${{ steps.size.outputs.rotate }}
+        run: >-
+          sudo env BENCH_OUT="${RECORDS}" deploy/capture-bench/run-bench.sh
+          "${BUILD}/services/capd/ics-capd" "${BUILD}/testing/capture_bench/ics-capture-send"
+          "${BUILD}/testing/capture_bench/ics-capture-verify" "${PACKETS}" "${RATE}" "${ROTATE}"
+
+      - name: Keep the bench records
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: capture-bench-${{ github.run_id }}
+          path: ${{ env.RECORDS }}/
+          if-no-files-found: warn
+          retention-days: 30

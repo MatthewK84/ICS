@@ -13,6 +13,7 @@ static_assert(static_cast<std::uint16_t>(ics::Error::kStaleHandle) == 5);
 static_assert(static_cast<std::uint16_t>(ics::Error::kUnreadable) == 6);
 static_assert(static_cast<std::uint16_t>(ics::Error::kMalformed) == 7);
 static_assert(static_cast<std::uint16_t>(ics::Error::kUnavailable) == 8);
+static_assert(static_cast<std::uint16_t>(ics::Error::kUnwritable) == 9);
 
 namespace {
 
@@ -25,6 +26,7 @@ TEST(Error, NamesEveryCode) {
   EXPECT_EQ(ics::to_string(ics::Error::kUnreadable), "unreadable");
   EXPECT_EQ(ics::to_string(ics::Error::kMalformed), "malformed");
   EXPECT_EQ(ics::to_string(ics::Error::kUnavailable), "unavailable");
+  EXPECT_EQ(ics::to_string(ics::Error::kUnwritable), "unwritable");
 }
 
 TEST(Error, NamesAnUnlistedCodeUnknown) {

@@ -1,0 +1,5 @@
+# Ubuntu packages the capture bench needs on the machine that runs it
+# (ICS-020), one per line: ip for its network namespaces and veth pair
+# (run-bench.sh). The workflow installs them from the runner's Ubuntu archive.
+# Every package here needs an entry in docs/dependency-register.toml (ICS-010).
+iproute2
