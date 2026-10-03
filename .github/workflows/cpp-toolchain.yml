@@ -103,14 +103,25 @@ jobs:
       - name: Golden frame vectors are current
         run: ${RUN} golden/frames/generate.sh --check
 
-      - name: Require the Conan lockfile
+      # When the lockfile is missing, or cpp/conanfile.py requires a package it
+      # does not pin, print the lockfile to commit. An existing lockfile keeps
+      # every pin; only the new packages are resolved (--lockfile-partial).
+      - name: Require a current Conan lockfile
         run: |
-          if [ -f cpp/conan.lock ]; then
+          lock=(conan lock create cpp --profile:all cpp/conan/profiles/gcc13 --lockfile-out /tmp/conan.lock)
+          if [ ! -f cpp/conan.lock ]; then
+            ${RUN} bash -c "${lock[*]} >/dev/null && base64 -w0 /tmp/conan.lock"
+            echo
+            echo "::error::cpp/conan.lock is missing. Decode the base64 line above into cpp/conan.lock and commit it."
+            exit 1
+          fi
+          if ${RUN} "${lock[@]}" --lockfile cpp/conan.lock >"${RUNNER_TEMP}/lock-check.log" 2>&1; then
             exit 0
           fi
-          ${RUN} bash -c 'conan lock create cpp --profile:all cpp/conan/profiles/gcc13 --lockfile-out /tmp/conan.lock >/dev/null && base64 -w0 /tmp/conan.lock'
+          tail -n 20 "${RUNNER_TEMP}/lock-check.log"
+          ${RUN} bash -c "${lock[*]} --lockfile cpp/conan.lock --lockfile-partial >/dev/null && base64 -w0 /tmp/conan.lock"
           echo
-          echo "::error::cpp/conan.lock is missing. Decode the base64 line above into cpp/conan.lock and commit it."
+          echo "::error::cpp/conan.lock does not pin every package cpp/conanfile.py requires. Decode the base64 line above into cpp/conan.lock and commit it; the packages already pinned keep their versions."
           exit 1
 
       # Every Conan binary the later steps need: plain, and with ASan and TSan

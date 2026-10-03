@@ -40,7 +40,7 @@ Builds are reproducible: `deploy/toolchain/check-reproducible.sh gcc` (or `clang
 
 The protobuf messages generated from [`proto/`](../proto/README.md) are the `ics::proto` library in [`proto/`](proto/CMakeLists.txt). Its code is generated and committed, never edited, and it is built without the ICS warning flags, like a dependency.
 
-Dependencies are pinned in `conan.lock`. After changing `conanfile.py`, regenerate it with `conan lock create cpp --profile:all cpp/conan/profiles/gcc13 --lockfile-out cpp/conan.lock` and record the new dependency in the [dependency register](../docs/dependency-register.md).
+Dependencies are pinned in `conan.lock`. After adding a requirement to `conanfile.py`, add its pins with `conan lock create cpp --profile:all cpp/conan/profiles/gcc13 --lockfile cpp/conan.lock --lockfile-partial --lockfile-out cpp/conan.lock`, which keeps every existing pin, and record the new dependency in the [dependency register](../docs/dependency-register.md). Without access to Conan Center, push the change: the C++ toolchain workflow prints the updated lockfile to commit.
 
 ## Common library
 
