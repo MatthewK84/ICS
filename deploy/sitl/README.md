@@ -74,6 +74,23 @@ Each engagement leaves a folder in the output directory:
 | `tap.pcap` | The capture on the TAP monitor port |
 | `tap-counts.json` | The datagrams the capture holds from and to each autopilot |
 | `containers.log` | Both autopilots' console output |
+| `replay.jsonl` | In CI, the MAVLink replay of `tap.pcap` (below) |
+
+## MAVLink replay
+
+The nightly run then checks the MAVLink adapter ([ICS-021](https://github.com/MatthewK84/ICS/issues/21), [`cpp/mavlink`](../../cpp/README.md#mavlink)) against each engagement. `ics-mavlink-replay` runs the engagement's `tap.pcap` through the adapter, as `ics-plid` will run a TAP port, and `python -m ics_sitl compare` checks what came out against `truth.jsonl`. It passes when:
+
+- every position the rig logged has a record from the same MAVLink system (PX4 is 1, ArduCopter 2) with the same `time_boot_ms`, latitude and longitude to 1e-9 degrees, and height above mean sea level to 1 mm, with the record's height above the ellipsoid no further from it than the geoid ever is;
+- every status text and every refused command the rig logged is an event from that system, at least as often.
+
+The replay runs in the `ics-cpp` image, which holds the EGM96 grid, with the engagements' range origin, 40 N, 100 W and 700 m above the ellipsoid. After a local run, with `ics-mavlink-replay` built in that image:
+
+```sh
+out=/tmp/sitl-records/crossing
+docker run --rm -v "$PWD:/work/ics" -w /work/ics -v /tmp/sitl-records:/tmp/sitl-records ics-cpp:ci \
+  cpp/build/gcc-release/testing/mavlink_replay/ics-mavlink-replay "$out/tap.pcap" 40 -100 700 > "$out/replay.jsonl"
+PYTHONPATH=python python3 -m ics_sitl compare --truth "$out/truth.jsonl" --replay "$out/replay.jsonl"
+```
 
 ## What to expect from the autopilots
 

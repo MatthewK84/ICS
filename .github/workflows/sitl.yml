@@ -7,12 +7,17 @@ name: SITL rig
 # capture is missing a datagram the rig counted. It also runs on pull requests
 # that change the rig.
 #
+# Each capture is then replayed through the MAVLink adapter (ICS-021,
+# cpp/mavlink), built in the ics-cpp image, and the run fails unless every
+# position, status text and refused command in the engagement's truth log
+# comes out of it (python -m ics_sitl compare).
+#
 # The autopilot images are compiled only when deploy/sitl/image changes, and
 # are otherwise restored from the Actions cache. Each run writes their
 # CycloneDX SBOMs. The images are not published: ArduPilot is GPL-3.0, and
 # ICS does not distribute it. Each engagement's truth log, summary, TAP
-# capture and container logs, and the SBOMs, are kept as the sitl-<run id>
-# artifact for 30 days.
+# capture, MAVLink replay and container logs, and the SBOMs, are kept as the
+# sitl-<run id> artifact for 30 days.
 
 on:
   schedule:
@@ -36,11 +41,19 @@ jobs:
   engagements:
     name: Fly the scripted engagements
     runs-on: ubuntu-24.04
-    # Compiling both autopilots takes about 15 minutes; each engagement about 3.
-    timeout-minutes: 60
+    # Compiling both autopilots takes about 15 minutes; building the MAVLink
+    # replay about 10 with the Conan cache and 50 without; each engagement
+    # about 3.
+    timeout-minutes: 100
     env:
       IMAGES: /tmp/sitl-images
       RECORDS: /tmp/sitl-records
+      # The ics-cpp image, with the Conan package cache the C++ toolchain
+      # workflow saves and the engagement records mounted as they lie.
+      RUN: >-
+        docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home
+        -v /tmp/sitl-records:/tmp/sitl-records ics-cpp:ci
+      REPLAY: cpp/build/gcc-release/testing/mavlink_replay/ics-mavlink-replay
     steps:
       - name: Check out the repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -95,8 +108,42 @@ jobs:
               "${RECORDS}/ics-sitl-${autopilot}.cdx.json" deb
           done
 
+      # Before any docker run, so the runner user owns it (see cpp-toolchain.yml).
+      - name: Create the Conan cache folder
+        run: mkdir -p /tmp/conan-home "${RECORDS}"
+
+      - name: Build the ics-cpp image
+        run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
+
+      # Restored only: the C++ toolchain workflow owns the cache and saves it.
+      - name: Restore the Conan package cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/conan-home
+          key: conan-cpp-toolchain-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
+          restore-keys: conan-cpp-toolchain-
+
+      - name: Build the MAVLink replay
+        run: >-
+          ${RUN} bash -c 'deploy/toolchain/conan-install.sh gcc-release
+          && cd cpp && cmake --preset gcc-release >/dev/null
+          && cmake --build build/gcc-release --target ics-mavlink-replay'
+
       - name: Fly the engagements
         run: deploy/sitl/run-engagements.sh "${RECORDS}"
+
+      # The range origin is the engagements' (golden/frames, range-origin). The
+      # replay runs in the ics-cpp image, which holds the EGM96 grid.
+      - name: Replay the captures through the MAVLink adapter
+        run: |
+          status=0
+          for out in "${RECORDS}"/*/; do
+            echo "${out}"
+            ${RUN} "${REPLAY}" "${out}tap.pcap" 40 -100 700 >"${out}replay.jsonl" || status=1
+            PYTHONPATH=python python3 -m ics_sitl compare --truth "${out}truth.jsonl" --replay "${out}replay.jsonl" \
+              || status=1
+          done
+          exit "${status}"
 
       - name: Keep the engagement records
         if: always()

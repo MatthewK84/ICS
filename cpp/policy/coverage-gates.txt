@@ -17,4 +17,5 @@ cpp/frames 0.00
 cpp/timing 0.03
 cpp/services/timingd 0.20
 cpp/capture 0.03
+cpp/mavlink 0.09
 cpp/services/capd 0.08
