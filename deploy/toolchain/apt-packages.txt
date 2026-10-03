@@ -10,6 +10,9 @@ lld-17
 llvm-17
 libclang-rt-17-dev
 cmake
+# Conan builds some C libraries with their own build systems, which run make
+# (OpenSSL, and libpcap's flex and bison; ICS-020).
+make
 ninja-build
 cppcheck
 python3
