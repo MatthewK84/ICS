@@ -23,10 +23,11 @@ import json
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import MappingProxyType
 from typing import Final
 
 # The system IDs the rig's images give each autopilot (deploy/sitl/image).
-SYSTEMS: Final = {"px4": 1, "ardupilot": 2}
+SYSTEMS: Final = MappingProxyType({"px4": 1, "ardupilot": 2})
 DEGREES_TOLERANCE: Final = 1e-9
 MSL_TOLERANCE_M: Final = 1e-3
 # The EGM96 geoid's lowest and highest heights above the ellipsoid, rounded out.

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <string>
@@ -159,10 +160,10 @@ TEST_F(AdapterTest, MapsEachGpsFixType) {
       v1::PliRecord::FIX_TYPE_THREE_DIMENSIONAL, v1::PliRecord::FIX_TYPE_DGNSS, v1::PliRecord::FIX_TYPE_RTK_FLOAT,
       v1::PliRecord::FIX_TYPE_RTK_FIXED, v1::PliRecord::FIX_TYPE_OTHER, v1::PliRecord::FIX_TYPE_THREE_DIMENSIONAL,
       v1::PliRecord::FIX_TYPE_OTHER};
-  for (std::uint8_t fix = 0; fix < expected.size(); ++fix) {
-    receive(frame_of(kGpsRawIntId, testing::gps_raw_int_payload({.fix_type = fix})));
+  for (std::size_t fix = 0; fix < expected.size(); ++fix) {
+    receive(frame_of(kGpsRawIntId, testing::gps_raw_int_payload({.fix_type = static_cast<std::uint8_t>(fix)})));
     receive(frame_of(kGlobalPositionIntId, testing::position_payload(kPosition)));
-    EXPECT_EQ(out_.positions.back().record.fix_type(), expected.at(fix)) << int{fix};
+    EXPECT_EQ(out_.positions.back().record.fix_type(), expected.at(fix)) << fix;
   }
 }
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Final
 
@@ -57,26 +58,26 @@ def replay_event(system: int, kind: str, **fields: object) -> dict[str, object]:
     }
 
 
-TRUTH: Final = [
+TRUTH: Final = (
     {"autopilot": "both", "event": "engage", "time_s": 0.5},
     {"autopilot": "px4", "event": "phase", "phase": "climbing", "time_s": 0.6},
     truth_position("px4", 1000),
     truth_position("ardupilot", 1200),
     {"autopilot": "ardupilot", "event": "text", "severity": 6, "text": "Arm: Need � Estimate\t", "time_s": 2.0},
     {"autopilot": "ardupilot", "event": "refused", "command": 400, "result": 4, "time_s": 2.1},
-]
+)
 
-REPLAY: Final = [
+REPLAY: Final = (
     replay_event(2, "KIND_MODE_CHANGED", detail="STABILIZE"),
     replay_position(1, 1000),
     replay_position(2, 1200),
     replay_event(2, "KIND_STATUS_TEXT", detail="Arm: Need ? Estimate?"),
     replay_event(2, "KIND_COMMAND_ACK", command=400, command_result=4),
     replay_event(2, "KIND_COMMAND_ACK", command=400),
-]
+)
 
 
-def write_lines(path: Path, entries: list[dict[str, object]]) -> Path:
+def write_lines(path: Path, entries: Sequence[dict[str, object]]) -> Path:
     path.write_text("".join(json.dumps(entry) + "\n" for entry in entries) + "\n", encoding="utf-8")
     return path
 
@@ -92,7 +93,7 @@ def test_reads_a_truth_log_by_system(tmp_path: Path) -> None:
     assert log.refusals == {(2, 400, 4): 1}
 
 
-def load_truth_from(entries: list[dict[str, object]], folder: Path) -> Log:
+def load_truth_from(entries: Sequence[dict[str, object]], folder: Path) -> Log:
     return load_truth(write_lines(folder / "truth.jsonl", entries))
 
 
