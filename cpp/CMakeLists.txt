@@ -23,6 +23,8 @@ add_subdirectory(common)
 add_subdirectory(logging)
 add_subdirectory(config)
 add_subdirectory(frames)
+add_subdirectory(timing)
+add_subdirectory(services/timingd)
 add_subdirectory(toolchain_check)
 add_subdirectory(proto/test)
 

@@ -1,0 +1,24 @@
+# An example ics-timingd config (ICS-019); see cpp/README.md. ics-timingd reads
+# its config from /etc/ics/ics-timingd.toml. Every setting is required.
+
+[log]
+level = "info"
+service = "ics-timingd"
+
+[timing]
+# The station, as named in the range configuration.
+station_id = "station-1"
+# ptp4l's read-only management socket (uds_ro_address), and this end of it.
+ptp4l_socket = "/var/run/ptp4l-ro"
+client_socket = "/run/ics-timingd/ptp4l-client"
+# Where subscribers connect for ics.v1.TimeQuality reports.
+publish_socket = "/run/ics-timingd/time-quality"
+# ptp4l's domainNumber.
+ptp_domain = 0
+# How often ptp4l is polled and a report published, 10 ms to 1 s. Holdover is
+# flagged within this plus the grandmaster's announce interval of GNSS loss.
+poll_interval_ns = 100_000_000
+# The largest path asymmetry to the grandmaster, which PTP cannot measure.
+asymmetry_bound_ns = 1_000
+# The grandmaster oscillator's worst drift from UTC in holdover, in ns per s.
+holdover_drift_ns_per_s = 50.0

@@ -106,6 +106,26 @@ if (!config) {
 - **Ported code:** the angle reductions, the inverse conversion and the geoid interpolation are ported from GeographicLib 2.3, under its MIT License ([`frames/GEOGRAPHICLIB-LICENSE.txt`](frames/GEOGRAPHICLIB-LICENSE.txt)). The interpolation is GeographicLib's 12-point cubic fit, with its stencil tables copied unchanged. Bilinear interpolation would be off by up to 0.14 m, against the 1 mm the golden vectors require.
 - **Tests:** the frames tests read the golden CSV files and the installed grid, at paths CMake passes in (`ICS_GEOID_DIR`, which defaults to the images' `/usr/share/GeographicLib/geoids`). They fail rather than skip when the grid is missing.
 
+## Timing
+
+[`services/timingd/`](services/timingd) is `ics-timingd` (ICS-019), built on `ics::timing` in [`timing/`](timing). It reads the station's PTP state from `ptp4l` and publishes `ics.v1.TimeQuality` reports to the processes on the station that need them.
+
+Each poll interval, `ics-timingd` sends GET requests for four data sets (current, parent, time properties and port) to `ptp4l`'s read-only management socket (`uds_ro_address`), and matches the answers to its requests by sequence number. [`ptp_management.hpp`](timing/include/ics/timing/ptp_management.hpp) encodes the requests and decodes the answers (IEEE 1588-2008 clause 15). The decoder's tests and its fuzz target's seed corpus are answers captured from `ptp4l` 4.0.
+
+| Clock state | When |
+|---|---|
+| `locked` | The port is `SLAVE` and the grandmaster announces clock class 6, time traceable |
+| `holdover` | The port is `SLAVE` and the grandmaster announces class 7, or one of the ITU-T G.8275 holdover classes (135, 140 to 160) |
+| `free_running` | Anything else, including a `ptp4l` that does not answer within the poll interval |
+
+The report's `error_bound_ns` is a model, not a measurement: |offset| plus the accuracy the grandmaster announces (IEEE 1588-2019 Table 5) plus `asymmetry_bound_ns` when locked; the same plus `holdover_drift_ns_per_s` times the time in holdover; and unbounded, written as INT64_MAX, when free-running. Holdover is timed from the first poll that shows it. PTP does not carry `gnss_satellite_count` or `irig_b_locked`, so they stay 0 and false, and `camera_offsets` stays empty until the strobe calibration fills it.
+
+- **Reports.** The build plan has `ics-timingd` serve reports as a gRPC server stream. gRPC is not in the toolchain yet, because Conan Center's gRPC package needs an older protobuf than the 7.35.0 the lockfile pins. Until it is, [`publisher.hpp`](timing/include/ics/timing/publisher.hpp) sends each report to every subscriber on a local `SOCK_SEQPACKET` socket (`publish_socket`), one serialized `TimeQuality` per message, which is a server stream's shape. Up to 16 subscribers; one that cannot take a report at once is dropped and must reconnect.
+- **Logs.** `started`; `clock_state` when the state changes, with `state`, `ptp_offset_ns` and `error_bound_ns`; `ptp4l_answering` and, as a warning, `ptp4l_unavailable` when `ptp4l` starts or stops answering; `start_failed`; and `stopped`, with the `signal`.
+- **Running.** `ics-timingd` takes no arguments. It reads `/etc/ics/ics-timingd.toml`, a config like [`ics-timingd.toml`](services/timingd/ics-timingd.toml); the path is fixed so the service only ever opens that one file (CodeQL's path-injection rule rejects a path taken from the command line). It runs until SIGINT or SIGTERM and exits 0. It exits 1 when it cannot open a socket, and 2 for an argument or a bad config file, which it reports field by field.
+- **Allocation.** Once running, a poll that changes nothing allocates nothing: the tests run one inside `NoAllocationScope`. Only log lines allocate.
+- **Bench.** The [timing bench](../deploy/timing-bench/README.md) checks, every night, that holdover is flagged within 1 s of GNSS loss, and describes the same check on real hardware.
+
 ## Power-of-Ten checks
 
 The C++ rules from the coding-standards table in [docs/build-plan.md](../docs/build-plan.md) are enforced by tools, not review (ICS-005):

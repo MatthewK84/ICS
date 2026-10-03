@@ -1,0 +1,7 @@
+# Ubuntu packages the timing bench needs on the machine that runs it (ICS-019),
+# one per line: ptp4l and pmc for the grandmaster and the station, and ip for
+# their network namespaces and veth pair (run-bench.sh). The workflow installs
+# them from the runner's Ubuntu archive. Every package here needs an entry in
+# docs/dependency-register.toml (ICS-010).
+linuxptp
+iproute2
