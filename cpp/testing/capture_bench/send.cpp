@@ -60,34 +60,35 @@ std::optional<Plan> parse(const std::span<const char* const> args) {
   return plan;
 }
 
-// One batch of datagrams, sent with one sendmmsg call. The messages point
-// into the batch's own members, so it is neither copied nor moved.
+// The sendmmsg header for one datagram: the bytes vector points at, sent to to.
+mmsghdr message(sockaddr_in& to, iovec& vector) {
+  mmsghdr header{};
+  header.msg_hdr.msg_name = &to;
+  header.msg_hdr.msg_namelen = sizeof(to);
+  header.msg_hdr.msg_iov = &vector;
+  header.msg_hdr.msg_iovlen = 1;
+  return header;
+}
+
+// One batch of datagrams, sent with one sendmmsg call. The headers that point
+// at the address and payloads are built on each call's stack, so no pointer
+// into the batch outlives the call.
 class Batch {
  public:
-  explicit Batch(const sockaddr_in& to) : to_(to) {
-    for (std::size_t i = 0; i < kBatch; ++i) {
-      vectors_[i] = iovec{payloads_[i].data(), kPayloadBytes};
-      messages_[i].msg_hdr.msg_name = &to_;
-      messages_[i].msg_hdr.msg_namelen = sizeof(to_);
-      messages_[i].msg_hdr.msg_iov = &vectors_[i];
-      messages_[i].msg_hdr.msg_iovlen = 1;
-    }
-  }
-
-  Batch(const Batch&) = delete;
-  Batch& operator=(const Batch&) = delete;
-  Batch(Batch&&) = delete;
-  Batch& operator=(Batch&&) = delete;
-  ~Batch() = default;
+  explicit Batch(const sockaddr_in& to) : to_(to) {}
 
   // Sends size datagrams numbered from first: true when all went.
   [[nodiscard]] bool send(const int socket, const std::uint64_t first, const std::size_t size) {
+    std::array<iovec, kBatch> vectors{};
+    std::array<mmsghdr, kBatch> messages{};
     for (std::size_t i = 0; i < size; ++i) {
       ics::capture_bench::put_sequence(std::span(payloads_[i]).first<kSequenceBytes>(), first + i);
+      vectors[i] = iovec{payloads_[i].data(), kPayloadBytes};
+      messages[i] = message(to_, vectors[i]);
     }
     std::size_t sent = 0;
     for (int done = 0; sent < size; sent += static_cast<std::size_t>(done)) {
-      done = ::sendmmsg(socket, std::span(messages_).subspan(sent).data(), static_cast<unsigned>(size - sent), 0);
+      done = ::sendmmsg(socket, std::span(messages).subspan(sent).data(), static_cast<unsigned>(size - sent), 0);
       if (done <= 0) {
         return false;
       }
@@ -98,8 +99,6 @@ class Batch {
  private:
   sockaddr_in to_;
   std::array<std::array<std::byte, kPayloadBytes>, kBatch> payloads_{};
-  std::array<iovec, kBatch> vectors_{};
-  std::array<mmsghdr, kBatch> messages_{};
 };
 
 timespec to_timespec(const std::chrono::steady_clock::time_point time) {
