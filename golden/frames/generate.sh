@@ -10,19 +10,22 @@
 #                      (CartConvert -l)
 #   egm96-5.csv        EGM96 geoid height, and MSL height to ellipsoid height
 #                      (GeoidEval, the egm96-5 grid, cubic interpolation)
+#   utm-geodetic.csv   WGS84 UTM to latitude and longitude (GeoConvert;
+#                      ICS-024)
 # With --check, it writes them to a temporary folder instead and fails unless
 # the committed files match exactly; CI runs this in the ics-cpp image.
 #
-# Needs GeographicLib's CartConvert and GeoidEval and the egm96-5 grid, which
-# the ics-cpp image installs (deploy/toolchain). GeoidEval reads the grid from
-# /usr/share/GeographicLib/geoids, or from $GEOGRAPHICLIB_GEOID_PATH if set.
+# Needs GeographicLib's CartConvert, GeoConvert and GeoidEval and the egm96-5
+# grid, which the ics-cpp image installs (deploy/toolchain). GeoidEval reads
+# the grid from /usr/share/GeographicLib/geoids, or from
+# $GEOGRAPHICLIB_GEOID_PATH if set.
 set -euo pipefail
 export LC_ALL=C
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 readonly HERE
 readonly INPUTS="${HERE}/inputs"
-readonly OUTPUTS=(geodetic-ecef.csv geodetic-enu.csv egm96-5.csv)
+readonly OUTPUTS=(geodetic-ecef.csv geodetic-enu.csv egm96-5.csv utm-geodetic.csv)
 # CartConvert's digits after the decimal point: nanometres, far inside the
 # 1 mm that ICS-017 must match.
 readonly PRECISION=9
@@ -39,6 +42,7 @@ fail() {
 require_tools() {
   command -v CartConvert >/dev/null || fail "CartConvert not found; run this in the ics-cpp image"
   command -v GeoidEval >/dev/null || fail "GeoidEval not found; run this in the ics-cpp image"
+  command -v GeoConvert >/dev/null || fail "GeoConvert not found; run this in the ics-cpp image"
   echo "0 0" | GeoidEval -n "${GEOID}" >/dev/null || fail "GeoidEval cannot read the ${GEOID} grid"
 }
 
@@ -89,6 +93,15 @@ write_geoid() {
   join_rows geoid-points.csv "${WORK}/geoid.txt" >>"${out}"
 }
 
+# GeoConvert reads "<zone><hemisphere> <easting> <northing>" and, with -g,
+# writes latitude and longitude in degrees, here to 14 decimal places.
+write_utm() {
+  local out="$1"
+  rows utm-points.csv | awk -F, '{print $2 $3, $4, $5}' | GeoConvert -g -p "${PRECISION}" | tr ' ' , >"${WORK}/utm.txt"
+  echo "id,zone,hemisphere,easting_m,northing_m,latitude_deg,longitude_deg" >"${out}"
+  join_rows utm-points.csv "${WORK}/utm.txt" >>"${out}"
+}
+
 main() {
   local mode="${1:-}" target="${HERE}" file
   if [[ -n "${mode}" && "${mode}" != "--check" ]]; then
@@ -101,6 +114,7 @@ main() {
   write_ecef "${target}/geodetic-ecef.csv"
   write_enu "${target}/geodetic-enu.csv"
   write_geoid "${target}/egm96-5.csv"
+  write_utm "${target}/utm-geodetic.csv"
   if [[ "${mode}" != "--check" ]]; then
     echo "Wrote ${OUTPUTS[*]} in ${HERE}"
     return

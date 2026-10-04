@@ -1,0 +1,11 @@
+# Code generated from the protobuf files in proto/third_party (ICS-024): C++
+# only, beside the ICS contracts' C++ in cpp/proto/gen, which the warnings,
+# clang-tidy, cppcheck, CodeQL and coverage checks treat as generated. Run it
+# after proto/buf.gen.yaml, whose clean empties cpp/proto/gen:
+#
+#   buf generate proto --template proto/buf.gen.yaml --exclude-path proto/third_party/sapient_msg
+#   buf generate proto --template proto/buf.gen.third_party.yaml --path proto/third_party/sapient_msg
+version: v2
+plugins:
+  - protoc_builtin: cpp
+    out: cpp/proto/gen

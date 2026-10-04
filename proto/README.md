@@ -24,6 +24,8 @@ Protobuf contracts, the single source of truth for every message that crosses a 
 
 The contracts define messages only. Each service defines its own gRPC service when it is built.
 
+[`third_party/`](third_party/README.md) holds protobuf files copied unchanged from other projects, which ICS reads but does not own: SAPIENT's BSI Flex 335 v2.0 messages, for the SAPIENT adapter ([ICS-024](https://github.com/MatthewK84/ICS/issues/24)). The conventions below are for ICS's own contracts and do not apply to them.
+
 ## Conventions
 
 buf's COMMENTS rules require a comment on every message, field and enum value; the comment gives the unit and, where it matters, the frame.
@@ -75,7 +77,9 @@ PYTHONPATH=gen uv run --locked python -m ics_golden.proto ../golden/proto
 |---|---|
 | [`buf.yaml`](buf.yaml) | The module: lint rules (STANDARD and COMMENTS) and breaking-change rules (FILE) |
 | [`buf.gen.yaml`](buf.gen.yaml) | Code generation for C++ and Python (protoc's built-in generators) and TypeScript (protobuf-es) |
+| [`buf.gen.third_party.yaml`](buf.gen.third_party.yaml) | C++ generation for `third_party/`, beside the ICS C++ |
 | [`tools.txt`](tools.txt) | buf 1.73.0 and protoc 35.0, pinned by sha256 |
+| [`third_party/tools.txt`](third_party/tools.txt) | The source commit and sha256 of each copied folder |
 | [`check-proto.sh`](check-proto.sh) | What CI runs ([`proto.yml`](../.github/workflows/proto.yml)); see below |
 
 The generated code is committed, in one package per language:
@@ -102,21 +106,24 @@ From the repository root, with buf and protoc from `tools.txt` on the `PATH` and
 
 ```sh
 deploy/evidence/install-tools.sh /tmp/proto-tools proto/tools.txt && export PATH="/tmp/proto-tools:${PATH}"
-buf format -w proto && buf lint proto
-buf generate proto --template proto/buf.gen.yaml
+buf format -w proto --exclude-path proto/third_party/sapient_msg && buf lint proto
+buf generate proto --template proto/buf.gen.yaml --exclude-path proto/third_party/sapient_msg
+buf generate proto --template proto/buf.gen.third_party.yaml --path proto/third_party/sapient_msg
 proto/check-proto.sh origin/main
 ```
 
 Then regenerate the golden files, as above.
 
-`check-proto.sh` runs four checks:
+`check-proto.sh` runs five checks:
 
-1. `buf format` and `buf lint` must pass.
+1. `buf format` and `buf lint` must pass. The copied files in `third_party/` are linted with buf's MINIMAL rules only, and not formatted.
 2. `buf breaking` must find no breaking change against the given commit.
 3. `buf generate` must reproduce the committed code exactly.
-4. Each check above must reject its seeded defect:
+4. Each folder in `third_party/` must match the sha256 in [`third_party/tools.txt`](third_party/tools.txt).
+5. Each check above must reject its seeded defect:
    - a camelCase field name ([`policy/seeded/lint_violation.proto`](policy/seeded/lint_violation.proto));
    - a deleted field (`RunRecord.flags`);
-   - an edited generated file.
+   - an edited generated file;
+   - an edited copied file.
 
 `buf.yaml` ignores `ics/toolchain_check` in breaking-change checks: ICS-012 removed those two sample messages, which ICS-011 used to exercise the generators and nothing else used. Remove the entry once `main` no longer has them.

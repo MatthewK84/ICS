@@ -9,6 +9,14 @@ modules:
     # The seeded lint violation is checked only by check-proto.sh.
     excludes:
       - policy
+      - third_party
+  # Protobuf files copied unchanged from other projects (third_party/README.md):
+  # SAPIENT's BSI Flex 335 v2.0 messages (ICS-024). They keep their authors'
+  # style, so only buf's MINIMAL lint rules apply, and they are not formatted.
+  - path: third_party
+    lint:
+      use:
+        - MINIMAL
 lint:
   use:
     - STANDARD

@@ -15,7 +15,7 @@ A direct dependency is anything the repository names that ICS builds with, tests
 | `github-action` | `uses:` in `.github/workflows/*.yml` and `action.yml` files |
 | `container` | `image:` in workflows and action files, `docker://` actions, and `FROM` in Dockerfiles |
 | `apt` | `apt-packages.txt`, the Ubuntu packages in the toolchain images |
-| `tool` | `tools.txt` files: the pinned binaries of the evidence pipeline (`deploy/evidence/`) and the protobuf pipeline (`proto/`), and the pinned data in the toolchain images (`deploy/toolchain/`) |
+| `tool` | `tools.txt` files: the pinned binaries of the evidence pipeline (`deploy/evidence/`) and the protobuf pipeline (`proto/`), the pinned data in the toolchain images (`deploy/toolchain/`), the autopilot sources of the SITL rig (`deploy/sitl/image/`), and files copied from other projects (`proto/third_party/`, `cpp/sapient/test/samples/`) |
 
 Transitive dependencies are not registered: the lockfiles pin them and the SBOMs list them ([ICS-009](../deploy/evidence/README.md)). Packages and images whose names start with a `first_party` prefix in the register, such as `@ics/` and `ghcr.io/matthewk84/`, are ICS's own. Workspace references (`workspace:`) and local actions (`./`) are skipped too.
 

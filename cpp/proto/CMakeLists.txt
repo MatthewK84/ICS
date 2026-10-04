@@ -1,6 +1,7 @@
 # The C++ protobuf messages generated from proto/ (ICS-011), as the ics::proto
-# library. gen/ is written by buf (proto/buf.gen.yaml) and committed; never edit
-# it by hand. Like a Conan dependency, generated code is not ICS-authored:
+# library, with the SAPIENT messages copied into proto/third_party (ICS-024).
+# gen/ is written by buf (proto/buf.gen.yaml and proto/buf.gen.third_party.yaml)
+# and committed; never edit it by hand. Like a Conan dependency, generated code is not ICS-authored:
 # cpp/CMakeLists.txt adds this folder before the ICS warning flags, its headers
 # are system headers to the code that includes them, and the policy scans skip
 # gen/. The ICS code that uses the messages is checked as usual (proto/test).

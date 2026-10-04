@@ -1,0 +1,10 @@
+{
+  "timestamp": "2026-10-04T12:00:05Z",
+  "nodeId": "3f2a9c1e-5b7d-4e8f-9a01-2c3d4e5f6a7b",
+  "statusReport": {
+    "reportId": "01K6PZ0000000000000000S001",
+    "system": "SYSTEM_OK",
+    "info": "INFO_UNCHANGED",
+    "activeTaskId": "01K6PZ0000000000000000T001"
+  }
+}

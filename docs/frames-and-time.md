@@ -89,13 +89,14 @@ The component doing each conversion owns its leap-second offset and must take it
 
 ## Golden vectors
 
-[`golden/frames/generate.sh`](../golden/frames/generate.sh) runs GeographicLib 2.3's `CartConvert` and `GeoidEval` over the case lists in [`golden/frames/inputs/`](../golden/frames/inputs), in the ics-cpp image:
+[`golden/frames/generate.sh`](../golden/frames/generate.sh) runs GeographicLib 2.3's `CartConvert`, `GeoidEval` and `GeoConvert` over the case lists in [`golden/frames/inputs/`](../golden/frames/inputs), in the ics-cpp image:
 
 | File | Conversion | GeographicLib | Printed to |
 |---|---|---|---|
 | `geodetic-ecef.csv` | Geodetic to ECEF | `CartConvert` | 1 nm |
 | `geodetic-enu.csv` | Geodetic to the ENU frame of an origin | `CartConvert -l` | 1 nm |
 | `egm96-5.csv` | Geoid height N, and MSL height to ellipsoid height | `GeoidEval -n egm96-5` | 0.1 mm |
+| `utm-geodetic.csv` | WGS84 UTM to latitude and longitude ([ICS-024](https://github.com/MatthewK84/ICS/issues/24)) | `GeoConvert -g` | 1e-14 degrees |
 
 The cases cover:
 
@@ -104,9 +105,10 @@ The cases cover:
 - the southern hemisphere and high latitudes;
 - both sides of the antimeridian and ENU cases that cross it;
 - points below the ellipsoid and at 12 km;
-- EGM96's highest and lowest geoid heights.
+- EGM96's highest and lowest geoid heights;
+- UTM points in zones 1 and 60, in both hemispheres, at the edges of a zone, and at UTM's northern and southern limits.
 
-The C++ frames module, [`cpp/frames`](../cpp/README.md#frames), reproduces every vector within 1 mm ([ICS-017](https://github.com/MatthewK84/ICS/issues/17)). Its geodetic to ECEF and ENU results agree to the vectors' printed nanometre, and its geoid heights to their printed 0.1 mm. CI checks the vectors in three ways:
+The C++ frames module, [`cpp/frames`](../cpp/README.md#frames), reproduces every vector within 1 mm ([ICS-017](https://github.com/MatthewK84/ICS/issues/17)). Its geodetic to ECEF and ENU results agree to the vectors' printed nanometre, its geoid heights to their printed 0.1 mm, and its UTM conversion, Karney's sixth-order Krüger series as in GeographicLib, to 1e-12 degrees. CI checks the vectors in three ways:
 
 - **C++ toolchain workflow:** it regenerates them in the image and requires an exact match.
 - **Python test** ([`python/tests/test_frame_vectors.py`](../python/tests/test_frame_vectors.py)): it recomputes geodetic to ECEF and ENU in closed form, requires agreement within 1 µm, and checks that h = H + N in every geoid row.

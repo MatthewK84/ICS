@@ -79,6 +79,7 @@ def test_outputs_repeat_their_inputs_in_order() -> None:
         ("geodetic-ecef.csv", "geodetic-points.csv"),
         ("geodetic-enu.csv", "enu-cases.csv"),
         ("egm96-5.csv", "geoid-points.csv"),
+        ("utm-geodetic.csv", "utm-points.csv"),
     )
     for output, source in pairs:
         inputs = read_rows(f"inputs/{source}")
@@ -87,7 +88,7 @@ def test_outputs_repeat_their_inputs_in_order() -> None:
 
 
 def test_ids_are_unique() -> None:
-    for name in ("geodetic-ecef.csv", "geodetic-enu.csv", "egm96-5.csv"):
+    for name in ("geodetic-ecef.csv", "geodetic-enu.csv", "egm96-5.csv", "utm-geodetic.csv"):
         ids = [row["id"] for row in read_rows(name)]
         assert len(ids) == len(set(ids)), name
 

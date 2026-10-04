@@ -100,10 +100,11 @@ if (!config) {
 | [`geodetic.hpp`](frames/include/ics/frames/geodetic.hpp) | `Geodetic`, a WGS84 point made only through `Geodetic::make`. It refuses a value that is not finite or a latitude beyond a pole, and wraps longitude into [−180°, 180°). Also `to_ecef` and `to_geodetic`; the inverse is exact everywhere, including at the poles and near the Earth's centre |
 | [`enu.hpp`](frames/include/ics/frames/enu.hpp) | `EnuFrame`, the range east-north-up frame of an origin (GeographicLib's `LocalCartesian`). It converts positions, and `rotate` turns vectors of any unit, such as velocities, between ECEF and ENU axes |
 | [`egm96.hpp`](frames/include/ics/frames/egm96.hpp) | `Egm96`, the geoid that defines MSL. `Egm96::load` reads the `egm96-5` grid that the images install at `Egm96::kDefaultPath`. Then `geoid_height`, `from_msl` (h = H + N) and `msl_height` give heights |
+| [`utm.hpp`](frames/include/ics/frames/utm.hpp) | `from_utm`: a WGS84 UTM position to a geodetic point (ICS-024), with Karney's sixth-order Krüger series as in GeographicLib's `TransverseMercator`, good to nanometres. It refuses a zone outside 1 to 60 and a position beyond UTM's limits |
 | [`wgs84.hpp`](frames/include/ics/frames/wgs84.hpp) | The ellipsoid's constants |
 
 - **Real-time use:** the conversions and geoid lookups are `noexcept`, allocate nothing (the tests run them inside `NoAllocationScope`) and are safe from several threads. Load the 19 MB grid once at start-up.
-- **Ported code:** the angle reductions, the inverse conversion and the geoid interpolation are ported from GeographicLib 2.3, under its MIT License ([`frames/GEOGRAPHICLIB-LICENSE.txt`](frames/GEOGRAPHICLIB-LICENSE.txt)). The interpolation is GeographicLib's 12-point cubic fit, with its stencil tables copied unchanged. Bilinear interpolation would be off by up to 0.14 m, against the 1 mm the golden vectors require.
+- **Ported code:** the angle reductions, the inverse conversion, the UTM series and the geoid interpolation are ported from GeographicLib 2.3, under its MIT License ([`frames/GEOGRAPHICLIB-LICENSE.txt`](frames/GEOGRAPHICLIB-LICENSE.txt)). The interpolation is GeographicLib's 12-point cubic fit, with its stencil tables copied unchanged. Bilinear interpolation would be off by up to 0.14 m, against the 1 mm the golden vectors require.
 - **Tests:** the frames tests read the golden CSV files and the installed grid, at paths CMake passes in (`ICS_GEOID_DIR`, which defaults to the images' `/usr/share/GeographicLib/geoids`). They fail rather than skip when the grid is missing.
 
 ## Timing
@@ -207,6 +208,31 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
 - **Security.** HTTPS with the server's certificate and name verified; plain HTTP only to this host, for tests. Redirects are not followed. The token is read from a file that only its owner may reach, and must be printable ASCII without spaces, so it cannot add a header; it is never logged. The client only reads the stream; the token's read-only scope is set in Lattice. Sandboxes also take `Anduril-Sandbox-Authorization`.
 - **Probe.** [`testing/lattice_probe`](testing/lattice_probe/main.cpp) is `ics-lattice-probe`, which streams for a while and prints the records as JSON lines. The [Lattice sandbox workflow](../.github/workflows/lattice-sandbox.yml) runs it nightly against a Lattice Sandbox once the `LATTICE_URL`, `LATTICE_ENVIRONMENT_TOKEN` and `LATTICE_SANDBOX_TOKEN` secrets are set.
 - **Tests.** A synthetic [sample stream](lattice/test/samples/README.md), read in chunks of every size from 1 to 64 bytes, and a loopback HTTP server that plays back streams, errors and silences to the client. The fuzz target reads its input as a stream and as an event.
+
+## SAPIENT
+
+[`sapient/`](sapient) is `ics::sapient` (ICS-024), the fourth PLI adapter. It reads the BSI Flex 335 v2.0 messages a SAPIENT node sends, and turns the positions in their detection reports into `ics.v1.PliRecord`. The messages are Dstl's protobuf definitions, copied unchanged into [`proto/third_party/sapient_msg`](../proto/third_party/README.md) and generated into `ics::proto`. The adapter does no network I/O; ICS-030 decides how `ics-plid` connects to nodes.
+
+| Header | Provides |
+|---|---|
+| [`stream.hpp`](sapient/include/ics/sapient/stream.hpp) | `StreamReader`: the messages in a node's TCP stream, each a 4-byte little-endian length and then the message, as Dstl's test harness frames them. A length over 1 MiB, or a message that does not parse, breaks the stream, which then reads nothing more |
+| [`location.hpp`](sapient/include/ics/sapient/location.hpp) | `to_fix`: a SAPIENT location as a WGS84 point with one-sigma errors in metres; `parse_zone`: a UTM zone such as `30U` |
+| [`registration.hpp`](sapient/include/ics/sapient/registration.hpp) | `read_units`: the UTM zone and velocity units a node registers |
+| [`adapter.hpp`](sapient/include/ics/sapient/adapter.hpp) | `Adapter`: each node's units from its registration, and a record from each detection report with a location |
+
+| SAPIENT | `PliRecord` |
+|---|---|
+| `detection_report.object_id` | `entity_id`; the role comes from the settings, matched to the `object_id` or the report's `id` (such as a tail number), and is `ENTITY_ROLE_OTHER` for an object not listed |
+| `location`: `x`, `y`, `z` | `position`: x is the longitude or easting and y the latitude or northing, in degrees, radians or UTM metres. UTM uses the location's `utm_zone`, or else the node's registered zone. z is the ellipsoid height for `WGS84_E`, and the height above mean sea level, through EGM96 ([Frames](#frames)), for `WGS84_G`; without z the height is 0 and not valid |
+| `location`: `x_error`, `y_error`, `z_error` | `horizontal_sigma_m`: the larger of the x and y errors in metres; `vertical_sigma_m`: `z_error`, when the height is known |
+| `enu_velocity` at the object | `velocity_enu_mps`, in the node's registered units (m/s or km/h), rotated into the range ENU frame; a missing up rate is 0. Unset until the node registers |
+| `timestamp` | `valid_utc_ns` with `PLI_TIME_BASIS_VEHICLE_GNSS` when within `max_skew` (30 s) of receipt, as for CoT; otherwise the receipt time with `PLI_TIME_BASIS_RECEIPT` |
+| (none) | `fix_type`: `FIX_TYPE_OTHER`, since SAPIENT reports no GNSS fix |
+
+- **Zones.** A zone is its number and a latitude band letter, as in Dstl's samples (`30U`). C to M are south of the equator and N to X north. A UTM position must lie in its band, give or take 1 degree, except in band N, which is read as the northern hemisphere. A sender that writes `56S` for zone 56 south would otherwise put Sydney at 56 N; the band check refuses it instead. It cannot catch such a sender between about 49 S and 59 S, whose points fall in band S when read as northern.
+- **Registrations.** A detection does not name the mode it was made in, so a zone or velocity unit counts only when every detection definition in the registration that gives one agrees. Units are kept for up to `max_nodes` (1024) nodes, keyed by `node_id`. A node that registered before the adapter started has no units until it registers again.
+- **Skipped and counted.** Detection reports with a range and bearing, which ICS does not convert; with no `object_id`; or with no location, or one that cannot be placed. Status reports, tasks, alerts and the other messages give nothing.
+- **Tests.** Dstl's 83 sample messages and a synthetic session ([samples](sapient/test/samples/README.md)), framed and read back in chunks of every size from 1 to 64 bytes. The fuzz target reads its input as a framed stream and as one message.
 
 ## Power-of-Ten checks
 

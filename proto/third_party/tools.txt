@@ -1,0 +1,6 @@
+# Protobuf files copied unchanged from other projects (ICS-024), one folder per
+# line: name, commit, sha256, repository. The name is the folder in
+# proto/third_party, and the sha256 is of its .proto files concatenated in
+# path order (README.md). proto/check-proto.sh refuses a folder that does not
+# match. Every entry needs an entry in docs/dependency-register.toml.
+sapient_msg 244a741c13bcee628f84944aef91e4a66854bd7d ded596db8bcc1f5465419f12b070a680c6466b9e1c98bd85e713d9798ef4617b https://github.com/dstl/sapient-proto-files
