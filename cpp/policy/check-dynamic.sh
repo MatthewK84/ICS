@@ -2,17 +2,19 @@
 # Run the dynamic CI stages and prove each one catches a seeded defect (ICS-008
 # "Done when": seeded defects fail each stage; clean code passes).
 #
-# Usage: check-dynamic.sh sanitizers
+# Usage: check-dynamic.sh sanitizers [PRESET]
 #        check-dynamic.sh fuzz SECONDS
 #        check-dynamic.sh coverage
 #
 #   sanitizers  Builds and tests the ICS code under ASan, UBSan and TSan with
 #               GCC 13 and Clang 17; every test must pass. Then each sanitizer's
 #               seed in cpp/policy/seeded-runtime must fail with the report
-#               named on its first line.
-#   fuzz        Builds the clang-fuzz preset and runs every fuzz target listed
-#               in <build>/fuzzers.txt for SECONDS from its seed corpus; any
-#               crash fails. The seeded fuzz target must then crash within
+#               named on its first line. PRESET, such as gcc-asan, checks only
+#               that one, so CI can run the six side by side.
+#   fuzz        Builds the fuzz targets listed in <build>/fuzzers.txt with the
+#               clang-fuzz preset and runs each for SECONDS from its seed
+#               corpus, as many at once as there are processors; any crash
+#               fails. The seeded fuzz target must then crash within
 #               min(SECONDS, 120) seconds.
 #   coverage    Builds the clang-coverage preset, runs every test and gates the
 #               code listed in cpp/policy/coverage-gates.txt: full line and
@@ -34,6 +36,8 @@ readonly ARTIFACTS="${ARTIFACT_DIR:-${WORK}/artifacts}"
 readonly COMPILERS=(gcc clang)
 readonly SANITIZERS=(asan ubsan tsan)
 readonly SANITIZER_SEEDS=(asan_heap_overflow.cpp ubsan_signed_overflow.cpp tsan_data_race.cpp)
+FUZZ_JOBS="$(nproc)"
+readonly FUZZ_JOBS
 readonly FUZZ_SEED="fuzz_planted_bug.cpp"
 readonly SEED_FUZZ_BUDGET=120
 readonly COVERAGE_PRESET="clang-coverage"
@@ -52,7 +56,7 @@ fail() {
 }
 
 usage() {
-  fail "usage: check-dynamic.sh sanitizers | check-dynamic.sh fuzz SECONDS | check-dynamic.sh coverage"
+  fail "usage: check-dynamic.sh sanitizers [PRESET] | check-dynamic.sh fuzz SECONDS | check-dynamic.sh coverage"
 }
 
 # Run a command, showing its output only if it fails.
@@ -88,13 +92,19 @@ check_seed_list() {
   [[ "${listed}" == "${actual}" ]] || fail "check-dynamic.sh must list every seed; listed:"$'\n'"${listed}"$'\n'"found:"$'\n'"${actual}"
 }
 
-# Configure and build one preset with the seeds available.
-build_preset() {
+# Configure one preset with the seeds available.
+configure_preset() {
   local preset="$1"
   if [[ "${SKIP_CONAN_INSTALL:-0}" != "1" ]]; then
     quietly "${ROOT}/deploy/toolchain/conan-install.sh" "${preset}"
   fi
   (cd "${CPP}" && quietly cmake --preset "${preset}" -B "${WORK}/${preset}" -DICS_POLICY_SEEDS=ON)
+}
+
+# Configure and build one preset with the seeds available.
+build_preset() {
+  local preset="$1"
+  configure_preset "${preset}"
   quietly cmake --build "${WORK}/${preset}" || fail "the ICS code does not build under ${preset}"
 }
 
@@ -110,13 +120,18 @@ check_sanitizer() {
   expect_rejected "${preset}" "${SEEDS}/${seed}" "${status}" "${output}"
 }
 
+# Every sanitizer preset, or only the one named.
 check_sanitizers() {
-  local compiler index
+  local only="${1:-}" compiler index checked=0
   for compiler in "${COMPILERS[@]}"; do
     for index in "${!SANITIZERS[@]}"; do
-      check_sanitizer "${compiler}" "${index}"
+      if [[ -z "${only}" || "${only}" == "${compiler}-${SANITIZERS[index]}" ]]; then
+        check_sanitizer "${compiler}" "${index}"
+        checked=$((checked + 1))
+      fi
     done
   done
+  ((checked > 0)) || usage
 }
 
 # Fuzz one target for the given time: a fresh working corpus, then the seed corpus if any.
@@ -128,19 +143,49 @@ run_fuzzer() {
     -artifact_prefix="${artifacts}/${binary##*/}-" "${corpus}" ${seed_corpus:+"${seed_corpus}"}
 }
 
+# Wait for one running fuzz target, named in the caller's names array by
+# process ID, and fail if it crashed.
+reap_fuzzer() {
+  local seconds="$1" finished="" status=0
+  wait -n -p finished || status=$?
+  local name="${names[${finished}]}"
+  if ((status != 0)); then
+    tail -n 60 "${WORK}/${name}.log" >&2
+    fail "${name} crashed; the input is in ${ARTIFACTS}"
+  fi
+  echo "Fuzzed ${name} for ${seconds} s: no crash"
+}
+
 check_fuzzers() {
   local seconds="$1"
-  local build="${WORK}/clang-fuzz" binary corpus count=0 output status=0
-  build_preset clang-fuzz
+  local build="${WORK}/clang-fuzz" binary corpus count=0 running=0 output status=0
+  local -A names=()
+  local -a targets=()
+  configure_preset clang-fuzz
+  while read -r binary corpus; do
+    if [[ -n "${binary}" ]]; then
+      targets+=("${binary##*/}")
+    fi
+  done <"${build}/fuzzers.txt"
+  ((${#targets[@]} > 0)) || fail "no fuzz targets in ${build}/fuzzers.txt"
+  quietly cmake --build "${build}" --target "${targets[@]}" seed_fuzz_planted_bug \
+    || fail "the fuzz targets do not build under clang-fuzz"
   while read -r binary corpus; do
     [[ -n "${binary}" ]] || continue
-    quietly run_fuzzer "${binary}" "${seconds}" "${ARTIFACTS}" "${corpus}" \
-      || fail "${binary##*/} crashed; the input is in ${ARTIFACTS}"
-    echo "Fuzzed ${binary##*/} for ${seconds} s: no crash"
+    if ((running >= FUZZ_JOBS)); then
+      reap_fuzzer "${seconds}"
+      running=$((running - 1))
+    fi
+    run_fuzzer "${binary}" "${seconds}" "${ARTIFACTS}" "${corpus}" >"${WORK}/${binary##*/}.log" 2>&1 &
+    names[$!]="${binary##*/}"
+    running=$((running + 1))
     count=$((count + 1))
   done <"${build}/fuzzers.txt"
-  ((count > 0)) || fail "no fuzz targets in ${build}/fuzzers.txt"
-  quietly cmake --build "${build}" --target seed_fuzz_planted_bug || fail "the seeded fuzz target does not build"
+  while ((running > 0)); do
+    reap_fuzzer "${seconds}"
+    running=$((running - 1))
+  done
+  echo "Fuzzed ${count} targets, ${FUZZ_JOBS} at a time"
   output="$(run_fuzzer "${build}/policy/seeded-runtime/seed_fuzz_planted_bug" \
     "$((seconds < SEED_FUZZ_BUDGET ? seconds : SEED_FUZZ_BUDGET))" "${WORK}/seed-artifacts" 2>&1)" || status=$?
   expect_rejected "libFuzzer" "${SEEDS}/${FUZZ_SEED}" "${status}" "${output}"
@@ -200,7 +245,7 @@ main() {
   local mode="${1:-}"
   check_seed_list
   case "${mode}" in
-    sanitizers) check_sanitizers ;;
+    sanitizers) check_sanitizers "${2:-}" ;;
     fuzz)
       [[ "${2:-}" =~ ^[1-9][0-9]*$ ]] || usage
       check_fuzzers "$2"

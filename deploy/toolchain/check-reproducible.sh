@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Build the toolchain_check sample twice, in two different build folders, and
-# require byte-identical outputs (ICS-004 "Done when").
+# require byte-identical outputs (ICS-004 "Done when": a sample target builds
+# bit-identically twice on both compilers). The first folder also builds and
+# tests all the ICS code in release; the second builds only the sample.
 #
 # Usage: check-reproducible.sh gcc|clang [extra cmake arguments]
 #
@@ -17,15 +19,27 @@ readonly OUTPUTS=(
   toolchain_check/toolchain_check_cli
   toolchain_check/toolchain_check_test
 )
+readonly SAMPLE_TARGETS=(toolchain_check toolchain_check_cli toolchain_check_test)
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-0}"
 trap 'rm -rf "${WORK}"' EXIT
 
-build_in() {
+configure_in() {
   local dir="$1"
   shift
   (cd "${ROOT}/cpp" && cmake --preset "${PRESET}" -B "${dir}" "$@" >/dev/null)
-  cmake --build "${dir}"
-  ctest --test-dir "${dir}" --output-on-failure
+}
+
+# Everything, with every test run.
+build_all_in() {
+  configure_in "$@"
+  cmake --build "$1"
+  ctest --test-dir "$1" --output-on-failure
+}
+
+# The sample alone.
+build_sample_in() {
+  configure_in "$@"
+  cmake --build "$1" --target "${SAMPLE_TARGETS[@]}"
 }
 
 hash_outputs() {
@@ -36,8 +50,8 @@ main() {
   if [[ "${SKIP_CONAN_INSTALL:-0}" != "1" ]]; then
     "${ROOT}/deploy/toolchain/conan-install.sh" "${PRESET}"
   fi
-  build_in "${WORK}/first" "$@"
-  build_in "${WORK}/second-build-folder" "$@"
+  build_all_in "${WORK}/first" "$@"
+  build_sample_in "${WORK}/second-build-folder" "$@"
   hash_outputs "${WORK}/first" > "${WORK}/first.sha256"
   hash_outputs "${WORK}/second-build-folder" > "${WORK}/second.sha256"
   cat "${WORK}/first.sha256"

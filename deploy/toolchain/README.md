@@ -37,6 +37,6 @@ Behind a TLS-inspecting proxy, pass its CA bundle as a build secret: `--secret i
 ## Scripts
 
 - [`conan-install.sh PRESET...`](conan-install.sh): installs the Conan dependencies that one or more CMake presets need, from `cpp/conan.lock`. For the `asan`, `tsan` and `fuzz` presets it builds them with the matching sanitizer, from the [`asan`](../../cpp/conan/profiles/asan) and [`tsan`](../../cpp/conan/profiles/tsan) profiles.
-- [`check-reproducible.sh gcc|clang`](check-reproducible.sh): builds the `toolchain_check` sample twice in different build folders and fails unless every output is byte-identical. This is the ICS-004 "Done when" test, run in CI for both compilers.
+- [`check-reproducible.sh gcc|clang`](check-reproducible.sh): builds the `toolchain_check` sample twice in different build folders and fails unless every output is byte-identical. The first folder also builds and tests all the ICS code in release; the second builds only the sample. This is the ICS-004 "Done when" test ("a sample target builds bit-identically twice on both compilers"), run in CI for both compilers.
 - [`install-toolchain.sh SNAPSHOT_ID`](install-toolchain.sh): used by both Dockerfiles.
 - [`install-geoids.sh TARGET_DIR [CA_BUNDLE]`](install-geoids.sh): downloads each geoid grid pinned in `tools.txt`, refuses one whose checksum does not match, and unpacks it into `TARGET_DIR`. `install-toolchain.sh` runs it.
