@@ -146,6 +146,23 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
 - **Tests.** The live tests capture on the loopback interface, so they need `CAP_NET_RAW`, as the tests have when run as root in the `ics-cpp` container.
 - **Bench.** The [capture bench](../deploy/capture-bench/README.md) checks, every night, an accelerated 24 h capture with zero drops, every packet in the files and every hash matching, and describes the 24 h run on real hardware.
 
+## MAVLink
+
+[`mavlink/`](mavlink) is `ics::mavlink` (ICS-021), the first PLI adapter. It reads the MAVLink a TAP port carries and turns it into `ics.v1.PliRecord` and `PliEvent` ([`pli.proto`](../proto/ics/v1/pli.proto)), for `ics-plid` (ICS-030) to serve.
+
+| Header | Provides |
+|---|---|
+| [`datagram.hpp`](mavlink/include/ics/mavlink/datagram.hpp) | `udp_datagram`: the UDP datagram in a captured Ethernet frame (at most one 802.1Q tag, IPv4, no fragments) |
+| [`frame.hpp`](mavlink/include/ics/mavlink/frame.hpp) | `FrameReader`: the MAVLink 1 and 2 frames in a datagram, each checked with the X.25 checksum and its message's CRC_EXTRA; frames of other messages are stepped over, and bytes that start no frame are counted and skipped |
+| [`messages.hpp`](mavlink/include/ics/mavlink/messages.hpp) | `decode`: `HEARTBEAT`, `SYSTEM_TIME`, `GPS_RAW_INT`, `ATTITUDE_QUATERNION`, `GLOBAL_POSITION_INT`, `COMMAND_LONG`, `COMMAND_ACK` and `STATUSTEXT`, field for field, extensions included |
+| [`adapter.hpp`](mavlink/include/ics/mavlink/adapter.hpp), [`modes.hpp`](mavlink/include/ics/mavlink/modes.hpp) | `Adapter`: records and events from frames; the flight modes of PX4 and ArduCopter by name |
+
+- **Records.** One per `GLOBAL_POSITION_INT` from a vehicle's autopilot (component 1). The height above mean sea level becomes a height above the ellipsoid through EGM96 ([Frames](#frames)); the velocity is rotated from the vehicle's north-east-down axes into the range ENU frame. The fix type and one-sigma accuracies of the vehicle's last `GPS_RAW_INT`, and the attitude of its last `ATTITUDE_QUATERNION`, are added when received within 1 s (`max_age`). `entity_id` is the MAVLink system ID; the role comes from the settings.
+- **Time.** Each `SYSTEM_TIME` that carries UTC gives the vehicle's boot-to-UTC offset, and a record is valid at its `time_boot_ms` plus the last offset (`PLI_TIME_BASIS_VEHICLE_GNSS`). Before a vehicle sends UTC, its records take the time they were received (`PLI_TIME_BASIS_RECEIPT`), the capture's time stamp. There is no drift fit yet (CPP-11): on the SITL rig, ArduCopter's positions are valid about 230 ms before they arrive, drifting by about 0.1 ms each second.
+- **Events.** Arming and disarming and mode changes from `HEARTBEAT`; each `COMMAND_LONG`, for its target; each `COMMAND_ACK` and `STATUSTEXT` chunk; and a link lost when a vehicle's heartbeats stop for longer than `link_timeout` (3 s), checked by `tick`, and restored at the next. MAVLink stamps none of them, so they take the time they were received.
+- **Signing.** A signed frame is read with its signature skipped: ICS listens on a TAP port and holds no key.
+- **Replay.** [`testing/mavlink_replay`](testing/mavlink_replay/main.cpp) is `ics-mavlink-replay`, which runs a pcap file through the adapter and writes JSON lines. Every night the [SITL rig workflow](../.github/workflows/sitl.yml) replays each engagement's TAP capture and checks it against the rig's truth log ([`deploy/sitl`](../deploy/sitl/README.md#mavlink-replay)). The tests replay part of one such capture ([`test/fixtures`](mavlink/test/fixtures/README.md)).
+
 ## Power-of-Ten checks
 
 The C++ rules from the coding-standards table in [docs/build-plan.md](../docs/build-plan.md) are enforced by tools, not review (ICS-005):

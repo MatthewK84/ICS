@@ -6,6 +6,8 @@
         Fly the engagement, listening for each autopilot at its address; exit 1 if it fails.
     python -m ics_sitl tap-check --summary FILE --counts FILE
         Check the TAP capture carried every datagram the rig counted; exit 1 if not.
+    python -m ics_sitl compare --truth FILE --replay FILE
+        Check ics-mavlink-replay's output against a run's truth log (ICS-021); exit 1 if it falls short.
 
 A usage or engagement-file error exits 2.
 """
@@ -19,6 +21,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Final
 
+from ics_sitl.compare import CompareError, compare, load_replay, load_truth, summary_lines
 from ics_sitl.profiles import Engagement, ProfileError, load_engagement
 from ics_sitl.rig import Address, Link, run
 
@@ -58,6 +61,9 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     tap = commands.add_parser("tap-check", help="check the TAP capture's datagram counts")
     tap.add_argument("--summary", type=Path, required=True)
     tap.add_argument("--counts", type=Path, required=True)
+    check = commands.add_parser("compare", help="check a MAVLink replay against a truth log")
+    check.add_argument("--truth", type=Path, required=True, help="the run's truth.jsonl")
+    check.add_argument("--replay", type=Path, required=True, help="ics-mavlink-replay's output for the run's tap.pcap")
     return parser.parse_args(argv)
 
 
@@ -121,6 +127,12 @@ def tap_check(arguments: argparse.Namespace) -> int:
     return EXIT_FAILED if shortfalls else 0
 
 
+def replay_check(arguments: argparse.Namespace) -> int:
+    report = compare(load_truth(arguments.truth), load_replay(arguments.replay))
+    sys.stdout.writelines(f"{line}\n" for line in summary_lines(report))
+    return EXIT_FAILED if report.problems else 0
+
+
 def main(argv: Sequence[str]) -> int:
     arguments = parse_args(argv)
     try:
@@ -129,8 +141,10 @@ def main(argv: Sequence[str]) -> int:
             return 0
         if arguments.command == "run":
             return fly(arguments)
+        if arguments.command == "compare":
+            return replay_check(arguments)
         return tap_check(arguments)
-    except (ProfileError, UsageError) as error:
+    except (CompareError, ProfileError, UsageError) as error:
         sys.stderr.write(f"error: {error}\n")
         return EXIT_USAGE
 
