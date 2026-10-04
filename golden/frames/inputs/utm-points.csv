@@ -1,0 +1,15 @@
+id,zone,hemisphere,easting_m,northing_m
+central-meridian-equator,31,n,500000,0
+central-meridian-mid,30,n,500000,5650000
+west-edge-mid,30,n,166021.4431,5650000
+east-edge-mid,30,n,833978.5569,5650000
+zone-edge-far-west,33,n,100000,3000000
+zone-edge-far-east,33,n,900000,3000000
+high-north,32,n,450000,9300000
+far-north-84,40,n,500000,9329005
+southern-hemisphere,56,s,334786.9,6252000.5
+southern-near-equator,19,s,700000,9999000
+far-south,21,s,500000,1200000
+range-origin-area,14,n,414639.53,4428236.06
+zone-1,1,n,600000,7000000
+zone-60,60,s,400000,5000000

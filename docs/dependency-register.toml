@@ -1138,6 +1138,42 @@ reviewed = 2026-09-27
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
+# --- Copied protobuf files and samples (proto/third_party, cpp/sapient) -------
+
+[[project]]
+name = "SAPIENT protobuf files (BSI Flex 335)"
+ecosystem = "tool"
+packages = ["sapient_msg"]
+used_for = "SAPIENT's BSI Flex 335 v2.0 messages, copied unchanged into proto/third_party/sapient_msg and generated into ics::proto, which the SAPIENT adapter (cpp/sapient, ICS-024) parses"
+ships = true
+license = "Apache-2.0"
+source = "https://github.com/dstl/sapient-proto-files"
+governance = "Published by Dstl, the UK Ministry of Defence's Defence Science and Technology Laboratory, as the protobuf form of BSI Flex 335, the SAPIENT interface standard that BSI released for the Ministry of Defence in 2023. Crown copyright. The standard's text is the authority; the repository has no public review process."
+sustainment = "Published as snapshots: the repository holds one commit, of 2024-06-04. Pinned by commit and by the sha256 of the .proto files in proto/third_party/tools.txt, which proto/check-proto.sh verifies. The messages could be rewritten from the standard's text if Dstl stopped publishing them."
+foreign_influence = "Steward: Dstl, an executive agency of the UK Ministry of Defence (UK Government)."
+single_maintainer = true
+maintainers = "Dstl; one Dstl account published the only commit, and no other maintainer is named"
+reviewed = 2026-10-04
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "SAPIENT test harness (BSI Flex 335 v2.0)"
+ecosystem = "tool"
+packages = ["sapient-test-harness"]
+used_for = "Its 83 sample messages, copied unchanged into cpp/sapient/test/samples/dstl, are the ICD samples the SAPIENT adapter's tests read (ICS-024). Test data only; ICS neither builds nor ships the harness."
+ships = false
+license = "Apache-2.0"
+source = "https://github.com/dstl/BSI-Flex-335-v2-Test-Harness"
+governance = "Published by Dstl, the UK Ministry of Defence's Defence Science and Technology Laboratory, as the reference test harness for BSI Flex 335 v2.0. Crown copyright. The repository has no public review process."
+sustainment = "Published as snapshots: the repository holds one commit, of 2025-05-20. Pinned by commit and by the sha256 of the copied samples in cpp/sapient/test/samples/tools.txt. Synthetic samples written from the standard could replace them."
+foreign_influence = "Steward: Dstl, an executive agency of the UK Ministry of Defence (UK Government)."
+single_maintainer = true
+maintainers = "Dstl; one Dstl account published the only commit, and no other maintainer is named"
+reviewed = 2026-10-04
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
 # --- Toolchain data (deploy/toolchain/tools.txt) -----------------------------
 
 [[project]]

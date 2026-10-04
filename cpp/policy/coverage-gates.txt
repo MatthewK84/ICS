@@ -20,4 +20,5 @@ cpp/capture 0.05
 cpp/mavlink 0.10
 cpp/cot 0.21
 cpp/lattice 0.20
+cpp/sapient 0.11
 cpp/services/capd 0.08

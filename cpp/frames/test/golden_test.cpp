@@ -15,6 +15,7 @@
 #include "ics/frames/egm96.hpp"
 #include "ics/frames/enu.hpp"
 #include "ics/frames/geodetic.hpp"
+#include "ics/frames/utm.hpp"
 
 namespace {
 
@@ -25,22 +26,30 @@ using ics::frames::Egm96;
 using ics::frames::Enu;
 using ics::frames::EnuFrame;
 using ics::frames::Geodetic;
+using ics::frames::UtmPoint;
 
 constexpr double kOneMillimetre = 1e-3;
 // Printed to 1 nm; a micrometre leaves room for the last bits of arithmetic.
 constexpr double kCartesianAgreement = 1e-6;
 // Printed to 0.1 mm, so rounding alone is up to 0.05 mm.
 constexpr double kGeoidAgreement = 0.06e-3;
+// Printed to 1e-14 degrees. Karney's series are good to a few nanometres, and
+// 1e-12 degrees is about 0.1 micrometre on the ground.
+constexpr double kAngleAgreement = 1e-12;
 
 // A golden CSV file: its header, and its rows as text.
 struct Table {
   std::vector<std::string> columns;
   std::vector<std::vector<std::string>> rows;
 
-  [[nodiscard]] double number(const std::vector<std::string>& row, const std::string& column) const {
+  [[nodiscard]] std::string text(const std::vector<std::string>& row, const std::string& column) const {
     const auto found = std::find(columns.begin(), columns.end(), column);
     EXPECT_NE(found, columns.end()) << column;
-    return std::stod(row.at(static_cast<std::size_t>(found - columns.begin())));
+    return row.at(static_cast<std::size_t>(found - columns.begin()));
+  }
+
+  [[nodiscard]] double number(const std::vector<std::string>& row, const std::string& column) const {
+    return std::stod(text(row, column));
   }
 };
 
@@ -144,6 +153,20 @@ TEST(GoldenFrames, Egm96Heights) {
     agreement.add(row[0], above_msl->height().value(), table.number(row, "height_ellipsoid_m"));
   }
   EXPECT_LE(agreement.largest(), kGeoidAgreement);
+}
+
+TEST(GoldenFrames, UtmToGeodetic) {
+  const Table table = read_table("utm-geodetic.csv");
+  for (const std::vector<std::string>& row : table.rows) {
+    const UtmPoint utm{.zone = static_cast<int>(table.number(row, "zone")),
+                       .north = table.text(row, "hemisphere") == "n",
+                       .easting = Meters(table.number(row, "easting_m")),
+                       .northing = Meters(table.number(row, "northing_m"))};
+    const ics::Result<Geodetic> computed = ics::frames::from_utm(utm, Meters(0.0));
+    ASSERT_TRUE(computed.has_value()) << row[0];
+    EXPECT_NEAR(computed->latitude().value(), table.number(row, "latitude_deg"), kAngleAgreement) << row[0];
+    EXPECT_NEAR(computed->longitude().value(), table.number(row, "longitude_deg"), kAngleAgreement) << row[0];
+  }
 }
 
 }  // namespace

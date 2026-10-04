@@ -1,0 +1,5 @@
+# Sample messages copied unchanged from Dstl's SAPIENT test harness (ICS-024),
+# one source per line: name, commit, sha256, repository. The sha256 is of the
+# JSON files under dstl/ concatenated in path order (README.md). Every entry
+# needs an entry in docs/dependency-register.toml.
+sapient-test-harness 6a2999d70d761d224914ddd8fa3f663af5005be0 0df7176fc549e5e3f62ffad88fd645e674601809d76eeec2b5a512529cf357a9 https://github.com/dstl/BSI-Flex-335-v2-Test-Harness
