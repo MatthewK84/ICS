@@ -2,21 +2,20 @@
 
 #include <algorithm>
 #include <array>
-#include <chrono>
 #include <cmath>
-#include <cstdint>
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
 
 #include <google/protobuf/struct.pb.h>
-#include <google/protobuf/timestamp.pb.h>
 #include <google/protobuf/util/json_util.h>
-#include <google/protobuf/util/time_util.h>
 
+#include "ics/common/check.hpp"
 #include "ics/common/error.hpp"
 #include "ics/common/units.hpp"
+#include "ics/cot/time.hpp"
 
 namespace ics::lattice {
 namespace {
@@ -36,10 +35,6 @@ constexpr std::array<NamedType, 4> kEventTypes{{
     {"EVENT_TYPE_DELETED", EventType::kDeleted},
 }};
 
-// The last second of 2200. Times from 1970 to 2200 are read, as for CoT
-// (ICS-022), so the difference of any two fits a Duration.
-constexpr std::int64_t kLastSecond = 7'289'654'399;
-
 // The member named key, or nothing.
 [[nodiscard]] const Value* member(const Struct& object, const std::string_view key) {
   const auto found = object.fields().find(std::string(key));
@@ -52,16 +47,15 @@ constexpr std::int64_t kLastSecond = 7'289'654'399;
   return value != nullptr && value->kind_case() == Value::kStructValue ? &value->struct_value() : nullptr;
 }
 
-[[nodiscard]] bool is_finite_number(const Value& value) {
-  return value.kind_case() == Value::kNumberValue && std::isfinite(value.number_value());
-}
-
-// A finite number, or nothing when it is missing or anything else.
+// A number, or nothing when it is missing or anything else. It is finite:
+// protobuf's JSON parser refuses a number past the range of a double, and
+// reads NaN and Infinity as strings.
 [[nodiscard]] std::optional<double> number(const Struct& parent, const std::string_view key) {
   const Value* value = member(parent, key);
-  if (value == nullptr || !is_finite_number(*value)) {
+  if (value == nullptr || value->kind_case() != Value::kNumberValue) {
     return std::nullopt;
   }
+  static_cast<void>(check(std::isfinite(value->number_value())));
   return value->number_value();
 }
 
@@ -71,15 +65,17 @@ constexpr std::int64_t kLastSecond = 7'289'654'399;
   return member(parent, key) == nullptr ? std::optional<double>(0.0) : number(parent, key);
 }
 
+// An RFC 3339 time, read by the CoT time parser (ICS-022), which takes the
+// same form and only times from 1970 to 2200, so the difference of any two
+// fits a Duration. protobuf's TimeUtil::FromString is not used: in a debug
+// build it aborts on a time past year 9999, which fuzzing found.
 [[nodiscard]] std::optional<UtcTime> time(const Struct& parent, const std::string_view key) {
   const Value* value = member(parent, key);
-  google::protobuf::Timestamp stamp;
-  if (value == nullptr || value->kind_case() != Value::kStringValue ||
-      !google::protobuf::util::TimeUtil::FromString(value->string_value(), &stamp) || stamp.seconds() < 0 ||
-      stamp.seconds() > kLastSecond) {
+  if (value == nullptr || value->kind_case() != Value::kStringValue) {
     return std::nullopt;
   }
-  return UtcTime(std::chrono::seconds(stamp.seconds()) + std::chrono::nanoseconds(stamp.nanos()));
+  const Result<UtcTime> parsed = cot::parse_cot_time(value->string_value());
+  return parsed ? std::optional<UtcTime>(*parsed) : std::nullopt;
 }
 
 [[nodiscard]] EventType event_type(const Struct& root) {

@@ -163,7 +163,9 @@ TEST(StreamClient, RefusesSettingsItCannotUseSafely) {
   ASSERT_TRUE(StreamClient::make(good).has_value());
   ClientSettings with_ca = good;
   with_ca.ca_file = "/etc/ssl/certs/ca-certificates.crt";
-  EXPECT_TRUE(StreamClient::make(with_ca).has_value());
+  StreamClient replaced = StreamClient::make(good).value();
+  replaced = StreamClient::make(with_ca).value();
+  EXPECT_EQ(replaced.stats().connections, 0U);
   std::vector<ClientSettings> bad(16, good);
   bad[0].url = "http://lattice.example.com";
   bad[1].url = "ftp://127.0.0.1:21";

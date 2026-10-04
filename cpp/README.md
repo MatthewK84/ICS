@@ -181,6 +181,33 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
 - **XML.** pugixml, built without exceptions, reads no DTD and expands no entities beyond XML's own, so a hostile payload cannot reach files or the network, or grow without bound.
 - **Tests.** The [sample feeds](cot/test/samples/README.md) are synthetic, written from the public CoT schema: ATAK, WinTAK through a TAK Server, a UAS, a human estimate, chat and a delete, and malformed and invalid payloads. The tests read each one directly, and again from a pcap file written as `ics-capd` writes one. The fuzz target reads its input as a captured frame and as a payload.
 
+## Lattice
+
+[`lattice/`](lattice) is `ics::lattice` (ICS-023), the third PLI adapter. It streams entities from Anduril's Lattice over its REST API, `POST /api/v1/entities/stream`, read as server-sent events, and turns each entity's position into an `ics.v1.PliRecord` ([`pli.proto`](../proto/ics/v1/pli.proto)). It is written against the public REST API with libcurl; Anduril's SDKs are not used, since their license forbids redistributing or modifying them.
+
+| Header | Provides |
+|---|---|
+| [`stream_client.hpp`](lattice/include/ics/lattice/stream_client.hpp) | `StreamClient`: the stream over HTTPS, connecting again after errors and silences, and stopping on a refused request |
+| [`sse.hpp`](lattice/include/ics/lattice/sse.hpp) | `SseReader`: server-sent events, read from chunks of any size, with a limit on an event's length |
+| [`event.hpp`](lattice/include/ics/lattice/event.hpp) | `decode_event`: an event's JSON, read with protobuf's JSON parser into a `google.protobuf.Struct`, then field by field |
+| [`adapter.hpp`](lattice/include/ics/lattice/adapter.hpp) | `Adapter`: a record from each current position of a live entity |
+| [`token.hpp`](lattice/include/ics/lattice/token.hpp) | `read_token`: a token from a file only its owner can reach |
+
+| Lattice | `PliRecord` |
+|---|---|
+| `entity.entityId` | `entity_id`; the role comes from the settings, `ENTITY_ROLE_OTHER` for an entity not listed |
+| `location.position`: `latitudeDegrees`, `longitudeDegrees`, `altitudeHaeMeters` | `position`; with no `altitudeHaeMeters` the height is 0 and not valid |
+| `location.velocityEnu`: `e`, `n`, `u` at the entity | `velocity_enu_mps`, rotated into the range ENU frame |
+| `locationUncertainty.positionEnuCov` | `horizontal_sigma_m`: the square root of the larger eigenvalue of its east-north block; `vertical_sigma_m`: the square root of `mzz`, when the height is known |
+| `provenance.sourceUpdateTime` | `valid_utc_ns` with `PLI_TIME_BASIS_VEHICLE_GNSS` when within `max_skew` (30 s) of receipt, as for CoT; otherwise the receipt time with `PLI_TIME_BASIS_RECEIPT` |
+| (none) | `fix_type`: `FIX_TYPE_OTHER`, since Lattice reports no GNSS fix |
+
+- **Events.** `PREEXISTING`, `CREATED` and `UPDATE` events of a live entity with a position give a record; a deleted or expired entity, or one without a position, gives nothing, and staleness is left to `ics-plid` (ICS-030). Lattice writes protobuf messages as JSON, which leaves out zeros, so a missing number inside a position, vector or matrix is 0. Times are RFC 3339 from 1970 to 2200, read with the CoT time parser: protobuf's own `TimeUtil::FromString` aborts in a debug build on a year past 9999, which fuzzing found.
+- **Connection.** Each request asks for every existing entity and then every change, with a heartbeat every 5 s. A failed or ended connection, a 408, 429 or 5xx answer, or 15 s without a byte means connecting again after a pause that doubles from 1 s to 30 s; every new connection sends every existing entity again. Any other 4xx, such as 401 or 403 for a refused token, ends the run with an error.
+- **Security.** HTTPS with the server's certificate and name verified; plain HTTP only to this host, for tests. Redirects are not followed. The token is read from a file that only its owner may reach, and must be printable ASCII without spaces, so it cannot add a header; it is never logged. The client only reads the stream; the token's read-only scope is set in Lattice. Sandboxes also take `Anduril-Sandbox-Authorization`.
+- **Probe.** [`testing/lattice_probe`](testing/lattice_probe/main.cpp) is `ics-lattice-probe`, which streams for a while and prints the records as JSON lines. The [Lattice sandbox workflow](../.github/workflows/lattice-sandbox.yml) runs it nightly against a Lattice Sandbox once the `LATTICE_URL`, `LATTICE_ENVIRONMENT_TOKEN` and `LATTICE_SANDBOX_TOKEN` secrets are set.
+- **Tests.** A synthetic [sample stream](lattice/test/samples/README.md), read in chunks of every size from 1 to 64 bytes, and a loopback HTTP server that plays back streams, errors and silences to the client. The fuzz target reads its input as a stream and as an event.
+
 ## Power-of-Ten checks
 
 The C++ rules from the coding-standards table in [docs/build-plan.md](../docs/build-plan.md) are enforced by tools, not review (ICS-005):

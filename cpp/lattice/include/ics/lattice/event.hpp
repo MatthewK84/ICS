@@ -23,7 +23,7 @@ namespace ics::lattice {
 //         .positionEnuCov              mxx, mxy, mxz, myy, myz, mzz in square metres
 //   entity.provenance.sourceUpdateTime when the source last updated the entity
 //
-// Times are read from 1970 to 2200; any other time is left out.
+// Times are RFC 3339, read from 1970 to 2200; any other time is left out.
 //
 // Lattice writes protobuf messages as JSON, which leaves out fields that hold
 // zero, so a missing number inside a vector, matrix or position is 0. A

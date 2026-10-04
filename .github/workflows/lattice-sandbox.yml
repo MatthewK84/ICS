@@ -1,0 +1,106 @@
+name: Lattice sandbox
+
+# Runs the Lattice adapter against the vendor's sandbox (ICS-023 "Done when"):
+# ics-lattice-probe streams a Lattice Sandbox's entities for a minute through
+# the adapter and must write at least one record. It needs three repository
+# secrets: LATTICE_URL, the sandbox environment's base URL;
+# LATTICE_ENVIRONMENT_TOKEN, its environment token; and LATTICE_SANDBOX_TOKEN,
+# the sandbox token. Without them the job says so and passes, so the workflow
+# can wait on main until the sandbox is set up. The tokens go to files only
+# their owner can read, never onto a command line, and the log shows counts,
+# not records.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 7 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lattice-sandbox
+  cancel-in-progress: false
+
+env:
+  RUN: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home ics-cpp:ci
+
+jobs:
+  sandbox:
+    name: Lattice adapter against the vendor sandbox
+    runs-on: ubuntu-24.04
+    # Building libcurl from source for an empty Conan cache takes the longest.
+    timeout-minutes: 90
+    steps:
+      - name: Look for the sandbox secrets
+        id: secrets
+        env:
+          LATTICE_URL: ${{ secrets.LATTICE_URL }}
+          ENVIRONMENT_TOKEN: ${{ secrets.LATTICE_ENVIRONMENT_TOKEN }}
+          SANDBOX_TOKEN: ${{ secrets.LATTICE_SANDBOX_TOKEN }}
+        run: |
+          if [ -n "${LATTICE_URL}" ] && [ -n "${ENVIRONMENT_TOKEN}" ] && [ -n "${SANDBOX_TOKEN}" ]; then
+            echo "ready=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "::notice::LATTICE_URL, LATTICE_ENVIRONMENT_TOKEN and LATTICE_SANDBOX_TOKEN are not all set; the sandbox run is skipped."
+            echo "ready=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Check out the repository
+        if: steps.secrets.outputs.ready == 'true'
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      # Before any docker run, so actions/cache can extract into it.
+      - name: Create the Conan cache folder
+        if: steps.secrets.outputs.ready == 'true'
+        run: mkdir -p /tmp/conan-home
+
+      - name: Build the ics-cpp image
+        if: steps.secrets.outputs.ready == 'true'
+        run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
+
+      - name: Restore the nearest Conan package cache
+        if: steps.secrets.outputs.ready == 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/conan-home
+          key: conan-cpp-toolchain-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
+          restore-keys: conan-cpp-toolchain-
+
+      - name: Build ics-lattice-probe
+        if: steps.secrets.outputs.ready == 'true'
+        run: >-
+          ${RUN} bash -c "deploy/toolchain/conan-install.sh gcc-release
+          && cd cpp && cmake --preset gcc-release -B build/lattice-probe >/dev/null
+          && cmake --build build/lattice-probe --target ics-lattice-probe"
+
+      - name: Write the token files
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          ENVIRONMENT_TOKEN: ${{ secrets.LATTICE_ENVIRONMENT_TOKEN }}
+          SANDBOX_TOKEN: ${{ secrets.LATTICE_SANDBOX_TOKEN }}
+        run: |
+          umask 077
+          mkdir -p "${RUNNER_TEMP}/lattice"
+          printf '%s' "${ENVIRONMENT_TOKEN}" > "${RUNNER_TEMP}/lattice/token"
+          printf '%s' "${SANDBOX_TOKEN}" > "${RUNNER_TEMP}/lattice/sandbox-token"
+
+      # A minute of the sandbox's entities, through the adapter, with the range
+      # origin at the SITL rig's made-up 40 N, 100 W; at least one record.
+      - name: Stream the sandbox through the adapter
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          LATTICE_URL: ${{ secrets.LATTICE_URL }}
+        run: |
+          status=0
+          docker run --rm -v "${GITHUB_WORKSPACE}:/work/ics" -w /work/ics -v "${RUNNER_TEMP}/lattice:/run/lattice:ro" \
+            ics-cpp:ci cpp/build/lattice-probe/testing/lattice_probe/ics-lattice-probe "${LATTICE_URL}" \
+            /run/lattice/token 60 1 40 -100 700 /run/lattice/sandbox-token > "${RUNNER_TEMP}/records.jsonl" || status=$?
+          echo "Records written: $(wc -l < "${RUNNER_TEMP}/records.jsonl")"
+          exit "${status}"
+
+      - name: Remove the token files
+        if: always() && steps.secrets.outputs.ready == 'true'
+        run: rm -rf "${RUNNER_TEMP}/lattice"

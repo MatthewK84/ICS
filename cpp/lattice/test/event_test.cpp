@@ -136,6 +136,11 @@ TEST(DecodeEvent, LeavesOutAPartThatIsMissingOrNotNumbers) {
   EXPECT_FALSE(odd_height.entity.position->hae_m.has_value());
 }
 
+TEST(DecodeEvent, RefusesANumberPastTheRangeOfADouble) {
+  EXPECT_EQ(decode_event(R"({"entity":{"entityId":"E-1","location":{"position":{"latitudeDegrees":1e999}}}})").error(),
+            Error::kMalformed);
+}
+
 TEST(DecodeEvent, ReadsLiveOnlyFromAnExplicitFalse) {
   EXPECT_FALSE(decoded(update(R"(,"isLive":false)")).entity.live);
   EXPECT_TRUE(decoded(update(R"(,"isLive":true)")).entity.live);
@@ -151,8 +156,9 @@ TEST(DecodeEvent, ReadsTimesFrom1970To2200) {
   EXPECT_EQ(to_utc_ns(source_time(R"("2026-10-04T13:00:00.000000001+01:00")").value_or(UtcTime{})), kNoon + 1);
   EXPECT_EQ(to_utc_ns(source_time(R"("1970-01-01T00:00:00Z")").value_or(UtcTime{} + std::chrono::seconds(1))), 0);
   EXPECT_TRUE(source_time(R"("2200-12-31T23:59:59.999999999Z")").has_value());
+  // The last made protobuf's TimeUtil::FromString abort in a debug build.
   for (const std::string_view bad : {R"("1969-12-31T23:59:59Z")", R"("2201-01-01T00:00:00Z")", R"("yesterday")",
-                                     R"(1791115200)", R"(null)"}) {
+                                     R"(1791115200)", R"(null)", R"("22006-1-04T12:00:00.600Z")"}) {
     EXPECT_FALSE(source_time(bad).has_value()) << bad;
   }
   EXPECT_FALSE(decoded(update(R"(,"provenance":{})")).entity.source_update_time.has_value());

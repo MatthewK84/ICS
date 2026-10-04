@@ -11,7 +11,7 @@ add_library(ics_lattice STATIC
   src/token.cpp)
 add_library(ics::lattice ALIAS ics_lattice)
 target_include_directories(ics_lattice PUBLIC include)
-target_link_libraries(ics_lattice PUBLIC ics::common ics::frames ics::proto PRIVATE CURL::libcurl)
+target_link_libraries(ics_lattice PUBLIC ics::common ics::frames ics::proto PRIVATE ics::cot CURL::libcurl)
 
 ics_add_gtest(lattice_test
   SOURCES
