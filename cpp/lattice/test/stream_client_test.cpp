@@ -167,7 +167,8 @@ TEST(StreamClient, RefusesSettingsItCannotUseSafely) {
   replaced = StreamClient::make(with_ca).value();
   EXPECT_EQ(replaced.stats().connections, 0U);
   std::vector<ClientSettings> bad(16, good);
-  bad[0].url = "http://lattice.example.com";
+  // The same URL without TLS: plain HTTP to another host.
+  bad[0].url = std::string(good.url).erase(4, 1);
   bad[1].url = "ftp://127.0.0.1:21";
   bad[2].url = "https://lattice.example.com/a b";
   bad[3].url = "";
@@ -183,6 +184,7 @@ TEST(StreamClient, RefusesSettingsItCannotUseSafely) {
   bad[13].max_backoff = milliseconds(5);
   bad[14].components = {"Location_2"};
   bad[15].components = {"loc~ation"};
+  ASSERT_EQ(bad[0].url, "http" + good.url.substr(5));
   for (std::size_t i = 0; i < bad.size(); ++i) {
     EXPECT_EQ(StreamClient::make(bad[i]).error(), Error::kInvalidArgument) << i;
   }

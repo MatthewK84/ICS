@@ -1,6 +1,7 @@
 #include "ics/lattice/sse.hpp"
 
 #include <cstddef>
+#include <iterator>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -21,9 +22,8 @@ std::vector<SseEvent> read_bytewise(const std::string_view stream) {
   SseReader reader;
   std::vector<SseEvent> out;
   for (std::size_t i = 0; i < stream.size(); ++i) {
-    for (SseEvent& event : reader.feed(stream.substr(i, 1))) {
-      out.push_back(std::move(event));
-    }
+    std::vector<SseEvent> events = reader.feed(stream.substr(i, 1));
+    out.insert(out.end(), std::make_move_iterator(events.begin()), std::make_move_iterator(events.end()));
   }
   return out;
 }
