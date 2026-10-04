@@ -3,7 +3,7 @@
 # (ICS-005 "Done when": CI fails on one seeded violation of each rule; ICS-008
 # adds cppcheck).
 #
-# Usage: check-policy.sh
+# Usage: check-policy.sh [gcc|clang]
 #
 #   1. No suppressions: no NOLINT, cppcheck-suppress or "diagnostic ignored"
 #      pragma in C++ files, no -Wno- flag in CMake files, and no .clang-tidy
@@ -13,6 +13,10 @@
 #   3. Seeds: every file in cpp/policy/seeded is rejected, each with the
 #      diagnostic named on its first line, so a rule that silently stops
 #      firing fails too.
+#
+# With no argument it checks everything. "gcc" checks the GCC build and its
+# seeds; "clang" the Clang build, clang-tidy, cppcheck and their seeds, so CI
+# can run the two side by side. Both check the suppressions.
 #
 # Set SKIP_CONAN_INSTALL=1 when dependencies are already installed.
 set -euo pipefail
@@ -103,18 +107,22 @@ configure() {
   (cd "${CPP}" && quietly cmake --preset "${compiler}-debug" -B "${WORK}/${compiler}" -DICS_POLICY_SEEDS=ON)
 }
 
-check_clean_code() {
-  local compiler
-  for compiler in gcc clang; do
-    configure "${compiler}"
-    quietly cmake --build "${WORK}/${compiler}" || fail "the ICS code does not build cleanly with ${compiler}"
-  done
+# The ICS code builds with the compiler given, every warning an error.
+build_clean() {
+  local compiler="$1"
+  configure "${compiler}"
+  quietly cmake --build "${WORK}/${compiler}" || fail "the ICS code does not build cleanly with ${compiler}"
+  echo "Clean code: ok (${compiler} with warnings as errors)"
+}
+
+# clang-tidy and cppcheck over the Clang build's compile commands.
+check_static_analysis() {
   quietly run-clang-tidy-17 -quiet -p "${WORK}/clang" '^(?!.*/(policy/seeded|proto/gen/))' \
     || fail "clang-tidy found violations in the ICS code"
   quietly cppcheck "${CPPCHECK_ARGS[@]}" --project="${WORK}/clang/compile_commands.json" \
     -i "${CPP}/policy/seeded" -i "${CPP}/policy/seeded-runtime" -i "${CPP}/proto/gen" \
     || fail "cppcheck found defects in the ICS code"
-  echo "Clean code: ok (GCC 13 and Clang 17 with warnings as errors, clang-tidy, cppcheck)"
+  echo "Clean code: ok (clang-tidy, cppcheck)"
 }
 
 check_scan_seeds() {
@@ -135,13 +143,11 @@ check_tidy_seeds() {
 }
 
 check_compiler_seeds() {
-  local compiler seed output status
-  for compiler in gcc clang; do
-    for seed in "${COMPILER_SEEDS[@]}"; do
-      status=0
-      output="$(cmake --build "${WORK}/${compiler}" --target "seed_${seed}" 2>&1)" || status=$?
-      expect_rejected "${compiler} warnings" "${SEEDS}/${seed}.cpp" "${status}" "${output}"
-    done
+  local compiler="$1" seed output status
+  for seed in "${COMPILER_SEEDS[@]}"; do
+    status=0
+    output="$(cmake --build "${WORK}/${compiler}" --target "seed_${seed}" 2>&1)" || status=$?
+    expect_rejected "${compiler} warnings" "${SEEDS}/${seed}.cpp" "${status}" "${output}"
   done
 }
 
@@ -161,16 +167,33 @@ check_allocation_seed() {
   expect_rejected "the allocation guard" "${SEEDS}/${ALLOCATION_SEED}" "${status}" "${output}"
 }
 
-main() {
-  check_no_suppressions
-  check_seed_list
-  check_clean_code
-  check_scan_seeds
-  check_tidy_seeds
-  check_compiler_seeds
-  check_cppcheck_seeds
-  check_allocation_seed
-  echo "Power-of-Ten policy: ok; every seeded violation was rejected"
+check_gcc() {
+  build_clean gcc
+  check_compiler_seeds gcc
 }
 
-main
+check_clang() {
+  build_clean clang
+  check_static_analysis
+  check_tidy_seeds
+  check_compiler_seeds clang
+  check_cppcheck_seeds
+  check_allocation_seed
+}
+
+main() {
+  local half="${1:-}"
+  [[ "${half}" =~ ^(gcc|clang|)$ ]] || fail "usage: check-policy.sh [gcc|clang]"
+  check_no_suppressions
+  check_seed_list
+  check_scan_seeds
+  if [[ "${half}" != "clang" ]]; then
+    check_gcc
+  fi
+  if [[ "${half}" != "gcc" ]]; then
+    check_clang
+  fi
+  echo "Power-of-Ten policy${half:+ (${half})}: ok; every seeded violation was rejected"
+}
+
+main "$@"

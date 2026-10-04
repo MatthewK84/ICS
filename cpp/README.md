@@ -36,7 +36,7 @@ cmake --build --preset gcc-release
 ctest --preset gcc-release
 ```
 
-Builds are reproducible: `deploy/toolchain/check-reproducible.sh gcc` (or `clang`) builds the `toolchain_check` sample twice and requires byte-identical outputs. The flags that make this work are in [`cmake/Reproducible.cmake`](cmake/Reproducible.cmake).
+Builds are reproducible: `deploy/toolchain/check-reproducible.sh gcc` (or `clang`) builds the `toolchain_check` sample twice, in two build folders, and requires byte-identical outputs. The first folder also builds and tests all the ICS code in release; the second builds only the sample. The flags that make this work are in [`cmake/Reproducible.cmake`](cmake/Reproducible.cmake).
 
 The protobuf messages generated from [`proto/`](../proto/README.md) are the `ics::proto` library in [`proto/`](proto/CMakeLists.txt). Its code is generated and committed, never edited, and it is built without the ICS warning flags, like a dependency.
 
@@ -196,10 +196,12 @@ The C++ rules from the coding-standards table in [docs/build-plan.md](../docs/bu
 Run all of it the way CI does, inside the `ics-cpp` image:
 
 ```sh
-cpp/policy/check-policy.sh
+cpp/policy/check-policy.sh          # everything
+cpp/policy/check-policy.sh gcc      # the GCC build and its seeds
+cpp/policy/check-policy.sh clang    # the Clang build, clang-tidy, cppcheck and their seeds
 ```
 
-The script also proves each rule still fires: every file in [`policy/seeded/`](policy/seeded) breaks exactly one rule and must be rejected with the diagnostic named on its first line. The seeds build only with `-DICS_POLICY_SEEDS=ON`.
+CI runs the `gcc` and `clang` halves side by side; both check for suppressions. The script also proves each rule still fires: every file in [`policy/seeded/`](policy/seeded) breaks exactly one rule and must be rejected with the diagnostic named on its first line. The seeds build only with `-DICS_POLICY_SEEDS=ON`.
 
 Add tests with `ics_add_gtest(name SOURCES … LIBRARIES …)` from [`cmake/Testing.cmake`](cmake/Testing.cmake). It links GoogleTest and the allocation guard, which replaces the global `operator new` and `delete` so that allocations are counted. Open a `NoAllocationScope` once a component is initialized and run its steady-state path inside it.
 
@@ -223,10 +225,13 @@ The dynamic stages run in CI on every change to `cpp/` (ICS-008), through [`poli
 | Coverage (ICS-015) | `clang-coverage` preset (Clang source-based coverage): every line and branch of each path in [`policy/coverage-gates.txt`](policy/coverage-gates.txt) covered, and its assertion density at or above its floor | a branch no test takes, and a function with no `ics::check` under a floor of 1 |
 
 ```sh
-cpp/policy/check-dynamic.sh sanitizers
-cpp/policy/check-dynamic.sh fuzz 60        # seconds per fuzz target
+cpp/policy/check-dynamic.sh sanitizers             # all six presets
+cpp/policy/check-dynamic.sh sanitizers gcc-asan    # one preset
+cpp/policy/check-dynamic.sh fuzz 60                # seconds per fuzz target
 cpp/policy/check-dynamic.sh coverage
 ```
+
+The fuzz stage builds only the fuzz targets and runs as many at once as there are processors, so each still gets its full time. In CI, the [C++ toolchain workflow](../.github/workflows/cpp-toolchain.yml) runs every stage as its own job, side by side: the two reproducible builds, the six sanitizer presets, fuzzing, coverage and the two policy halves. With the Conan cache warm, a change takes under ten minutes.
 
 The assertion density of a gated path is the number of `ics::check` calls in its functions longer than three lines, divided by the number of those functions. Power of Ten rule 5 asks for two per function; container code, with one failure mode per operation, sits near 0.5, and logging and config, where bad input is an expected outcome rather than a bug, sit lower. Frames code sits at 0: its inputs are checked once, where they are made, and any further check could never fail, so its failure branch could never be covered. So each path has a floor that only rises: CI fails below it, and asks for the floor to be raised when the density rises above it. [`.github/scripts/cpp_coverage.py`](../.github/scripts/cpp_coverage.py) reads function extents from `llvm-cov export`, so a template member counts only once some test instantiates it. Add a library to the gates file when it is written, at its measured density. Test and fuzz folders are never gated. Comparisons in gated code are written out rather than defaulted, because Clang 17's coverage miscounts the branches of a defaulted comparison.
 
