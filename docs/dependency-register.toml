@@ -153,6 +153,23 @@ reviewed = 2026-10-04
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
+[[project]]
+name = "curl (libcurl)"
+ecosystem = "conan"
+packages = ["libcurl"]
+used_for = "Streams Lattice's entity events over HTTPS for the Lattice adapter (cpp/lattice, ICS-023): one POST read as server-sent events, through OpenSSL, with the server's certificate and name verified and only HTTPS allowed beyond this host."
+ships = true
+license = "curl"
+source = "https://github.com/curl/curl"
+governance = "Founded and led by Daniel Stenberg, with a team of long-time maintainers who review changes on GitHub; a published security process, regular audits and coordinated releases. The Conan recipe comes from Conan Center."
+sustainment = "Very active and among the most widely deployed libraries, with a release every eight weeks and security fixes as needed. 8.22.0 is the newest on Conan Center, pinned in cpp/conan.lock; its recipe builds with Conan's autotools, meson, ninja and pkgconf. ics::lattice keeps it behind its StreamClient class, so another HTTP client could replace it."
+foreign_influence = "No controlling organization: an open project led by its founder in Sweden, with international contributors."
+single_maintainer = false
+maintainers = "Daniel Stenberg (founder and lead) and the curl maintainers"
+reviewed = 2026-10-04
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
 # --- Python (PyPI) -----------------------------------------------------------
 
 [[project]]

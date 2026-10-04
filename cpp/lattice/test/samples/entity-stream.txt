@@ -1,0 +1,19 @@
+: A synthetic Lattice entity stream for the ICS tests (ICS-023). See README.md.
+
+data: {"event":"heartbeat","timestamp":"2026-10-04T12:00:00Z"}
+
+data: {"event":"entity","eventType":"EVENT_TYPE_PREEXISTING","time":"2026-10-04T12:00:00.100Z","entity":{"entityId":"example-asset-1","isLive":true,"aliases":{"name":"Example asset"},"ontology":{"template":"TEMPLATE_ASSET","platformType":"UAV"},"milView":{"disposition":"DISPOSITION_FRIENDLY","environment":"ENVIRONMENT_AIR"},"location":{"position":{"latitudeDegrees":40.001,"longitudeDegrees":-100.002,"altitudeHaeMeters":735.5},"velocityEnu":{"e":12,"n":5,"u":-0.5},"speedMps":13},"locationUncertainty":{"positionEnuCov":{"mxx":4,"myy":4,"mzz":9}},"provenance":{"integrationName":"example-integration","dataType":"example","sourceUpdateTime":"2026-10-04T12:00:00Z"}}}
+
+event: entity
+data: {"event":"entity","eventType":"EVENT_TYPE_UPDATE","time":"2026-10-04T12:00:00.600Z",
+data:  "entity":{"entityId":"example-track-7","isLive":true,"ontology":{"template":"TEMPLATE_TRACK"},
+data:  "location":{"position":{"latitudeDegrees":39.998,"longitudeDegrees":-99.997}},
+data:  "locationUncertainty":{"positionEnuCov":{"mxx":100,"mxy":20,"myy":64}},
+data:  "provenance":{"sourceUpdateTime":"2026-10-03T12:00:00Z"}}}
+
+data: {"event":"entity","eventType":"EVENT_TYPE_DELETED","time":"2026-10-04T12:00:00.700Z","entity":{"entityId":"example-track-6"}}
+
+data: {"event":"entity","eventType":"EVENT_TYPE_CREATED","time":"2026-10-04T12:00:00.800Z","entity":{"entityId":"example-marker-2","isLive":true,"ontology":{"template":"TEMPLATE_GEO"}}}
+
+data: not json
+

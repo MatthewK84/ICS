@@ -45,6 +45,9 @@ class IcsConan(ConanFile):
         # DTD and expands no entities beyond XML's own, so a hostile payload
         # cannot reach files or the network or grow without bound.
         self.requires("pugixml/1.16")
+        # Streams Lattice's entities over HTTPS for ics::lattice (ICS-023),
+        # through OpenSSL, with the server's certificate verified.
+        self.requires("libcurl/8.22.0")
 
     def generate(self) -> None:
         CMakeDeps(self).generate()
