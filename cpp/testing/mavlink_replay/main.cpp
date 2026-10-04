@@ -32,13 +32,13 @@
 #include <google/protobuf/util/json_util.h>
 
 #include "ics/capture/capture.hpp"
+#include "ics/capture/datagram.hpp"
 #include "ics/common/error.hpp"
 #include "ics/common/units.hpp"
 #include "ics/frames/egm96.hpp"
 #include "ics/frames/enu.hpp"
 #include "ics/frames/geodetic.hpp"
 #include "ics/mavlink/adapter.hpp"
-#include "ics/mavlink/datagram.hpp"
 #include "ics/mavlink/frame.hpp"
 
 namespace {
@@ -151,7 +151,7 @@ class Replayer final : public ics::capture::PacketSink {
   ics::Status accept(const ics::capture::Packet& packet) override {
     ++counts_.packets;
     adapter_.tick(packet.time, out_);
-    const std::optional<ics::mavlink::Datagram> datagram = ics::mavlink::udp_datagram(packet.bytes);
+    const std::optional<ics::capture::Datagram> datagram = ics::capture::udp_datagram(packet.bytes);
     if (datagram) {
       ++counts_.datagrams;
       read_frames(datagram->payload, packet.time);

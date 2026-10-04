@@ -13,10 +13,16 @@
 
 #include "ics/mavlink/frame.hpp"
 #include "ics/mavlink/messages.hpp"
+#include "udp_support.hpp"
 
 namespace ics::mavlink::testing {
 
-using Bytes = std::vector<std::byte>;
+using capture::testing::Bytes;
+using capture::testing::ethernet;
+using capture::testing::from_hex;
+using capture::testing::ipv4_udp;
+using capture::testing::put_be16;
+using capture::testing::UdpAddressing;
 
 // Frames the SITL rig's own encoder (python/ics_sitl/mavlink.py) wrote, with
 // sequence 7, as cross-checks on the checksum, the CRC_EXTRA table, the
@@ -46,23 +52,10 @@ inline constexpr std::string_view kCommandAck = "fd0a00000702014d000090010400000
 inline constexpr std::string_view kStatusText =
     "fd1f0000070201fd00000650726541726d3a204e65656420506f736974696f6e20457374696d61746535cc";
 
-inline Bytes from_hex(const std::string_view hex) {
-  Bytes out;
-  for (std::size_t i = 0; i + 1 < hex.size(); i += 2) {
-    out.push_back(static_cast<std::byte>(std::stoi(std::string(hex.substr(i, 2)), nullptr, 16)));
-  }
-  return out;
-}
-
 inline void put_le(Bytes& out, const std::uint64_t value, const std::size_t size) {
   for (std::size_t i = 0; i < size; ++i) {
     out.push_back(static_cast<std::byte>((value >> (8 * i)) & 0xFFU));
   }
-}
-
-inline void put_be16(Bytes& out, const unsigned value) {
-  out.push_back(static_cast<std::byte>((value >> 8U) & 0xFFU));
-  out.push_back(static_cast<std::byte>(value & 0xFFU));
 }
 
 inline Bytes concat(const std::vector<Bytes>& parts) {
@@ -120,46 +113,6 @@ inline Bytes frame_v1(const std::uint8_t message_id, const std::uint8_t extra, c
 inline Bytes payload_of(const Bytes& frame) {
   const std::size_t length = std::to_integer<std::size_t>(frame[1]);
   return Bytes(frame.begin() + 10, frame.begin() + 10 + static_cast<std::ptrdiff_t>(length));
-}
-
-struct UdpAddressing {
-  std::array<std::uint8_t, 4> source{172, 30, 18, 10};
-  std::array<std::uint8_t, 4> destination{172, 30, 18, 1};
-  std::uint16_t source_port = 18570;
-  std::uint16_t destination_port = 14551;
-};
-
-// An IPv4 packet carrying payload in UDP.
-inline Bytes ipv4_udp(const Bytes& payload, const UdpAddressing& to = {}) {
-  Bytes out;
-  put_be16(out, 0x4500);
-  put_be16(out, static_cast<unsigned>(20 + 8 + payload.size()));
-  put_be16(out, 0x1234);
-  put_be16(out, 0x4000);  // don't fragment
-  out.push_back(std::byte{64});
-  out.push_back(std::byte{17});
-  put_be16(out, 0);
-  const auto as_byte = [](const std::uint8_t octet) { return static_cast<std::byte>(octet); };
-  std::ranges::transform(to.source, std::back_inserter(out), as_byte);
-  std::ranges::transform(to.destination, std::back_inserter(out), as_byte);
-  put_be16(out, to.source_port);
-  put_be16(out, to.destination_port);
-  put_be16(out, static_cast<unsigned>(8 + payload.size()));
-  put_be16(out, 0);
-  out.insert(out.end(), payload.begin(), payload.end());
-  return out;
-}
-
-// An Ethernet II frame of an IPv4 packet, with an 802.1Q tag when tagged.
-inline Bytes ethernet(const Bytes& packet, const bool tagged = false, const unsigned ether_type = 0x0800) {
-  Bytes out(12, std::byte{0x02});
-  if (tagged) {
-    put_be16(out, 0x8100);
-    put_be16(out, 0x0064);
-  }
-  put_be16(out, ether_type);
-  out.insert(out.end(), packet.begin(), packet.end());
-  return out;
 }
 
 // Writes value, size bytes little-endian, at offset at of payload.

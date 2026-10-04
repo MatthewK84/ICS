@@ -1,0 +1,5 @@
+<event version="2.0" uid="INVALID-1" type="a-f-G" how="m-g" time="2026-10-04T12:00:00Z"><point lat="91.0" lon="-100.0" hae="700.0" ce="3.0" le="5.0"/></event>
+<event version="2.0" uid="INVALID-2" type="a-f-G" how="m-g" time="2026-10-04T12:00:00Z"><point lat="40.0" lon="west" hae="700.0" ce="3.0" le="5.0"/></event>
+<event version="2.0" uid="INVALID-3" type="a-f-G" how="m-g" time="2026-10-04T12:00:00Z"><point lat="40.0" lon="-100.0" hae="700.0" ce="3.0"/></event>
+<event version="2.0" uid="INVALID-4" type="a-f-G" how="m-g" time="2026-10-04T12:00:00Z"/>
+<event version="2.0" uid="" type="a-f-G" how="m-g" time="2026-10-04T12:00:00Z"><point lat="40.0" lon="-100.0" hae="700.0" ce="3.0" le="5.0"/></event>

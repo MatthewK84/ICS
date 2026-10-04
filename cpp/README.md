@@ -135,6 +135,7 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
 | [`capture.hpp`](capture/include/ics/capture/capture.hpp) | `Capture`: libpcap, live from an interface or replayed from a file, handing packets to a `PacketSink` without blocking, with libpcap's received and dropped counters |
 | [`rotating_writer.hpp`](capture/include/ics/capture/rotating_writer.hpp) | `RotatingWriter`: one interface's packets to a series of pcap files, each closed by age or size, SHA-256 hashed as it is written, with a `.sha256` file in `sha256sum` format beside it |
 | [`pcap_format.hpp`](capture/include/ics/capture/pcap_format.hpp) | The classic pcap headers, with the nanosecond magic number |
+| [`datagram.hpp`](capture/include/ics/capture/datagram.hpp) | `udp_datagram`: the UDP datagram in a captured Ethernet frame (at most one 802.1Q tag, IPv4, no fragments), which the PLI adapters read |
 | [`sha256.hpp`](capture/include/ics/capture/sha256.hpp), [`output_file.hpp`](capture/include/ics/capture/output_file.hpp) | SHA-256 through OpenSSL's EVP interface, so a FIPS provider computes it when the station loads one; a file created only if nothing is at its path, so a capture is never overwritten |
 
 - **Files.** One series per interface, named `<interface>-<UTC time it opened>.pcap`, such as `tap0-20261003T171500.123456789Z.pcap`, in `folder`. Classic pcap with nanosecond time stamps, which `tcpdump`, Wireshark and libpcap read. A file closes after `rotate_interval_ns`, or before a packet would take it past `rotate_bytes`; its bytes are synced, then its `.sha256` is written and synced. `ics-capd` writes the bytes itself rather than through `pcap_dump`, so it hashes them as they go, never reads a file back, and sees every write error. A file with no packets is still written: it shows the capture ran. Nothing is ever deleted; retention is the station's job.
@@ -152,7 +153,6 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
 
 | Header | Provides |
 |---|---|
-| [`datagram.hpp`](mavlink/include/ics/mavlink/datagram.hpp) | `udp_datagram`: the UDP datagram in a captured Ethernet frame (at most one 802.1Q tag, IPv4, no fragments) |
 | [`frame.hpp`](mavlink/include/ics/mavlink/frame.hpp) | `FrameReader`: the MAVLink 1 and 2 frames in a datagram, each checked with the X.25 checksum and its message's CRC_EXTRA; frames of other messages are stepped over, and bytes that start no frame are counted and skipped |
 | [`messages.hpp`](mavlink/include/ics/mavlink/messages.hpp) | `decode`: `HEARTBEAT`, `SYSTEM_TIME`, `GPS_RAW_INT`, `ATTITUDE_QUATERNION`, `GLOBAL_POSITION_INT`, `COMMAND_LONG`, `COMMAND_ACK` and `STATUSTEXT`, field for field, extensions included |
 | [`adapter.hpp`](mavlink/include/ics/mavlink/adapter.hpp), [`modes.hpp`](mavlink/include/ics/mavlink/modes.hpp) | `Adapter`: records and events from frames; the flight modes of PX4 and ArduCopter by name |
@@ -162,6 +162,24 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
 - **Events.** Arming and disarming and mode changes from `HEARTBEAT`; each `COMMAND_LONG`, for its target; each `COMMAND_ACK` and `STATUSTEXT` chunk; and a link lost when a vehicle's heartbeats stop for longer than `link_timeout` (3 s), checked by `tick`, and restored at the next. MAVLink stamps none of them, so they take the time they were received.
 - **Signing.** A signed frame is read with its signature skipped: ICS listens on a TAP port and holds no key.
 - **Replay.** [`testing/mavlink_replay`](testing/mavlink_replay/main.cpp) is `ics-mavlink-replay`, which runs a pcap file through the adapter and writes JSON lines. Every night the [SITL rig workflow](../.github/workflows/sitl.yml) replays each engagement's TAP capture and checks it against the rig's truth log ([`deploy/sitl`](../deploy/sitl/README.md#mavlink-replay)). The tests replay part of one such capture ([`test/fixtures`](mavlink/test/fixtures/README.md)).
+
+## Cursor on Target
+
+[`cot/`](cot) is `ics::cot` (ICS-022), the second PLI adapter. It reads the Cursor on Target (CoT) XML that a TAP port carries in UDP datagrams, such as the situational-awareness reports ATAK and WinTAK send, and turns each position into an `ics.v1.PliRecord` ([`pli.proto`](../proto/ics/v1/pli.proto)).
+
+| Header | Provides |
+|---|---|
+| [`event.hpp`](cot/include/ics/cot/event.hpp) | `read_events`: the `<event>` elements in a datagram's payload, one or several, read with pugixml; malformed payloads, other elements and events without a usable point are counted |
+| [`time.hpp`](cot/include/ics/cot/time.hpp) | `parse_cot_time`: CoT's `xs:dateTime` times, with a fraction of up to nine digits and `Z` or an offset |
+| [`uncertainty.hpp`](cot/include/ics/cot/uncertainty.hpp) | `sigma_factors`, `sigma`: CoT's `ce` and `le` as one-sigma errors |
+| [`adapter.hpp`](cot/include/ics/cot/adapter.hpp) | `Adapter`: a record from each position |
+
+- **Records.** One per atom with a usable point: an event whose type starts `a-`. Chat, markers, deletes and every other event give none, and staleness is left to `ics-plid` (ICS-030). `entity_id` is the uid; the role comes from the settings, and is `ENTITY_ROLE_OTHER` for a uid not listed. The point's `hae` is already above the WGS84 ellipsoid. A `<track>`'s course and speed become a horizontal velocity in the range ENU frame. A machine GPS position (`how` starting `m-g`) is a 3D fix, or 2D when `hae` is unknown (`9999999`), and the height is then 0; any other `how`, such as a human estimate, is `FIX_TYPE_OTHER`.
+- **Errors.** `ce` and `le` are read as circular and linear errors at `ce_probability` and `le_probability`, 0.90 by default (CE90 and LE90): the horizontal sigma is `ce / sqrt(-2 ln(1 - p))`, and the vertical sigma is `le` over the normal quantile at `(1 + p) / 2`. CoT does not fix the probability, so set it to what the senders use. An unknown `ce` or `le`, or an unknown `hae`, leaves its sigma unset.
+- **Time.** A record is valid at the event's `time` (`PLI_TIME_BASIS_VEHICLE_GNSS`) when that is within `max_skew` (30 s) of the capture's time stamp. Otherwise, and when `time` is missing or malformed, it takes the capture's time stamp (`PLI_TIME_BASIS_RECEIPT`), which flags a sender whose clock is wrong.
+- **Transport.** CoT XML in UDP datagrams, one or more events each. Not yet read: CoT over TCP or TLS streams, such as a TAK Server's, and the TAK Protocol's protobuf payloads.
+- **XML.** pugixml, built without exceptions, reads no DTD and expands no entities beyond XML's own, so a hostile payload cannot reach files or the network, or grow without bound.
+- **Tests.** The [sample feeds](cot/test/samples/README.md) are synthetic, written from the public CoT schema: ATAK, WinTAK through a TAK Server, a UAS, a human estimate, chat and a delete, and malformed and invalid payloads. The tests read each one directly, and again from a pcap file written as `ics-capd` writes one. The fuzz target reads its input as a captured frame and as a payload.
 
 ## Power-of-Ten checks
 

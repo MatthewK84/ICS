@@ -21,13 +21,13 @@
 #include <gtest/gtest.h>
 
 #include "ics/capture/capture.hpp"
+#include "ics/capture/datagram.hpp"
 #include "ics/common/error.hpp"
 #include "ics/common/units.hpp"
 #include "ics/frames/egm96.hpp"
 #include "ics/frames/enu.hpp"
 #include "ics/frames/geodetic.hpp"
 #include "ics/mavlink/adapter.hpp"
-#include "ics/mavlink/datagram.hpp"
 #include "ics/mavlink/frame.hpp"
 
 namespace ics::mavlink {
@@ -47,7 +47,7 @@ class Replay final : public capture::PacketSink {
 
   Status accept(const capture::Packet& packet) override {
     adapter_.tick(packet.time, out_);
-    const std::optional<Datagram> datagram = udp_datagram(packet.bytes);
+    const std::optional<capture::Datagram> datagram = capture::udp_datagram(packet.bytes);
     if (datagram) {
       FrameReader reader(datagram->payload);
       for (std::optional<Frame> frame = reader.next(); frame; frame = reader.next()) {

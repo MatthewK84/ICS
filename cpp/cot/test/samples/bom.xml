@@ -1,0 +1,4 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<event version="2.0" uid="BOM-EXAMPLE-1" type="a-n-G" how="m-g" time="2026-10-04T12:00:00.5Z" start="2026-10-04T12:00:00.5Z" stale="2026-10-04T12:01:00Z">
+  <point lat=" 40.0050000 " lon="-100.0050000" hae="-12.5" ce="9999999.0" le="9999999.0"/>
+</event>

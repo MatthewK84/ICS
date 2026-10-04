@@ -16,13 +16,13 @@
 #include <span>
 #include <string>
 
+#include "ics/capture/datagram.hpp"
 #include "ics/common/error.hpp"
 #include "ics/common/units.hpp"
 #include "ics/frames/egm96.hpp"
 #include "ics/frames/enu.hpp"
 #include "ics/frames/geodetic.hpp"
 #include "ics/mavlink/adapter.hpp"
-#include "ics/mavlink/datagram.hpp"
 #include "ics/mavlink/frame.hpp"
 
 namespace {
@@ -93,7 +93,7 @@ void adapt(const std::span<const std::byte> payload) {
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
   const std::span<const std::byte> input = std::as_bytes(std::span<const std::uint8_t>(data, size));
-  const std::optional<ics::mavlink::Datagram> datagram = ics::mavlink::udp_datagram(input);
+  const std::optional<ics::capture::Datagram> datagram = ics::capture::udp_datagram(input);
   if (datagram) {
     require(datagram->payload.size() + kSmallestHeaders <= input.size());
     adapt(datagram->payload);

@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+<event version="2.0" uid="WINTAK-EXAMPLE-0002" type="a-f-G-U-C-I" how="m-g-n" time="2026-10-04T13:00:00.000250+01:00" start="2026-10-04T13:00:00.000250+01:00" stale="2026-10-04T13:02:00+01:00" access="Undefined">
+  <point lat="40.0020000" lon="-99.9980000" hae="690.25" ce="10.0" le="16.449"/>
+  <detail>
+    <__serverdestination destinations="0.0.0.0:4242:tcp:EXAMPLE"/>
+    <link uid="ANDROID-EXAMPLE-0001" relation="p-p" type="a-f-G-U-C"/>
+    <contact callsign="EXAMPLE-2" endpoint="*:-1:stcp"/>
+    <track course="359.9" speed="0.0"/>
+    <_flow-tags_ TAK-Server-example="2026-10-04T12:00:00.100Z"/>
+  </detail>
+</event>
