@@ -44,7 +44,7 @@ class IcsConan(ConanFile):
         # Reads the Cursor on Target XML in ics::cot (ICS-022). It reads no
         # DTD and expands no entities beyond XML's own, so a hostile payload
         # cannot reach files or the network or grow without bound.
-        self.requires("pugixml/[>=1.14 <2]")
+        self.requires("pugixml/1.16")
 
     def generate(self) -> None:
         CMakeDeps(self).generate()
