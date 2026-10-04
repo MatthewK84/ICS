@@ -6,11 +6,12 @@
 #include <optional>
 #include <span>
 
-namespace ics::mavlink {
+namespace ics::capture {
 
-// The UDP datagrams in captured Ethernet frames (ICS-021), as a TAP port
-// passes them to pcap capture (ICS-020): Ethernet II, with at most one
-// 802.1Q tag, carrying IPv4 and UDP. MAVLink over UDP needs no more.
+// The UDP datagrams in captured Ethernet frames, as a TAP port passes them to
+// pcap capture: Ethernet II, with at most one 802.1Q tag, carrying IPv4 and
+// UDP. The PLI adapters read their feeds from these: MAVLink (ICS-021) and
+// Cursor on Target (ICS-022).
 
 struct Endpoint {
   std::array<std::uint8_t, 4> address{};
@@ -29,4 +30,4 @@ struct Datagram {
 // that contradicts itself.
 [[nodiscard]] std::optional<Datagram> udp_datagram(std::span<const std::byte> frame) noexcept;
 
-}  // namespace ics::mavlink
+}  // namespace ics::capture

@@ -6,6 +6,7 @@ find_package(OpenSSL CONFIG REQUIRED)
 
 add_library(ics_capture STATIC
   src/capture.cpp
+  src/datagram.cpp
   src/output_file.cpp
   src/pcap_format.cpp
   src/rotating_writer.cpp
@@ -17,6 +18,7 @@ target_link_libraries(ics_capture PUBLIC ics::common ics::timing PRIVATE libpcap
 ics_add_gtest(capture_test
   SOURCES
     test/capture_test.cpp
+    test/datagram_test.cpp
     test/output_file_test.cpp
     test/pcap_format_test.cpp
     test/rotating_writer_test.cpp

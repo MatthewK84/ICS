@@ -136,6 +136,23 @@ reviewed = 2026-10-03
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
+[[project]]
+name = "pugixml"
+ecosystem = "conan"
+packages = ["pugixml"]
+used_for = "Reads the Cursor on Target XML events in the UDP datagrams ICS captures, for the CoT adapter (cpp/cot, ICS-022); built without exceptions. CoT arrives from other systems, so the reader is fuzzed end to end."
+ships = true
+license = "MIT"
+source = "https://github.com/zeux/pugixml"
+governance = "Maintained by its author, Arseny Kapoulkine (GitHub: zeux), who reviews contributions and makes every release. The Conan recipe comes from Conan Center."
+sustainment = "Mature and widely packaged (Debian, Ubuntu, vcpkg, Conan Center), with about one release a year since 2006. Pinned in cpp/conan.lock. It reads no DTD and expands no entities beyond XML's own, so a hostile payload cannot reach files or the network or grow without bound. ics::cot uses it only in event.cpp, so Expat or tinyxml2 could replace it."
+foreign_influence = "No controlling organization: its author maintains it, and their jurisdiction was not established from the project's pages."
+single_maintainer = true
+maintainers = "Arseny Kapoulkine, the author"
+reviewed = 2026-10-04
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
 # --- Python (PyPI) -----------------------------------------------------------
 
 [[project]]

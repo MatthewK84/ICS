@@ -1,4 +1,4 @@
-#include "ics/mavlink/datagram.hpp"
+#include "ics/capture/datagram.hpp"
 
 #include <algorithm>
 #include <array>
@@ -9,7 +9,7 @@
 
 #include "ics/common/check.hpp"
 
-namespace ics::mavlink {
+namespace ics::capture {
 namespace {
 
 using Bytes = std::span<const std::byte>;
@@ -118,4 +118,4 @@ std::optional<Datagram> udp_datagram(const std::span<const std::byte> frame) noe
                   .payload = segment.subspan(kUdpHeader, length - kUdpHeader)};
 }
 
-}  // namespace ics::mavlink
+}  // namespace ics::capture

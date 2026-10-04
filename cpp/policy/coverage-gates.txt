@@ -16,6 +16,7 @@ cpp/config 0.07
 cpp/frames 0.00
 cpp/timing 0.03
 cpp/services/timingd 0.20
-cpp/capture 0.03
-cpp/mavlink 0.09
+cpp/capture 0.05
+cpp/mavlink 0.10
+cpp/cot 0.21
 cpp/services/capd 0.08

@@ -1,4 +1,4 @@
-#include "ics/mavlink/datagram.hpp"
+#include "ics/capture/datagram.hpp"
 
 #include <array>
 #include <cstddef>
@@ -8,9 +8,9 @@
 
 #include <gtest/gtest.h>
 
-#include "mavlink_support.hpp"
+#include "udp_support.hpp"
 
-namespace ics::mavlink {
+namespace ics::capture {
 namespace {
 
 using testing::Bytes;
@@ -18,7 +18,8 @@ using testing::ethernet;
 using testing::from_hex;
 using testing::ipv4_udp;
 
-const Bytes kPayload = from_hex(testing::kHeartbeat);
+// A MAVLink 2 HEARTBEAT, as the SITL rig sends one; any payload would do.
+const Bytes kPayload = from_hex("fd09000007010100000000000404020c89040350a2");
 
 Bytes payload_of(const std::optional<Datagram>& datagram) {
   return datagram ? Bytes(datagram->payload.begin(), datagram->payload.end()) : Bytes{};
@@ -90,4 +91,4 @@ TEST(UdpDatagram, RejectsABadUdpLength) {
 }
 
 }  // namespace
-}  // namespace ics::mavlink
+}  // namespace ics::capture

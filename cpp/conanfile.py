@@ -13,13 +13,14 @@ class IcsConan(ConanFile):
     name = "ics"
     settings = "os", "arch", "compiler", "build_type"
     # Header-only packages have one binary for every preset, so Conan builds
-    # nothing new for them (ICS-016). Neither library throws: real-time code
-    # builds without exceptions, and errors come back as values.
+    # nothing new for them (ICS-016). None of the libraries throws: real-time
+    # code builds without exceptions, and errors come back as values.
     default_options = {
         "fmt/*:header_only": True,
         "spdlog/*:header_only": True,
         "spdlog/*:no_exceptions": True,
         "tomlplusplus/*:exceptions": False,
+        "pugixml/*:no_exceptions": True,
     }
 
     def requirements(self) -> None:
@@ -40,6 +41,10 @@ class IcsConan(ConanFile):
         # EVP interface, so a FIPS provider can compute it. 3.5 is the current
         # long-term support release.
         self.requires("openssl/3.5.9")
+        # Reads the Cursor on Target XML in ics::cot (ICS-022). It reads no
+        # DTD and expands no entities beyond XML's own, so a hostile payload
+        # cannot reach files or the network or grow without bound.
+        self.requires("pugixml/[>=1.14 <2]")
 
     def generate(self) -> None:
         CMakeDeps(self).generate()

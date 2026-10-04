@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <format>
@@ -12,6 +13,7 @@
 #include <utility>
 #include <variant>
 
+#include "ics/common/check.hpp"
 #include "ics/common/error.hpp"
 #include "ics/common/units.hpp"
 #include "ics/frames/egm96.hpp"
@@ -207,6 +209,8 @@ void Adapter::position(const GlobalPositionInt& message, const Context& context)
     ++counts_.bad_positions;
     return;
   }
+  // An MSL height of at most 2^31 mm plus a geoid height is always finite.
+  static_cast<void>(check(std::isfinite(where->height().value())));
   const Vehicle& vehicle = vehicles_[context.system];
   Position out{.record = {}, .time_boot_ms = message.time_boot_ms};
   v1::PliRecord& record = out.record;
