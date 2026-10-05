@@ -178,13 +178,17 @@ void print_log_records(const std::size_t index, const flightlog::LogContents& co
 }  // namespace
 
 void report(const Vehicles& vehicles, const bool records) {
-  for (const auto& [system, vehicle] : vehicles) {
+  // Not a structured binding: CodeQL drops the body of a range-for that
+  // declares one over this map, and with it every call the body makes.
+  for (const auto& entry : vehicles) {
+    const unsigned system = entry.first;
+    const Vehicle& vehicle = entry.second;
     std::vector<Duration> latencies;
     for (std::size_t index = 0; index < vehicle.sorties.size(); ++index) {
       const Sortie& sortie = vehicle.sorties[index];
       const Result<ClockFit> fit = timealign::fit_clock(sortie.samples);
       std::printf(R"({"kind":"sortie","system":%u,"sortie":%zu,"samples":%zu,"positions":%zu,%s})" "\n",
-                  unsigned{system}, index, sortie.samples.size(), sortie.positions.size(), fit_fields(fit).c_str());
+                  system, index, sortie.samples.size(), sortie.positions.size(), fit_fields(fit).c_str());
       if (fit) {
         add_latencies(sortie, fit->model, latencies);
       }
@@ -227,7 +231,11 @@ bool check(const Vehicles& vehicles, const timealign::Injection& injection,
            const timealign::Withholding& withholding) {
   std::size_t checked = 0;
   bool passed = true;
-  for (const auto& [system, vehicle] : vehicles) {
+  // Not a structured binding: CodeQL drops the body of a range-for that
+  // declares one over this map, and with it every call the body makes.
+  for (const auto& entry : vehicles) {
+    const unsigned system = entry.first;
+    const Vehicle& vehicle = entry.second;
     for (std::size_t index = 0; index < vehicle.sorties.size(); ++index) {
       const Sortie& sortie = vehicle.sorties[index];
       std::vector<std::int64_t> boots;
@@ -239,7 +247,7 @@ bool check(const Vehicles& vehicles, const timealign::Injection& injection,
       passed = passed && (ok || !result);
       std::printf(R"({"kind":"check","system":%u,"sortie":%zu,"positions":%zu,"checked":%s,"max_error_ns":%lld,)"
                   R"("reference_spread_ns":%.0f,"passed":%s,%s})" "\n",
-                  unsigned{system}, index, boots.size(), result ? "true" : "false",
+                  system, index, boots.size(), result ? "true" : "false",
                   result ? static_cast<long long>(result->max_error.count()) : -1LL,
                   result ? result->reference_spread.count() : -1.0, ok ? "true" : "false",
                   fit_fields(result ? Result<ClockFit>(result->fit) : fail(result.error())).c_str());
