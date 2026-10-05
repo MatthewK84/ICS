@@ -18,19 +18,21 @@
 // "log_record" and "log_event" lines).
 //
 // A fit times records only when its clock pairs lie on a straight line
-// ("straight": within 0.5 ms RMS of it). PX4 SIH's do not: its boot clock is
-// simulated time, whose rate wanders against the host clock that gives its
-// UTC. Its records keep the adapter's live times, and only aligned records
-// count towards the latency.
+// ("straight": within 0.5 ms RMS of it). PX4 SIH's have not, so far: its boot
+// clock is simulated time, whose rate wanders against the host clock that
+// gives its UTC. Records of a sortie whose clock is not straight keep the
+// adapter's live times, and only aligned records count towards the latency.
 //
 // --inject is the "Done when" check: it puts PPM of drift and OFFSET_MS of
 // offset on every sortie's boot times, withholds the samples from FROM to TO
 // of each sortie's span, and fits and times each position again ("check"
-// lines, with an outcome of "within", "beyond", "not_straight" or
-// "unchecked"). It applies to the sorties whose clocks are straight, and exits
-// 1 unless it applied to at least one and each is within 1 ms. The geoid grid
-// is read from where the ICS images install it. Exits 1 when a file cannot be
-// read, and 2 for bad arguments.
+// lines, with an outcome of "within", "beyond", "drifting" or "unchecked").
+// Its reference takes the clock to have no drift of its own, so it applies
+// only to sorties whose offsets (UTC minus boot time) stay within 0.5 ms of
+// their mean; PX4 SIH's drift by about 2.5 %. It exits 1 unless it applied to
+// at least one sortie and each is within 1 ms. The geoid grid is read from
+// where the ICS images install it. Exits 1 when a file cannot be read, and 2
+// for bad arguments.
 
 #include <algorithm>
 #include <charconv>

@@ -72,7 +72,7 @@ TEST(CrossingClocks, HoldTheWholeEngagement) {
   EXPECT_EQ(crossing().at(kArduCopter).positions.size(), 1530U);
 }
 
-TEST(CrossingClocks, Px4SihClockIsNotAStraightLine) {
+TEST(CrossingClocks, Px4SihClockDriftsSoIsNotChecked) {
   const Vehicle& px4 = crossing().at(kPx4);
   const Result<ClockFit> fit = fit_clock(px4.samples);
   ASSERT_TRUE(fit.has_value());
@@ -84,7 +84,8 @@ TEST(CrossingClocks, Px4SihClockIsNotAStraightLine) {
   const Result<DriftCheck> check =
       check_injected_drift(px4.samples, px4.positions, Injection{.ppm = 100.0, .offset = seconds(5)}, kOutage);
   ASSERT_TRUE(check.has_value());
-  EXPECT_EQ(judge(*check), Outcome::kNotStraight);
+  EXPECT_GT(check->reference_spread.count(), 1e9);
+  EXPECT_EQ(judge(*check), Outcome::kDrifting);
 }
 
 TEST(CrossingClocks, ArduCopterAlignsWithinAMillisecondWithAnInjectedDrift) {
@@ -97,6 +98,7 @@ TEST(CrossingClocks, ArduCopterAlignsWithinAMillisecondWithAnInjectedDrift) {
        {Injection{.ppm = 100.0, .offset = seconds(5)}, Injection{.ppm = -100.0, .offset = seconds(2)}}) {
     const Result<DriftCheck> check = check_injected_drift(copter.samples, copter.positions, injection, kOutage);
     ASSERT_TRUE(check.has_value()) << injection.ppm;
+    EXPECT_LT(check->reference_spread, kMaxReferenceSpread) << injection.ppm;
     EXPECT_EQ(judge(*check), Outcome::kWithin) << injection.ppm;
     // Well within: about 20 us.
     EXPECT_LT(check->max_error, microseconds(100)) << injection.ppm;

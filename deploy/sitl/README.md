@@ -99,7 +99,7 @@ PYTHONPATH=python python3 -m ics_sitl compare --truth "$out/truth.jsonl" --repla
 
 The nightly run then checks the drift fit ([ICS-026](https://github.com/MatthewK84/ICS/issues/26), [`cpp/timealign`](../../cpp/README.md#time-alignment)) against each engagement. `ics-time-align` runs twice. Each run puts 100 ppm of drift on every vehicle's boot clock, fast with a 5 s offset or slow with a 2 s one. It withholds the middle 60 % of each sortie's clock pairs, as a GNSS outage would, and fits the rest. The run fails unless the check applied to at least one sortie and, for each one, every position aligns within 1 ms of its reference.
 
-The check applies only to sorties whose clock pairs lie within 0.5 ms RMS of a straight line. ArduCopter's do, and on the `crossing` engagement every position aligns within about 20 µs. PX4 SIH's do not: its boot clock is simulated time, about 2.5 % slower than the host clock that gives its UTC, and uneven. So its sorties are reported as `not_straight` and keep the MAVLink adapter's live times.
+The check's reference takes each clock to have no drift of its own, so it applies only to sorties whose offsets (UTC minus boot time) stay within 0.5 ms of their mean. ArduCopter's stay within 0.27 ms, and on each engagement every position aligns within 50 µs. PX4 SIH's stray more than a second: its boot clock is simulated time, about 2.5 % slower than the host clock that gives its UTC. So its sorties are reported as `drifting` and not checked.
 
 ```sh
 docker run --rm -v "$PWD:/work/ics" -w /work/ics -v /tmp/sitl-records:/tmp/sitl-records ics-cpp:ci \

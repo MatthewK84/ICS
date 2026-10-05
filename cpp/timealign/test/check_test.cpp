@@ -90,7 +90,7 @@ Sortie reclocked(Sortie flight, const double drift_ppm, const double wander_ms) 
   return flight;
 }
 
-TEST(DriftCheck, JudgesOnlySortiesWhoseClockIsAStraightLine) {
+TEST(DriftCheck, JudgesOnlySortiesWhoseClockHasNoDriftOfItsOwn) {
   const Injection injection{.ppm = 100.0, .offset = seconds(5)};
   const Withholding outage{.from = 0.2, .to = 0.8};
   const Sortie flight = sortie(10 * kSecondUs, 300, false);
@@ -99,20 +99,22 @@ TEST(DriftCheck, JudgesOnlySortiesWhoseClockIsAStraightLine) {
   EXPECT_EQ(sound->sent.used, 300U);
   EXPECT_EQ(judge(*sound), Outcome::kWithin);
   EXPECT_EQ(judge(*sound, std::chrono::nanoseconds(-1)), Outcome::kBeyond);
-  EXPECT_EQ(judge(*sound, kAlignmentLimit, Nanoseconds(-1.0)), Outcome::kNotStraight);
-  // A straight clock with a drift of its own breaks the reference, which takes
-  // it to have none: the check applies and fails, rather than passing it by.
+  EXPECT_EQ(judge(*sound, kAlignmentLimit, Nanoseconds(-1.0)), Outcome::kDrifting);
+  // A clock with a drift of its own breaks the reference, which takes it to
+  // have none, even when its pairs lie on a straight line.
   const Sortie drifting = reclocked(flight, 50.0, 0.0);
   const Result<DriftCheck> broken = check_injected_drift(drifting.samples, drifting.positions, injection, outage);
   ASSERT_TRUE(broken.has_value());
   EXPECT_TRUE(straight(broken->sent));
   EXPECT_GT(broken->max_error, milliseconds(1));
-  EXPECT_EQ(judge(*broken), Outcome::kBeyond);
-  // A clock that wanders, as PX4 SIH's does, is not checked.
+  EXPECT_GT(broken->reference_spread, kMaxReferenceSpread);
+  EXPECT_EQ(judge(*broken), Outcome::kDrifting);
+  // So does a clock that also wanders, as PX4 SIH's does.
   const Sortie wandering = reclocked(flight, -25'000.0, 20.0);
   const Result<DriftCheck> uneven = check_injected_drift(wandering.samples, wandering.positions, injection, outage);
   ASSERT_TRUE(uneven.has_value());
-  EXPECT_EQ(judge(*uneven), Outcome::kNotStraight);
+  EXPECT_FALSE(straight(uneven->sent));
+  EXPECT_EQ(judge(*uneven), Outcome::kDrifting);
 }
 
 TEST(DriftCheck, FailsWhenTheSamplesOrTheInjectionCannotBeFitted) {

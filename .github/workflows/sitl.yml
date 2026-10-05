@@ -13,7 +13,7 @@ name: SITL rig
 # comes out of it (python -m ics_sitl compare). Then ics-time-align (ICS-026,
 # cpp/timealign) puts 100 ppm of drift either way on each vehicle's boot clock,
 # withholds the middle 60 % of its clock pairs and fits it again; the run fails
-# unless every sortie whose clock is a straight line aligns within 1 ms.
+# unless every sortie whose clock has no drift of its own aligns within 1 ms.
 #
 # The autopilot images are compiled only when deploy/sitl/image changes, and
 # are otherwise restored from the Actions cache. Each run writes their
@@ -151,9 +151,9 @@ jobs:
 
       # ICS-026's "Done when": with 100 ppm of drift either way on each boot
       # clock and the middle 60 % of its clock pairs withheld, every sortie
-      # whose clock pairs lie on a straight line aligns within 1 ms. PX4 SIH's
-      # do not (its boot clock is simulated time), so its sorties are reported
-      # as "not_straight" and not checked.
+      # whose clock has no drift of its own aligns within 1 ms. PX4 SIH's
+      # boot clock is simulated time, about 2.5 % slow, so its sorties are
+      # reported as "drifting" and not checked.
       - name: Check time alignment with an injected drift
         run: |
           status=0

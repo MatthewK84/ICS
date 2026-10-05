@@ -183,11 +183,11 @@ void print_log_records(const std::size_t index, const flightlog::LogContents& co
   }
 }
 
-// The sorties a check applied to, those whose clocks are not straight lines,
-// and whether every one it applied to was within the limit.
+// The sorties a check applied to, those whose clocks drift of their own
+// accord, and whether every one it applied to was within the limit.
 struct Tally {
   std::size_t checked = 0;
-  std::size_t not_straight = 0;
+  std::size_t drifting = 0;
   bool passed = true;
 };
 
@@ -195,7 +195,7 @@ struct Tally {
 // is "unchecked".
 void print_check(const unsigned system, const std::size_t index, const std::size_t positions,
                  const Result<timealign::DriftCheck>& result, const std::optional<Outcome> outcome) {
-  constexpr std::array<const char*, 3> kOutcomes{"within", "beyond", "not_straight"};
+  constexpr std::array<const char*, 3> kOutcomes{"within", "beyond", "drifting"};
   std::printf(R"({"kind":"check","system":%u,"sortie":%zu,"positions":%zu,"outcome":"%s","max_error_ns":%lld,)"
               R"("reference_spread_ns":%.0f,"sent_residual_rms_ns":%.0f,%s})" "\n",
               system, index, positions, outcome ? kOutcomes.at(static_cast<std::size_t>(*outcome)) : "unchecked",
@@ -272,15 +272,15 @@ bool check(const Vehicles& vehicles, const timealign::Injection& injection,
       const Result<timealign::DriftCheck> result =
           timealign::check_injected_drift(sortie.samples, boots, injection, withholding);
       const std::optional<Outcome> outcome = result ? std::optional(timealign::judge(*result)) : std::nullopt;
-      tally.checked += outcome && *outcome != Outcome::kNotStraight ? 1U : 0U;
-      tally.not_straight += outcome == Outcome::kNotStraight ? 1U : 0U;
+      tally.checked += outcome && *outcome != Outcome::kDrifting ? 1U : 0U;
+      tally.drifting += outcome == Outcome::kDrifting ? 1U : 0U;
       tally.passed = tally.passed && outcome != Outcome::kBeyond;
       print_check(system, index, boots.size(), result, outcome);
     }
   }
   const bool verdict = tally.checked > 0 && tally.passed;
-  std::printf(R"({"kind":"verdict","checked":%zu,"not_straight":%zu,"limit_ns":%lld,"passed":%s})" "\n",
-              tally.checked, tally.not_straight, static_cast<long long>(timealign::kAlignmentLimit.count()),
+  std::printf(R"({"kind":"verdict","checked":%zu,"drifting":%zu,"limit_ns":%lld,"passed":%s})" "\n",
+              tally.checked, tally.drifting, static_cast<long long>(timealign::kAlignmentLimit.count()),
               verdict ? "true" : "false");
   return verdict;
 }

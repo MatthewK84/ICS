@@ -87,9 +87,9 @@ struct ClockFit {
 
 // The most a sortie's clock pairs may stray from their fitted line, as an
 // RMS, for the line to time the sortie. ArduCopter SITL's stray 0.13 ms, and
-// a clock read in whole milliseconds about 0.3 ms. PX4 SIH's stray 13 ms: its
-// boot clock is simulated time, whose rate wanders against the host clock that
-// gives its UTC.
+// a clock read in whole milliseconds about 0.3 ms. PX4 SIH's have strayed
+// 0.8 ms to 13 ms: its boot clock is simulated time, whose rate wanders
+// against the host clock that gives its UTC.
 inline constexpr Nanoseconds kStraightRms = std::chrono::microseconds(500);
 
 // Whether a fit's clock pairs lie on a straight line: their residuals' RMS is

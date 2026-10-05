@@ -6,4 +6,4 @@
 
   `ics-time-align` reads the same counts from `tap.pcap` through the MAVLink adapter. Each vehicle booted once.
 
-`fixture_test.cpp` runs ICS-026's check on it: with 100 ppm of drift either way put on ArduCopter's boot clock and the middle 60 % of its clock pairs withheld, every position aligns within 1 ms. PX4 SIH's clock pairs do not lie on a straight line, so the check does not apply to it. The nightly [SITL rig workflow](../../../../.github/workflows/sitl.yml) runs the same check on each engagement it flies.
+`fixture_test.cpp` runs ICS-026's check on it: with 100 ppm of drift either way put on ArduCopter's boot clock and the middle 60 % of its clock pairs withheld, every position aligns within 1 ms. PX4 SIH's boot clock drifts by about 2.5 % of its own accord, so the check, whose reference takes a clock to have no drift, does not apply to it. The nightly [SITL rig workflow](../../../../.github/workflows/sitl.yml) runs the same check on each engagement it flies.

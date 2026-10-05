@@ -95,7 +95,7 @@ An autopilot stamps what it sends with its boot clock, which counts from power-o
 
 After a sortie, `ics::timealign` ([`cpp/timealign`](../cpp/README.md#time-alignment), ICS-026) fits all of the sortie's pairs at once, as UTC = origin UTC + (boot − origin boot) × (1 + drift). It fits by least squares, then leaves out pairs more than 3.5 median absolute deviations from the line, and never those within 2 ms of it. The fit averages away the millisecond resolution of `time_boot_ms`, carries a vehicle through a GNSS outage on its drift, and reports the drift and the pairs' residuals. A sortie is one boot of one vehicle; a boot time that goes back by more than 1 s is a reboot.
 
-A fit times a sortie's records only when the pairs lie on a straight line, within 0.5 ms RMS. PX4's SIH simulator fails that: its boot clock is simulated time, about 2.5 % slower than the host clock that gives its UTC, and uneven, 13 ms RMS from any line. A sortie like that keeps the live times.
+A fit times a sortie's records only when the pairs lie on a straight line, within 0.5 ms RMS. PX4's SIH simulator has failed that on every run so far: its boot clock is simulated time, about 2.5 % slower than the host clock that gives its UTC, and uneven, 0.8 ms to 13 ms RMS from any line. A sortie like that keeps the live times.
 
 ## Golden vectors
 

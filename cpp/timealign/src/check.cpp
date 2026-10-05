@@ -126,11 +126,11 @@ Result<DriftCheck> check_injected_drift(const std::span<const ClockSample> sampl
                     .reference_spread = truth.spread};
 }
 
-Outcome judge(const DriftCheck& drift, const Duration limit, const Nanoseconds straight_rms) noexcept {
+Outcome judge(const DriftCheck& drift, const Duration limit, const Nanoseconds max_spread) noexcept {
   // max_error is the largest of absolute differences.
   static_cast<void>(check(drift.max_error >= Duration::zero()));
-  if (!straight(drift.sent, straight_rms)) {
-    return Outcome::kNotStraight;
+  if (!(drift.reference_spread <= max_spread)) {
+    return Outcome::kDrifting;
   }
   return drift.max_error <= limit ? Outcome::kWithin : Outcome::kBeyond;
 }

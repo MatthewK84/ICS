@@ -83,7 +83,8 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     require(check->reference_spread.count() >= 0.0);
     require_sound(check->sent, samples.size());
     const ics::timealign::Outcome outcome = ics::timealign::judge(*check);
-    require((outcome == ics::timealign::Outcome::kNotStraight) == !ics::timealign::straight(check->sent));
+    require((outcome == ics::timealign::Outcome::kDrifting) ==
+            !(check->reference_spread <= ics::timealign::kMaxReferenceSpread));
   }
   return 0;
 }
