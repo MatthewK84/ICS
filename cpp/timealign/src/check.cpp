@@ -119,8 +119,20 @@ Result<DriftCheck> check_injected_drift(const std::span<const ClockSample> sampl
   if (!error) {
     return fail(error.error());
   }
-  return DriftCheck{
-      .fit = *fit, .positions = position_boot_us.size(), .max_error = *error, .reference_spread = truth.spread};
+  return DriftCheck{.sent = *given,
+                    .fit = *fit,
+                    .positions = position_boot_us.size(),
+                    .max_error = *error,
+                    .reference_spread = truth.spread};
+}
+
+Outcome judge(const DriftCheck& drift, const Duration limit, const Nanoseconds straight_rms) noexcept {
+  // max_error is the largest of absolute differences.
+  static_cast<void>(check(drift.max_error >= Duration::zero()));
+  if (!straight(drift.sent, straight_rms)) {
+    return Outcome::kNotStraight;
+  }
+  return drift.max_error <= limit ? Outcome::kWithin : Outcome::kBeyond;
 }
 
 }  // namespace ics::timealign

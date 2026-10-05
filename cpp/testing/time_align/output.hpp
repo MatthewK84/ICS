@@ -11,16 +11,20 @@
 namespace ics::time_align {
 
 // Writes each sortie's fit, each vehicle's latency, and with records, every
-// record timed by its sortie's fit.
+// record. A sortie whose clock pairs lie on a straight line has its records
+// timed by its fit, and only they count towards the latency; any other keeps
+// the adapter's live times.
 void report(const Vehicles& vehicles, bool records);
 
 // Imports an onboard log and writes its fit, with the sortie its boot times
-// overlap; false when it cannot be read.
+// overlap, and with records, its records timed as a sortie's are; false when
+// it cannot be read.
 [[nodiscard]] bool report_log(std::size_t index, const std::string& path, const Vehicles& vehicles,
                               const frames::Egm96& geoid, const frames::EnuFrame& range, bool records);
 
-// Writes the drift check of each sortie and a verdict: true when at least one
-// sortie was checked and every one checked is within 1 ms.
+// Writes the drift check of each sortie and a verdict. The check applies only
+// to a sortie whose clock pairs lie on a straight line; the verdict is true
+// when it applied to at least one and each one it applied to is within 1 ms.
 [[nodiscard]] bool check(const Vehicles& vehicles, const timealign::Injection& injection,
                          const timealign::Withholding& withholding);
 

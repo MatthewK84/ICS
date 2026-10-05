@@ -2,8 +2,8 @@
 // per sortie from the SYSTEM_TIME messages in a TAP capture, and writes one
 // JSON object per line on stdout:
 //
-//   {"kind":"sortie","system":1,"sortie":0,"samples":42,"positions":420,"fitted":true,
-//    "used":42,"rejected":0,"drift_ppm":-0.03,"residual_rms_ns":2900,"residual_max_ns":9000,...}
+//   {"kind":"sortie","system":2,"sortie":0,"samples":146,"positions":1530,"fitted":true,
+//    "straight":true,"used":146,"rejected":0,"drift_ppm":-0.16,"residual_rms_ns":133278,...}
 //   {"kind":"latency","system":1,"count":420,"min_ns":...,"median_ns":...,"p95_ns":...,"max_ns":...}
 //   {"kind":"log","log":0,"system":1,"sortie":0,"samples":42,"fitted":true,...}
 //
@@ -14,15 +14,23 @@
 // frame's origin, as for ics-mavlink-replay. Each --log is an onboard log of a
 // vehicle in the capture, fitted with the sortie whose boot times it overlaps:
 // its own GNSS times and the capture's SYSTEM_TIME pairs together. --records
-// also writes every record, and each log's records and events, timed by its
-// sortie's fit ("record", "log_record" and "log_event" lines).
+// also writes every record, and each log's records and events ("record",
+// "log_record" and "log_event" lines).
+//
+// A fit times records only when its clock pairs lie on a straight line
+// ("straight": within 0.5 ms RMS of it). PX4 SIH's do not: its boot clock is
+// simulated time, whose rate wanders against the host clock that gives its
+// UTC. Its records keep the adapter's live times, and only aligned records
+// count towards the latency.
 //
 // --inject is the "Done when" check: it puts PPM of drift and OFFSET_MS of
 // offset on every sortie's boot times, withholds the samples from FROM to TO
 // of each sortie's span, and fits and times each position again ("check"
-// lines). It exits 1 unless at least one sortie was checked and every one
-// checked is within 1 ms. The geoid grid is read from where the ICS images
-// install it. Exits 1 when a file cannot be read, and 2 for bad arguments.
+// lines, with an outcome of "within", "beyond", "not_straight" or
+// "unchecked"). It applies to the sorties whose clocks are straight, and exits
+// 1 unless it applied to at least one and each is within 1 ms. The geoid grid
+// is read from where the ICS images install it. Exits 1 when a file cannot be
+// read, and 2 for bad arguments.
 
 #include <algorithm>
 #include <charconv>

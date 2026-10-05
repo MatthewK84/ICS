@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <array>
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -32,9 +31,9 @@ namespace ics::time_align {
 namespace {
 
 using timealign::ClockFit;
+using timealign::ClockModel;
 using timealign::ClockSample;
-
-constexpr Duration kLimit = std::chrono::milliseconds(1);
+using timealign::Outcome;
 
 // The JSON of a message; "null" if protobuf cannot write it.
 [[nodiscard]] std::string json(const google::protobuf::Message& message) {
@@ -53,15 +52,22 @@ constexpr Duration kLimit = std::chrono::milliseconds(1);
   std::array<char, 512> text{};
   const int written = std::snprintf(
       text.data(), text.size(),
-      R"("fitted":true,"used":%zu,"rejected":%zu,"origin_boot_us":%lld,"origin_utc_ns":%lld,"drift_ppm":%.6f,)"
-      R"("residual_rms_ns":%.0f,"residual_max_ns":%.0f,"first_boot_us":%lld,"last_boot_us":%lld)",
-      fit->used, fit->rejected, static_cast<long long>(fit->model.origin_boot_us()),
-      static_cast<long long>(to_utc_ns(fit->model.origin_utc())), fit->model.drift_ppm(), fit->residual_rms.count(),
-      fit->residual_max.count(), static_cast<long long>(fit->first_boot_us), static_cast<long long>(fit->last_boot_us));
+      R"("fitted":true,"straight":%s,"used":%zu,"rejected":%zu,"origin_boot_us":%lld,"origin_utc_ns":%lld,)"
+      R"("drift_ppm":%.6f,"residual_rms_ns":%.0f,"residual_max_ns":%.0f,"first_boot_us":%lld,"last_boot_us":%lld)",
+      timealign::straight(*fit) ? "true" : "false", fit->used, fit->rejected,
+      static_cast<long long>(fit->model.origin_boot_us()), static_cast<long long>(to_utc_ns(fit->model.origin_utc())),
+      fit->model.drift_ppm(), fit->residual_rms.count(), fit->residual_max.count(),
+      static_cast<long long>(fit->first_boot_us), static_cast<long long>(fit->last_boot_us));
   return std::string(text.data(), static_cast<std::size_t>(std::max(written, 0)));
 }
 
-void add_latencies(const Sortie& sortie, const timealign::ClockModel& model, std::vector<Duration>& out) {
+// The model that times a sortie's records: its fit's, when its clock pairs lie
+// on a straight line. Otherwise the adapter's live times stand.
+[[nodiscard]] std::optional<ClockModel> timing(const Result<ClockFit>& fit) {
+  return fit && timealign::straight(*fit) ? std::optional(fit->model) : std::nullopt;
+}
+
+void add_latencies(const Sortie& sortie, const ClockModel& model, std::vector<Duration>& out) {
   for (const Positioned& position : sortie.positions) {
     const std::optional<UtcTime> valid = model.utc(position.boot_us);
     if (valid) {
@@ -83,10 +89,11 @@ void print_latency(const unsigned system, std::vector<Duration> latencies) {
               static_cast<long long>(stats->max.count()));
 }
 
-void print_records(const unsigned system, const std::size_t index, const Sortie& sortie, const Result<ClockFit>& fit) {
+void print_records(const unsigned system, const std::size_t index, const Sortie& sortie,
+                   const std::optional<ClockModel>& model) {
   for (const Positioned& position : sortie.positions) {
     const std::optional<v1::PliRecord> timed =
-        fit ? timealign::aligned(position.record, position.boot_us, fit->model) : std::nullopt;
+        model ? timealign::aligned(position.record, position.boot_us, *model) : std::nullopt;
     std::printf(R"({"kind":"record","system":%u,"sortie":%zu,"boot_us":%lld,"record":%s})" "\n", system, index,
                 static_cast<long long>(position.boot_us), json(timed ? *timed : position.record).c_str());
   }
@@ -158,10 +165,11 @@ struct Span {
   return std::string{std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 }
 
-void print_log_records(const std::size_t index, const flightlog::LogContents& contents, const Result<ClockFit>& fit) {
-  const auto print = [index, &fit](const char* kind, const flightlog::LogRecord& logged) {
+void print_log_records(const std::size_t index, const flightlog::LogContents& contents,
+                       const std::optional<ClockModel>& model) {
+  const auto print = [index, &model](const char* kind, const flightlog::LogRecord& logged) {
     const std::optional<v1::PliRecord> timed =
-        fit ? timealign::aligned(logged.record, logged.boot_us, fit->model) : std::nullopt;
+        model ? timealign::aligned(logged.record, logged.boot_us, *model) : std::nullopt;
     std::printf(R"({"kind":"%s","log":%zu,"boot_us":%lld,"record":%s})" "\n", kind, index,
                 static_cast<long long>(logged.boot_us), json(timed ? *timed : logged.record).c_str());
   };
@@ -169,10 +177,31 @@ void print_log_records(const std::size_t index, const flightlog::LogContents& co
   std::ranges::for_each(contents.gnss, [&print](const flightlog::LogRecord& r) { print("log_record", r); });
   for (const flightlog::LogEvent& logged : contents.events) {
     const std::optional<v1::PliEvent> timed =
-        fit ? timealign::aligned(logged.event, logged.boot_us, fit->model) : std::nullopt;
+        model ? timealign::aligned(logged.event, logged.boot_us, *model) : std::nullopt;
     std::printf(R"({"kind":"log_event","log":%zu,"boot_us":%lld,"event":%s})" "\n", index,
                 static_cast<long long>(logged.boot_us), json(timed ? *timed : logged.event).c_str());
   }
+}
+
+// The sorties a check applied to, those whose clocks are not straight lines,
+// and whether every one it applied to was within the limit.
+struct Tally {
+  std::size_t checked = 0;
+  std::size_t not_straight = 0;
+  bool passed = true;
+};
+
+// One sortie's check line. A check that could not run (too few samples, say)
+// is "unchecked".
+void print_check(const unsigned system, const std::size_t index, const std::size_t positions,
+                 const Result<timealign::DriftCheck>& result, const std::optional<Outcome> outcome) {
+  constexpr std::array<const char*, 3> kOutcomes{"within", "beyond", "not_straight"};
+  std::printf(R"({"kind":"check","system":%u,"sortie":%zu,"positions":%zu,"outcome":"%s","max_error_ns":%lld,)"
+              R"("reference_spread_ns":%.0f,"sent_residual_rms_ns":%.0f,%s})" "\n",
+              system, index, positions, outcome ? kOutcomes.at(static_cast<std::size_t>(*outcome)) : "unchecked",
+              result ? static_cast<long long>(result->max_error.count()) : -1LL,
+              result ? result->reference_spread.count() : -1.0, result ? result->sent.residual_rms.count() : -1.0,
+              fit_fields(result ? Result<ClockFit>(result->fit) : fail(result.error())).c_str());
 }
 
 }  // namespace
@@ -187,13 +216,14 @@ void report(const Vehicles& vehicles, const bool records) {
     for (std::size_t index = 0; index < vehicle.sorties.size(); ++index) {
       const Sortie& sortie = vehicle.sorties[index];
       const Result<ClockFit> fit = timealign::fit_clock(sortie.samples);
+      const std::optional<ClockModel> model = timing(fit);
       std::printf(R"({"kind":"sortie","system":%u,"sortie":%zu,"samples":%zu,"positions":%zu,%s})" "\n",
                   system, index, sortie.samples.size(), sortie.positions.size(), fit_fields(fit).c_str());
-      if (fit) {
-        add_latencies(sortie, fit->model, latencies);
+      if (model) {
+        add_latencies(sortie, *model, latencies);
       }
       if (records) {
-        print_records(system, index, sortie, fit);
+        print_records(system, index, sortie, model);
       }
     }
     print_latency(system, std::move(latencies));
@@ -222,15 +252,14 @@ bool report_log(const std::size_t index, const std::string& path, const Vehicles
               index, static_cast<unsigned>(contents->system_id), sortie ? static_cast<long long>(*sortie) : -1LL,
               samples.size(), contents->gnss_times.size(), fit_fields(fit).c_str());
   if (records) {
-    print_log_records(index, *contents, fit);
+    print_log_records(index, *contents, timing(fit));
   }
   return true;
 }
 
 bool check(const Vehicles& vehicles, const timealign::Injection& injection,
            const timealign::Withholding& withholding) {
-  std::size_t checked = 0;
-  bool passed = true;
+  Tally tally;
   // Not a structured binding: CodeQL drops the body of a range-for that
   // declares one over this map, and with it every call the body makes.
   for (const auto& entry : vehicles) {
@@ -242,20 +271,17 @@ bool check(const Vehicles& vehicles, const timealign::Injection& injection,
       std::ranges::transform(sortie.positions, std::back_inserter(boots), &Positioned::boot_us);
       const Result<timealign::DriftCheck> result =
           timealign::check_injected_drift(sortie.samples, boots, injection, withholding);
-      const bool ok = result && result->max_error <= kLimit;
-      checked += result ? 1U : 0U;
-      passed = passed && (ok || !result);
-      std::printf(R"({"kind":"check","system":%u,"sortie":%zu,"positions":%zu,"checked":%s,"max_error_ns":%lld,)"
-                  R"("reference_spread_ns":%.0f,"passed":%s,%s})" "\n",
-                  system, index, boots.size(), result ? "true" : "false",
-                  result ? static_cast<long long>(result->max_error.count()) : -1LL,
-                  result ? result->reference_spread.count() : -1.0, ok ? "true" : "false",
-                  fit_fields(result ? Result<ClockFit>(result->fit) : fail(result.error())).c_str());
+      const std::optional<Outcome> outcome = result ? std::optional(timealign::judge(*result)) : std::nullopt;
+      tally.checked += outcome && *outcome != Outcome::kNotStraight ? 1U : 0U;
+      tally.not_straight += outcome == Outcome::kNotStraight ? 1U : 0U;
+      tally.passed = tally.passed && outcome != Outcome::kBeyond;
+      print_check(system, index, boots.size(), result, outcome);
     }
   }
-  const bool verdict = checked > 0 && passed;
-  std::printf(R"({"kind":"verdict","checked":%zu,"limit_ns":%lld,"passed":%s})" "\n", checked,
-              static_cast<long long>(kLimit.count()), verdict ? "true" : "false");
+  const bool verdict = tally.checked > 0 && tally.passed;
+  std::printf(R"({"kind":"verdict","checked":%zu,"not_straight":%zu,"limit_ns":%lld,"passed":%s})" "\n",
+              tally.checked, tally.not_straight, static_cast<long long>(timealign::kAlignmentLimit.count()),
+              verdict ? "true" : "false");
   return verdict;
 }
 

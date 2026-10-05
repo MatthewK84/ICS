@@ -89,6 +89,14 @@ The component doing each conversion owns its leap-second offset and must take it
 
 One exception: a log that holds only GPS time, with no offset. ArduPilot's DataFlash logs give each GPS fix as GPS week and milliseconds, so the onboard-log importer ([`cpp/flightlog`](../cpp/flightlog/include/ics/flightlog/gps_time.hpp), ICS-025) converts them with a table of IERS's leap seconds, taken from the tz database's `leap-seconds.list`. The table holds until that list expires, on 2027-06-28. A time past then is still converted with the last offset in the table, and counted (`ImportCounts::beyond_leap_table`), since a leap second announced later would be missing from it. When IERS announces a leap second, or the expiry nears, the table in `gps_time.cpp` must be updated. PX4's ULog logs carry the receiver's UTC (`time_utc_usec`), so they need no table.
 
+### Vehicle boot clocks
+
+An autopilot stamps what it sends with its boot clock, which counts from power-on and drifts with its crystal. Whenever its GNSS gives it UTC, it can state both clocks at once: MAVLink's `SYSTEM_TIME`, and in onboard logs PX4's `time_utc_usec` and ArduPilot's GPS week and milliseconds. The live adapters time each report from the latest such pair.
+
+After a sortie, `ics::timealign` ([`cpp/timealign`](../cpp/README.md#time-alignment), ICS-026) fits all of the sortie's pairs at once, as UTC = origin UTC + (boot − origin boot) × (1 + drift). It fits by least squares, then leaves out pairs more than 3.5 median absolute deviations from the line, and never those within 2 ms of it. The fit averages away the millisecond resolution of `time_boot_ms`, carries a vehicle through a GNSS outage on its drift, and reports the drift and the pairs' residuals. A sortie is one boot of one vehicle; a boot time that goes back by more than 1 s is a reboot.
+
+A fit times a sortie's records only when the pairs lie on a straight line, within 0.5 ms RMS. PX4's SIH simulator fails that: its boot clock is simulated time, about 2.5 % slower than the host clock that gives its UTC, and uneven, 13 ms RMS from any line. A sortie like that keeps the live times.
+
 ## Golden vectors
 
 [`golden/frames/generate.sh`](../golden/frames/generate.sh) runs GeographicLib 2.3's `CartConvert`, `GeoidEval` and `GeoConvert` over the case lists in [`golden/frames/inputs/`](../golden/frames/inputs), in the ics-cpp image:

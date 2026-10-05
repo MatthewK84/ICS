@@ -1,6 +1,8 @@
 #include "ics/timealign/check.hpp"
 
 #include <chrono>
+#include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <vector>
@@ -75,6 +77,42 @@ TEST(DriftCheck, AlignsWithinAMillisecondFromWholeMillisecondBootTimes) {
   EXPECT_LT(check->max_error, milliseconds(1));
   EXPECT_GT(check->reference_spread.count(), 100'000.0);
   EXPECT_LT(check->reference_spread.count(), 1'000'000.0);
+}
+
+// The flight's clock, made to run drift_ppm fast and to wander by up to
+// wander_ms.
+Sortie reclocked(Sortie flight, const double drift_ppm, const double wander_ms) {
+  for (std::size_t i = 0; i < flight.samples.size(); ++i) {
+    const double boot_ns = static_cast<double>(flight.samples[i].boot_us) * 1000.0;
+    const double wander_ns = wander_ms * 1e6 * std::sin(static_cast<double>(i) / 6.0);
+    flight.samples[i].utc_ns += std::llround((boot_ns * drift_ppm * 1e-6) + wander_ns);
+  }
+  return flight;
+}
+
+TEST(DriftCheck, JudgesOnlySortiesWhoseClockIsAStraightLine) {
+  const Injection injection{.ppm = 100.0, .offset = seconds(5)};
+  const Withholding outage{.from = 0.2, .to = 0.8};
+  const Sortie flight = sortie(10 * kSecondUs, 300, false);
+  const Result<DriftCheck> sound = check_injected_drift(flight.samples, flight.positions, injection, outage);
+  ASSERT_TRUE(sound.has_value());
+  EXPECT_EQ(sound->sent.used, 300U);
+  EXPECT_EQ(judge(*sound), Outcome::kWithin);
+  EXPECT_EQ(judge(*sound, std::chrono::nanoseconds(-1)), Outcome::kBeyond);
+  EXPECT_EQ(judge(*sound, kAlignmentLimit, Nanoseconds(-1.0)), Outcome::kNotStraight);
+  // A straight clock with a drift of its own breaks the reference, which takes
+  // it to have none: the check applies and fails, rather than passing it by.
+  const Sortie drifting = reclocked(flight, 50.0, 0.0);
+  const Result<DriftCheck> broken = check_injected_drift(drifting.samples, drifting.positions, injection, outage);
+  ASSERT_TRUE(broken.has_value());
+  EXPECT_TRUE(straight(broken->sent));
+  EXPECT_GT(broken->max_error, milliseconds(1));
+  EXPECT_EQ(judge(*broken), Outcome::kBeyond);
+  // A clock that wanders, as PX4 SIH's does, is not checked.
+  const Sortie wandering = reclocked(flight, -25'000.0, 20.0);
+  const Result<DriftCheck> uneven = check_injected_drift(wandering.samples, wandering.positions, injection, outage);
+  ASSERT_TRUE(uneven.has_value());
+  EXPECT_EQ(judge(*uneven), Outcome::kNotStraight);
 }
 
 TEST(DriftCheck, FailsWhenTheSamplesOrTheInjectionCannotBeFitted) {

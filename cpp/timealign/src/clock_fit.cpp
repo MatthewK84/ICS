@@ -172,6 +172,8 @@ std::optional<UtcTime> ClockModel::utc(const std::int64_t boot_us) const noexcep
   return utc_from_ns(origin_utc_ns_ + (elapsed_us * kNsPerUs) + std::llround(correction_ns));
 }
 
+bool straight(const ClockFit& fit, const Nanoseconds bound) noexcept { return fit.residual_rms <= bound; }
+
 Result<ClockFit> fit_clock(const std::span<const ClockSample> samples, const FitSettings& settings) {
   if (!std::ranges::all_of(samples, in_range)) {
     return fail(Error::kInvalidArgument);

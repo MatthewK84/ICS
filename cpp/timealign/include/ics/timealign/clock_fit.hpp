@@ -85,4 +85,16 @@ struct ClockFit {
 // when fewer than min_samples remain or their boot times are all the same.
 [[nodiscard]] Result<ClockFit> fit_clock(std::span<const ClockSample> samples, const FitSettings& settings = {});
 
+// The most a sortie's clock pairs may stray from their fitted line, as an
+// RMS, for the line to time the sortie. ArduCopter SITL's stray 0.13 ms, and
+// a clock read in whole milliseconds about 0.3 ms. PX4 SIH's stray 13 ms: its
+// boot clock is simulated time, whose rate wanders against the host clock that
+// gives its UTC.
+inline constexpr Nanoseconds kStraightRms = std::chrono::microseconds(500);
+
+// Whether a fit's clock pairs lie on a straight line: their residuals' RMS is
+// within the bound. A fit that is not straight should time nothing, and the
+// adapter's live times, set from each pair as it comes, stand instead.
+[[nodiscard]] bool straight(const ClockFit& fit, Nanoseconds bound = kStraightRms) noexcept;
+
 }  // namespace ics::timealign

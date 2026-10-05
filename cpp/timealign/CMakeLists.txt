@@ -16,9 +16,12 @@ ics_add_gtest(timealign_test
     test/align_test.cpp
     test/check_test.cpp
     test/clock_fit_test.cpp
+    test/fixture_test.cpp
     test/latency_test.cpp
     test/sortie_test.cpp
   LIBRARIES ics::timealign)
+target_compile_definitions(timealign_test PRIVATE
+  ICS_TIMEALIGN_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/test/fixtures")
 
 # The fit takes pairs from logs and links ICS does not control, so it is
 # fuzzed for overflow and for its promises (ICS-008).

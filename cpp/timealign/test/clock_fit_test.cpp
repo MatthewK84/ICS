@@ -71,6 +71,32 @@ TEST(ClockFit, AveragesTheMillisecondResolutionOfBootTimes) {
   EXPECT_NEAR(fit->model.drift_ppm(), 50.0, 1.0);
 }
 
+TEST(ClockFit, IsStraightOnlyWhenItsPairsLieOnALine) {
+  const Result<ClockFit> line = fit_clock(clock(100.0, 120));
+  ASSERT_TRUE(line.has_value());
+  EXPECT_TRUE(straight(*line));
+  // Read in whole milliseconds, a clock strays about 0.3 ms from its line.
+  std::vector<ClockSample> rounded = clock(-30.0, 300);
+  for (std::size_t i = 0; i < rounded.size(); ++i) {
+    rounded[i].boot_us += static_cast<std::int64_t>((i * 7919) % 1000);
+  }
+  const Result<ClockFit> coarse = fit_clock(rounded);
+  ASSERT_TRUE(coarse.has_value());
+  EXPECT_GT(coarse->residual_rms.count(), 200'000.0);
+  EXPECT_TRUE(straight(*coarse));
+  EXPECT_FALSE(straight(*coarse, Nanoseconds(200'000.0)));
+  // A simulated clock 2.5 % slow whose rate wanders, as PX4 SIH's does.
+  std::vector<ClockSample> wandering = clock(-25'000.0, 150);
+  for (std::size_t i = 0; i < wandering.size(); ++i) {
+    wandering[i].utc_ns += std::llround(20'000'000.0 * std::sin(static_cast<double>(i) / 6.0));
+  }
+  const Result<ClockFit> uneven = fit_clock(wandering);
+  ASSERT_TRUE(uneven.has_value());
+  EXPECT_EQ(uneven->rejected, 0U);
+  EXPECT_GT(uneven->residual_rms.count(), 10'000'000.0);
+  EXPECT_FALSE(straight(*uneven));
+}
+
 TEST(ClockFit, LeavesOutOutliers) {
   std::vector<ClockSample> samples = clock(100.0, 120);
   for (const std::size_t i : {5U, 60U, 61U}) {

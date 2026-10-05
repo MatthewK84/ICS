@@ -55,6 +55,7 @@ void require_sound(const ics::timealign::ClockFit& fit, const std::size_t count)
   require(std::isfinite(fit.residual_rms.count()) && fit.residual_rms.count() >= 0.0);
   require(std::isfinite(fit.residual_max.count()) && fit.residual_max.count() >= 0.0);
   require(fit.first_boot_us <= fit.last_boot_us);
+  require(ics::timealign::straight(fit) == (fit.residual_rms <= ics::timealign::kStraightRms));
 }
 
 }  // namespace
@@ -80,6 +81,9 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   if (check) {
     require(check->positions == positions.size() && check->max_error.count() >= 0);
     require(check->reference_spread.count() >= 0.0);
+    require_sound(check->sent, samples.size());
+    const ics::timealign::Outcome outcome = ics::timealign::judge(*check);
+    require((outcome == ics::timealign::Outcome::kNotStraight) == !ics::timealign::straight(check->sent));
   }
   return 0;
 }

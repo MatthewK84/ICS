@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -15,7 +16,12 @@ namespace ics::timealign {
 // injected drift on SITL. The SITL rig's autopilots have no clock drift of
 // their own, so the check puts one on a sortie's boot times, withholds part of
 // its samples as a GNSS outage would, fits what is left and times each
-// position, then compares each time with its reference.
+// position, then compares each time with its reference. It applies only to a
+// sortie whose clock pairs lie on a straight line: PX4 SIH's do not, and a
+// sortie like that keeps the adapter's live times.
+
+// The most a position's aligned time may differ from its reference.
+inline constexpr Duration kAlignmentLimit = std::chrono::milliseconds(1);
 
 // A drift and offset put on a boot clock, as a crystal running fast or slow
 // would: boot' = offset + boot * (1 + ppm / 1e6).
@@ -35,6 +41,9 @@ struct Withholding {
 };
 
 struct DriftCheck {
+  // The fit to the samples as the vehicle sent them: whether it is straight
+  // decides whether the check applies.
+  ClockFit sent;
   // The fit to the injected samples left.
   ClockFit fit;
   std::size_t positions = 0;
@@ -54,5 +63,18 @@ struct DriftCheck {
                                                       std::span<const std::int64_t> position_boot_us,
                                                       const Injection& injection, const Withholding& withholding,
                                                       const FitSettings& settings = {});
+
+// How a sortie's check came out.
+enum class Outcome : std::uint8_t {
+  // Its clock is a straight line, and every position is within the limit.
+  kWithin,
+  // Its clock is a straight line, and a position is not within the limit.
+  kBeyond,
+  // Its clock is not a straight line, so the check does not apply.
+  kNotStraight,
+};
+
+[[nodiscard]] Outcome judge(const DriftCheck& drift, Duration limit = kAlignmentLimit,
+                            Nanoseconds straight_rms = kStraightRms) noexcept;
 
 }  // namespace ics::timealign
