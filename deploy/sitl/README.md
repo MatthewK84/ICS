@@ -77,6 +77,7 @@ Each engagement leaves a folder in the output directory:
 | `px4-log/` | PX4's onboard ULog log, in a folder for the day, as PX4 names it |
 | `ardupilot-logs/` | ArduCopter's onboard DataFlash log (`00000001.BIN`) |
 | `replay.jsonl` | In CI, the MAVLink replay of `tap.pcap` (below) |
+| `time-align-fast.jsonl`, `time-align-slow.jsonl` | In CI, the time alignment checks of `tap.pcap`, with drift injected either way (below) |
 
 ## MAVLink replay
 
@@ -94,6 +95,17 @@ docker run --rm -v "$PWD:/work/ics" -w /work/ics -v /tmp/sitl-records:/tmp/sitl-
 PYTHONPATH=python python3 -m ics_sitl compare --truth "$out/truth.jsonl" --replay "$out/replay.jsonl"
 ```
 
+## Time alignment
+
+The nightly run then checks the drift fit ([ICS-026](https://github.com/MatthewK84/ICS/issues/26), [`cpp/timealign`](../../cpp/README.md#time-alignment)) against each engagement. `ics-time-align` runs twice. Each run puts 100 ppm of drift on every vehicle's boot clock, fast with a 5 s offset or slow with a 2 s one. It withholds the middle 60 % of each sortie's clock pairs, as a GNSS outage would, and fits the rest. The run fails unless the check applied to at least one sortie and, for each one, every position aligns within 1 ms of its reference.
+
+The check's reference takes each clock to have no drift of its own, so it applies only to sorties whose offsets (UTC minus boot time) stay within 0.5 ms of their mean. ArduCopter's stay within 0.27 ms, and on each engagement every position aligns within 50 µs. PX4 SIH's stray more than a second: its boot clock is simulated time, about 2.5 % slower than the host clock that gives its UTC. So its sorties are reported as `drifting` and not checked.
+
+```sh
+docker run --rm -v "$PWD:/work/ics" -w /work/ics -v /tmp/sitl-records:/tmp/sitl-records ics-cpp:ci \
+  cpp/build/gcc-release/testing/time_align/ics-time-align "$out/tap.pcap" 40 -100 700 --inject 100:5000 --withhold 0.2:0.8
+```
+
 ## Onboard logs
 
 `ics-log-import` ([ICS-025](https://github.com/MatthewK84/ICS/issues/25), [`cpp/flightlog`](../../cpp/README.md#onboard-logs)) imports either autopilot's onboard log and writes JSON lines, the same way:
@@ -104,6 +116,14 @@ docker run --rm -v "$PWD:/work/ics" -w /work/ics -v /tmp/sitl-records:/tmp/sitl-
 ```
 
 PX4's built-in simulator gives its GNSS no UTC time, so PX4's log is untimed: its records carry only boot times. ArduCopter's log is timed by GPS week once its GNSS has a fix. The importer's sample logs are cut from these logs ([`cpp/flightlog/test/logs`](../../cpp/flightlog/test/logs/README.md)).
+
+`ics-time-align` times both logs on the capture's clock instead, from each vehicle's `SYSTEM_TIME` pairs ([Time alignment](#time-alignment)):
+
+```sh
+docker run --rm -v "$PWD:/work/ics" -w /work/ics -v /tmp/sitl-records:/tmp/sitl-records ics-cpp:ci \
+  cpp/build/gcc-release/testing/time_align/ics-time-align "$out/tap.pcap" 40 -100 700 \
+  --log "$out/ardupilot-logs/00000001.BIN" --log "$out"/px4-log/*/*.ulg --records
+```
 
 ## What to expect from the autopilots
 

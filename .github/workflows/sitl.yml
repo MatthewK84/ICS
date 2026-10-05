@@ -10,14 +10,17 @@ name: SITL rig
 # Each capture is then replayed through the MAVLink adapter (ICS-021,
 # cpp/mavlink), built in the ics-cpp image, and the run fails unless every
 # position, status text and refused command in the engagement's truth log
-# comes out of it (python -m ics_sitl compare).
+# comes out of it (python -m ics_sitl compare). Then ics-time-align (ICS-026,
+# cpp/timealign) puts 100 ppm of drift either way on each vehicle's boot clock,
+# withholds the middle 60 % of its clock pairs and fits it again; the run fails
+# unless every sortie whose clock has no drift of its own aligns within 1 ms.
 #
 # The autopilot images are compiled only when deploy/sitl/image changes, and
 # are otherwise restored from the Actions cache. Each run writes their
 # CycloneDX SBOMs. The images are not published: ArduPilot is GPL-3.0, and
 # ICS does not distribute it. Each engagement's truth log, summary, TAP
-# capture, MAVLink replay and container logs, and the SBOMs, are kept as the
-# sitl-<run id> artifact for 30 days.
+# capture, MAVLink replay, time alignment checks and container logs, and the
+# SBOMs, are kept as the sitl-<run id> artifact for 30 days.
 
 on:
   schedule:
@@ -54,6 +57,7 @@ jobs:
         docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home
         -v /tmp/sitl-records:/tmp/sitl-records ics-cpp:ci
       REPLAY: cpp/build/gcc-release/testing/mavlink_replay/ics-mavlink-replay
+      TIME_ALIGN: cpp/build/gcc-release/testing/time_align/ics-time-align
     steps:
       - name: Check out the repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -123,11 +127,11 @@ jobs:
           key: conan-cpp-toolchain-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
           restore-keys: conan-cpp-toolchain-
 
-      - name: Build the MAVLink replay
+      - name: Build the MAVLink replay and time alignment
         run: >-
           ${RUN} bash -c 'deploy/toolchain/conan-install.sh gcc-release
           && cd cpp && cmake --preset gcc-release >/dev/null
-          && cmake --build build/gcc-release --target ics-mavlink-replay'
+          && cmake --build build/gcc-release --target ics-mavlink-replay ics-time-align'
 
       - name: Fly the engagements
         run: deploy/sitl/run-engagements.sh "${RECORDS}"
@@ -142,6 +146,24 @@ jobs:
             ${RUN} "${REPLAY}" "${out}tap.pcap" 40 -100 700 >"${out}replay.jsonl" || status=1
             PYTHONPATH=python python3 -m ics_sitl compare --truth "${out}truth.jsonl" --replay "${out}replay.jsonl" \
               || status=1
+          done
+          exit "${status}"
+
+      # ICS-026's "Done when": with 100 ppm of drift either way on each boot
+      # clock and the middle 60 % of its clock pairs withheld, every sortie
+      # whose clock has no drift of its own aligns within 1 ms. PX4 SIH's
+      # boot clock is simulated time, about 2.5 % slow, so its sorties are
+      # reported as "drifting" and not checked.
+      - name: Check time alignment with an injected drift
+        run: |
+          status=0
+          for out in "${RECORDS}"/*/; do
+            echo "${out}"
+            ${RUN} "${TIME_ALIGN}" "${out}tap.pcap" 40 -100 700 --inject 100:5000 --withhold 0.2:0.8 \
+              >"${out}time-align-fast.jsonl" || status=1
+            ${RUN} "${TIME_ALIGN}" "${out}tap.pcap" 40 -100 700 --inject -100:2000 --withhold 0.2:0.8 \
+              >"${out}time-align-slow.jsonl" || status=1
+            grep -h -e '"kind":"check"' -e '"kind":"verdict"' "${out}"time-align-*.jsonl | cut -c1-200 || true
           done
           exit "${status}"
 

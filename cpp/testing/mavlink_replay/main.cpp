@@ -196,6 +196,7 @@ class Replayer final : public ics::capture::PacketSink {
     counts_.events += out_.events.size();
     out_.positions.clear();
     out_.events.clear();
+    out_.clocks.clear();
     return {};
   }
 

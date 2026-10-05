@@ -34,7 +34,9 @@ namespace ics::mavlink {
 // offset, and a record's valid time is its time_boot_ms plus the last offset
 // (PLI_TIME_BASIS_VEHICLE_GNSS). Until a vehicle sends one, its records take
 // the time they were received (PLI_TIME_BASIS_RECEIPT). Events always take
-// the time they were received: MAVLink stamps none of them.
+// the time they were received: MAVLink stamps none of them. Each such
+// SYSTEM_TIME is also passed on (Output::clocks), so the time alignment
+// (ICS-026) can fit the vehicle's clock over the whole sortie.
 //
 // Events, each for the system it concerns:
 // - ARMED and DISARMED when the armed flag in a vehicle's HEARTBEAT changes,
@@ -75,10 +77,20 @@ struct Position {
   std::uint32_t time_boot_ms = 0;
 };
 
+// A vehicle's SYSTEM_TIME with a UTC time: its boot time and its UTC time for
+// the same instant, which the time alignment (ICS-026) fits.
+struct SystemClock {
+  std::uint8_t system = 0;
+  std::uint32_t time_boot_ms = 0;
+  std::uint64_t time_unix_usec = 0;
+  UtcTime received{};
+};
+
 // What the adapter produced from one call. The caller empties it.
 struct Output {
   std::vector<Position> positions;
   std::vector<v1::PliEvent> events;
+  std::vector<SystemClock> clocks;
 };
 
 struct AdapterCounts {

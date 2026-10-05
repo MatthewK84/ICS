@@ -70,6 +70,13 @@ struct LogEvent {
   std::int64_t boot_us = 0;
 };
 
+// A GNSS time the log gave: a boot time, in microseconds, and its UTC time,
+// which the time alignment (ICS-026) fits.
+struct GnssTime {
+  std::int64_t boot_us = 0;
+  UtcTime utc{};
+};
+
 struct ImportCounts {
   // Estimated positions and GNSS fixes left out: no fix, a position not
   // valid, or not a geodetic point.
@@ -89,6 +96,8 @@ struct LogContents {
   std::vector<LogRecord> gnss;
   // In boot time order.
   std::vector<LogEvent> events;
+  // Every GNSS time that set the clock, in boot time order.
+  std::vector<GnssTime> gnss_times;
   ImportCounts counts;
 };
 
