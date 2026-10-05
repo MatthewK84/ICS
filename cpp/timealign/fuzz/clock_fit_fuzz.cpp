@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "ics/common/error.hpp"
+#include "ics/timealign/align.hpp"
 #include "ics/timealign/check.hpp"
 #include "ics/timealign/clock_fit.hpp"
 
@@ -58,6 +59,16 @@ void require_sound(const ics::timealign::ClockFit& fit, const std::size_t count)
   require(ics::timealign::straight(fit) == (fit.residual_rms <= ics::timealign::kStraightRms));
 }
 
+// The latest pair at or before a pair's own boot time is one at that boot
+// time, so the stepped clock gives it a time.
+void require_stepped(const std::vector<ClockSample>& samples) {
+  const ics::Result<ics::timealign::SteppedClock> clock = ics::timealign::SteppedClock::make(samples);
+  for (const ClockSample& sample : clock ? samples : std::vector<ClockSample>()) {
+    require(clock->utc(sample.boot_us).has_value());
+    static_cast<void>(clock->utc(sample.utc_ns));
+  }
+}
+
 }  // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
@@ -73,6 +84,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   }
   std::vector<std::int64_t> positions;
   std::ranges::transform(samples, std::back_inserter(positions), &ClockSample::boot_us);
+  require_stepped(samples);
   const ics::timealign::Injection injection{.ppm = static_cast<double>(static_cast<std::int8_t>(input[2])) * 2.0,
                                             .offset = std::chrono::seconds(input[3] % 16U)};
   const ics::timealign::Withholding withholding{.from = 0.25, .to = static_cast<double>(input[3] / 16U) / 16.0};

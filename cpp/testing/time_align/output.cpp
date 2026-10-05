@@ -63,7 +63,7 @@ using timealign::Outcome;
 
 // The model that times a sortie's records: its fit's, when its clock pairs lie
 // on a straight line. Otherwise the adapter's live times stand.
-[[nodiscard]] std::optional<ClockModel> timing(const Result<ClockFit>& fit) {
+[[nodiscard]] std::optional<ClockModel> straight_model(const Result<ClockFit>& fit) {
   return fit && timealign::straight(*fit) ? std::optional(fit->model) : std::nullopt;
 }
 
@@ -165,21 +165,80 @@ struct Span {
   return std::string{std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 }
 
-void print_log_records(const std::size_t index, const flightlog::LogContents& contents,
-                       const std::optional<ClockModel>& model) {
-  const auto print = [index, &model](const char* kind, const flightlog::LogRecord& logged) {
-    const std::optional<v1::PliRecord> timed =
-        model ? timealign::aligned(logged.record, logged.boot_us, *model) : std::nullopt;
+// How a log's records are timed: by the fit of the sortie it overlaps, when
+// that is straight, or otherwise by that sortie's clock pairs as the live
+// adapter times its records. Never by the log's own GNSS times, which can sit
+// tens of milliseconds from the pairs (ArduCopter's are 36 ms early, the lag
+// from a fix to its logging). With no sortie, the log keeps the importer's
+// own times.
+struct LogTiming {
+  std::optional<ClockModel> fit;
+  std::optional<timealign::SteppedClock> pairs;
+};
+
+[[nodiscard]] LogTiming log_timing(const Result<ClockFit>& fit, const std::span<const ClockSample> pairs) {
+  Result<timealign::SteppedClock> stepped = timealign::SteppedClock::make(pairs);
+  return LogTiming{.fit = straight_model(fit), .pairs = stepped ? std::optional(std::move(*stepped)) : std::nullopt};
+}
+
+[[nodiscard]] const char* timed_by(const LogTiming& timing) {
+  if (timing.fit) {
+    return "fit";
+  }
+  return timing.pairs ? "pairs" : "log";
+}
+
+[[nodiscard]] std::optional<UtcTime> utc_at(const LogTiming& timing, const std::int64_t boot_us) {
+  if (timing.fit) {
+    return timing.fit->utc(boot_us);
+  }
+  return timing.pairs ? timing.pairs->utc(boot_us) : std::nullopt;
+}
+
+// The median of the log's own GNSS times less the times its timing gives the
+// same boot times: how far the log's clock sits from the capture's.
+[[nodiscard]] std::optional<std::int64_t> log_offset_ns(const flightlog::LogContents& contents,
+                                                        const LogTiming& timing) {
+  std::vector<std::int64_t> offsets;
+  for (const flightlog::GnssTime& time : contents.gnss_times) {
+    const std::optional<UtcTime> capture = utc_at(timing, time.boot_us);
+    if (capture) {
+      offsets.push_back(to_utc_ns(time.utc) - to_utc_ns(*capture));
+    }
+  }
+  if (offsets.empty()) {
+    return std::nullopt;
+  }
+  const auto middle = offsets.begin() + static_cast<std::ptrdiff_t>(offsets.size() / 2);
+  std::ranges::nth_element(offsets, middle);
+  return *middle;
+}
+
+[[nodiscard]] v1::PliRecord retimed(const v1::PliRecord& record, const std::int64_t boot_us,
+                                    const LogTiming& timing) {
+  const std::optional<v1::PliRecord> out = timing.fit     ? timealign::aligned(record, boot_us, *timing.fit)
+                                           : timing.pairs ? timealign::stepped(record, boot_us, *timing.pairs)
+                                                          : std::nullopt;
+  return out ? *out : record;
+}
+
+[[nodiscard]] v1::PliEvent retimed(const v1::PliEvent& event, const std::int64_t boot_us, const LogTiming& timing) {
+  const std::optional<v1::PliEvent> out = timing.fit     ? timealign::aligned(event, boot_us, *timing.fit)
+                                          : timing.pairs ? timealign::stepped(event, boot_us, *timing.pairs)
+                                                         : std::nullopt;
+  return out ? *out : event;
+}
+
+void print_log_records(const std::size_t index, const flightlog::LogContents& contents, const LogTiming& timing) {
+  const auto print = [index, &timing](const char* kind, const flightlog::LogRecord& logged) {
     std::printf(R"({"kind":"%s","log":%zu,"boot_us":%lld,"record":%s})" "\n", kind, index,
-                static_cast<long long>(logged.boot_us), json(timed ? *timed : logged.record).c_str());
+                static_cast<long long>(logged.boot_us), json(retimed(logged.record, logged.boot_us, timing)).c_str());
   };
   std::ranges::for_each(contents.states, [&print](const flightlog::LogRecord& r) { print("log_record", r); });
   std::ranges::for_each(contents.gnss, [&print](const flightlog::LogRecord& r) { print("log_record", r); });
   for (const flightlog::LogEvent& logged : contents.events) {
-    const std::optional<v1::PliEvent> timed =
-        model ? timealign::aligned(logged.event, logged.boot_us, *model) : std::nullopt;
     std::printf(R"({"kind":"log_event","log":%zu,"boot_us":%lld,"event":%s})" "\n", index,
-                static_cast<long long>(logged.boot_us), json(timed ? *timed : logged.event).c_str());
+                static_cast<long long>(logged.boot_us), json(retimed(logged.event, logged.boot_us, timing)).c_str());
   }
 }
 
@@ -216,7 +275,7 @@ void report(const Vehicles& vehicles, const bool records) {
     for (std::size_t index = 0; index < vehicle.sorties.size(); ++index) {
       const Sortie& sortie = vehicle.sorties[index];
       const Result<ClockFit> fit = timealign::fit_clock(sortie.samples);
-      const std::optional<ClockModel> model = timing(fit);
+      const std::optional<ClockModel> model = straight_model(fit);
       std::printf(R"({"kind":"sortie","system":%u,"sortie":%zu,"samples":%zu,"positions":%zu,%s})" "\n",
                   system, index, sortie.samples.size(), sortie.positions.size(), fit_fields(fit).c_str());
       if (model) {
@@ -240,19 +299,21 @@ bool report_log(const std::size_t index, const std::string& path, const Vehicles
     return false;
   }
   const std::optional<std::size_t> sortie = matching_sortie(*contents, vehicles);
-  std::vector<ClockSample> samples =
-      sortie ? vehicles.at(static_cast<std::uint8_t>(contents->system_id)).sorties[*sortie].samples
-             : std::vector<ClockSample>();
-  std::ranges::transform(contents->gnss_times, std::back_inserter(samples), [](const flightlog::GnssTime& time) {
-    return ClockSample{.boot_us = time.boot_us, .utc_ns = to_utc_ns(time.utc)};
-  });
-  std::ranges::sort(samples, {}, &ClockSample::boot_us);
-  const Result<ClockFit> fit = timealign::fit_clock(samples);
-  std::printf(R"({"kind":"log","log":%zu,"system":%u,"sortie":%lld,"samples":%zu,"log_gnss_times":%zu,%s})" "\n",
+  const std::span<const ClockSample> pairs =
+      sortie ? std::span<const ClockSample>(
+                   vehicles.at(static_cast<std::uint8_t>(contents->system_id)).sorties[*sortie].samples)
+             : std::span<const ClockSample>();
+  const Result<ClockFit> fit = timealign::fit_clock(pairs);
+  const LogTiming timing = log_timing(fit, pairs);
+  const std::optional<std::int64_t> offset = log_offset_ns(*contents, timing);
+  const std::string offset_text = offset ? std::to_string(*offset) : std::string("null");
+  std::printf(R"({"kind":"log","log":%zu,"system":%u,"sortie":%lld,"samples":%zu,"log_gnss_times":%zu,)"
+              R"("timed_by":"%s","log_gnss_offset_ns":%s,%s})" "\n",
               index, static_cast<unsigned>(contents->system_id), sortie ? static_cast<long long>(*sortie) : -1LL,
-              samples.size(), contents->gnss_times.size(), fit_fields(fit).c_str());
+              pairs.size(), contents->gnss_times.size(), timed_by(timing), offset_text.c_str(),
+              fit_fields(fit).c_str());
   if (records) {
-    print_log_records(index, *contents, timing(fit));
+    print_log_records(index, *contents, timing);
   }
   return true;
 }

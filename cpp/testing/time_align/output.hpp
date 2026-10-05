@@ -16,8 +16,10 @@ namespace ics::time_align {
 // the adapter's live times.
 void report(const Vehicles& vehicles, bool records);
 
-// Imports an onboard log and writes its fit, with the sortie its boot times
-// overlap, and with records, its records timed as a sortie's are; false when
+// Imports an onboard log and writes how it is timed: from the clock pairs of
+// the sortie its boot times overlap, by their fit when straight and otherwise
+// as the live adapter times records, or by its own GNSS times when no sortie
+// matches. With records, writes its records and events so timed. False when
 // it cannot be read.
 [[nodiscard]] bool report_log(std::size_t index, const std::string& path, const Vehicles& vehicles,
                               const frames::Egm96& geoid, const frames::EnuFrame& range, bool records);

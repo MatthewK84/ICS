@@ -117,6 +117,14 @@ docker run --rm -v "$PWD:/work/ics" -w /work/ics -v /tmp/sitl-records:/tmp/sitl-
 
 PX4's built-in simulator gives its GNSS no UTC time, so PX4's log is untimed: its records carry only boot times. ArduCopter's log is timed by GPS week once its GNSS has a fix. The importer's sample logs are cut from these logs ([`cpp/flightlog/test/logs`](../../cpp/flightlog/test/logs/README.md)).
 
+`ics-time-align` times both logs on the capture's clock instead, from each vehicle's `SYSTEM_TIME` pairs ([Time alignment](#time-alignment)):
+
+```sh
+docker run --rm -v "$PWD:/work/ics" -w /work/ics -v /tmp/sitl-records:/tmp/sitl-records ics-cpp:ci \
+  cpp/build/gcc-release/testing/time_align/ics-time-align "$out/tap.pcap" 40 -100 700 \
+  --log "$out/ardupilot-logs/00000001.BIN" --log "$out"/px4-log/*/*.ulg --records
+```
+
 ## What to expect from the autopilots
 
 Each start takes about a minute before the engagement begins. ArduCopter refuses to arm for about 40 seconds, until its estimator has a GPS position, and right after boot it has no mission storage yet. The rig resends every refused command and mission upload once a second until the engagement's time limit, and the truth log records each refusal. PX4 refuses a rate request for `MISSION_CURRENT`, which it already sends unasked, so rate requests are best effort; a stream that never arrives fails the verdict instead. PX4 also refuses `MAV_CMD_DO_SET_MISSION_CURRENT` as unsupported, which is why the rig uses the `MISSION_SET_CURRENT` message, and both autopilots accept that.

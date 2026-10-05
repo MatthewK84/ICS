@@ -12,10 +12,12 @@
 //
 // LATITUDE, LONGITUDE and HEIGHT (metres above the ellipsoid) are the range ENU
 // frame's origin, as for ics-mavlink-replay. Each --log is an onboard log of a
-// vehicle in the capture, fitted with the sortie whose boot times it overlaps:
-// its own GNSS times and the capture's SYSTEM_TIME pairs together. --records
-// also writes every record, and each log's records and events ("record",
-// "log_record" and "log_event" lines).
+// vehicle in the capture, timed from the SYSTEM_TIME pairs of the sortie whose
+// boot times it overlaps ("timed_by"): by its fit when straight, otherwise by
+// the latest pair at or before each record, as the adapter times it live. The
+// log's own GNSS times are not used, only compared ("log_gnss_offset_ns"); a
+// log with no such sortie keeps them. --records also writes every record, and
+// each log's records and events ("record", "log_record" and "log_event" lines).
 //
 // A fit times records only when its clock pairs lie on a straight line
 // ("straight": within 0.5 ms RMS of it). PX4 SIH's have not, so far: its boot

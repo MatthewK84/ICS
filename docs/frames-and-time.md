@@ -97,6 +97,8 @@ After a sortie, `ics::timealign` ([`cpp/timealign`](../cpp/README.md#time-alignm
 
 A fit times a sortie's records only when the pairs lie on a straight line, within 0.5 ms RMS. PX4's SIH simulator has failed that on every run so far: its boot clock is simulated time, about 2.5 % slower than the host clock that gives its UTC, and uneven, 0.8 ms to 13 ms RMS from any line. A sortie like that keeps the live times.
 
+An onboard log of a sortie is timed from the same `SYSTEM_TIME` pairs, so that it shares the live records' clock: by the fit when straight, otherwise from the latest pair at or before each record, as the live adapter does. The log's own GNSS times are not mixed in. ArduCopter's log pairs each GNSS fix's time with the boot time the fix was logged at; on the rig's `crossing` engagement that puts UTC 36.6 ms early, most likely the lag from a fix to its logging.
+
 ## Golden vectors
 
 [`golden/frames/generate.sh`](../golden/frames/generate.sh) runs GeographicLib 2.3's `CartConvert`, `GeoidEval` and `GeoConvert` over the case lists in [`golden/frames/inputs/`](../golden/frames/inputs), in the ics-cpp image:
