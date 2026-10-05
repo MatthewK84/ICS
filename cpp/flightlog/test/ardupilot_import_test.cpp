@@ -1,10 +1,12 @@
 // The importer's ArduPilot half on DataFlash logs written for each case.
 #include <sys/mman.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <initializer_list>
+#include <iterator>
 #include <limits>
 #include <span>
 #include <string>
@@ -125,9 +127,9 @@ void parm(DataFlashBuilder& log, const std::string_view name, const float value)
 
 std::vector<std::string> details(const LogContents& contents) {
   std::vector<std::string> out;
-  for (const LogEvent& event : contents.events) {
-    out.push_back(v1::PliEvent::Kind_Name(event.event.kind()) + " " + event.event.detail());
-  }
+  std::ranges::transform(contents.events, std::back_inserter(out), [](const LogEvent& logged) {
+    return v1::PliEvent::Kind_Name(logged.event.kind()) + " " + logged.event.detail();
+  });
   return out;
 }
 
@@ -291,6 +293,8 @@ TEST(ArduPilotImport, ChecksFloatColumnsAreWholeNumbersInRange) {
   float_gps(log, 6'000, 2.0F, 0.0F, 2500.0F);
   float_gps(log, 7'000, 300.0F, 0.0F, 2400.0F);
   float_gps(log, 8'000, 1.0F, 0.0F, 0.0F);
+  // Week 9999 is in 2171, past the latest time ICS takes.
+  float_gps(log, 9'000, 3.0F, 0.0F, 9999.0F);
   gpa(log, 1'000, 0, std::numeric_limits<float>::quiet_NaN(), 1.0F);
   gpa(log, 2'000, 0, -1.0F, -1.0F);
   gpa(log, 6'000, 0, 1.0F, 2.0F);
@@ -302,7 +306,7 @@ TEST(ArduPilotImport, ChecksFloatColumnsAreWholeNumbersInRange) {
   EXPECT_EQ(contents.counts.gnss_times, 2U);
   EXPECT_EQ(contents.counts.beyond_leap_table, 1U);
   EXPECT_EQ(contents.counts.unplaced, 2U);
-  ASSERT_EQ(contents.gnss.size(), 6U);
+  ASSERT_EQ(contents.gnss.size(), 7U);
   EXPECT_FALSE(contents.gnss[0].record.has_horizontal_sigma_m());
   EXPECT_EQ(contents.gnss[0].record.vertical_sigma_m(), 1.0);
   EXPECT_FALSE(contents.gnss[1].record.has_horizontal_sigma_m());
@@ -324,6 +328,17 @@ TEST(ArduPilotImport, NamesOnlyWholeCopterModeNumbers) {
   EXPECT_EQ(contents.system_id, 1U);
   EXPECT_EQ(details(contents), (std::vector<std::string>{"KIND_STATUS_TEXT ArduCopter V4.6.0",
                                                          "KIND_MODE_CHANGED mode 2.5", "KIND_MODE_CHANGED AUTO"}));
+}
+
+TEST(ArduPilotImport, LeavesOutAVelocityOrAttitudeThatIsNotFinite) {
+  DataFlashBuilder log = formatted({kPosFmt, kXkf1Fmt, kAttFmt});
+  xkf1(log, 1'000, 0, std::numeric_limits<float>::quiet_NaN());
+  att(log, 1'000, std::numeric_limits<float>::infinity());
+  pos(log, 2'000, 40.0, -100.0, 700.0F);
+  const LogContents contents = imported(log.bytes());
+  ASSERT_EQ(contents.states.size(), 1U);
+  EXPECT_FALSE(contents.states[0].record.has_velocity_enu_mps());
+  EXPECT_FALSE(contents.states[0].record.has_attitude());
 }
 
 TEST(ArduPilotImport, JoinsOnlyAVelocityAndAttitudeNoOlderThanTheLimit) {

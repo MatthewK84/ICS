@@ -30,12 +30,9 @@ struct Expected {
 
   // The value of a NAME=VALUE field, or "" if there is none.
   [[nodiscard]] std::string named(const std::string& name) const {
-    for (const std::string& value : values) {
-      if (value.starts_with(name + "=")) {
-        return value.substr(name.size() + 1);
-      }
-    }
-    return {};
+    const auto found =
+        std::ranges::find_if(values, [&name](const std::string& value) { return value.starts_with(name + "="); });
+    return found == values.end() ? std::string() : found->substr(name.size() + 1);
   }
   [[nodiscard]] double number(const std::string& name) const { return std::stod(named(name)); }
 };

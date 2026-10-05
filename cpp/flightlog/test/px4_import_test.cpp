@@ -1,7 +1,9 @@
 // The importer's PX4 half on ULog logs written for each case.
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <initializer_list>
+#include <iterator>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -109,9 +111,9 @@ std::vector<std::byte> cut(std::vector<std::byte> bytes, const std::size_t size)
 
 std::vector<std::string> details(const LogContents& contents) {
   std::vector<std::string> out;
-  for (const LogEvent& event : contents.events) {
-    out.push_back(v1::PliEvent::Kind_Name(event.event.kind()) + " " + event.event.detail());
-  }
+  std::ranges::transform(contents.events, std::back_inserter(out), [](const LogEvent& logged) {
+    return v1::PliEvent::Kind_Name(logged.event.kind()) + " " + logged.event.detail();
+  });
   return out;
 }
 
@@ -213,6 +215,18 @@ TEST(Px4Import, LeavesOutSamplesThatAreInvalidOrUnreadable) {
   EXPECT_TRUE(contents.gnss[0].record.has_velocity_enu_mps());
   EXPECT_FALSE(contents.gnss[4].record.has_velocity_enu_mps());
   EXPECT_TRUE(contents.events.empty());
+}
+
+TEST(Px4Import, TakesNoReceiverTimeWhoseOffsetIsBeyondItsInt32) {
+  ULogBuilder log;
+  define(log, {{kGpsId,
+                "sensor_gps:uint64_t timestamp;uint64_t time_utc_usec;int64_t timestamp_time_relative;"
+                "double latitude_deg;double longitude_deg;double altitude_ellipsoid_m;uint8_t fix_type;"}});
+  log.data(kGpsId, sample(std::uint64_t{kUtcUs}, kUtcUs, std::int64_t{9'000'000'000'000'000'000}, 40.0, -100.0, 700.0,
+                          std::uint8_t{3}));
+  const LogContents contents = imported(log.bytes());
+  EXPECT_FALSE(contents.timed);
+  EXPECT_EQ(contents.gnss.size(), 1U);
 }
 
 TEST(Px4Import, ReadsAHeightAboveMeanSeaLevelAndLeavesOutTopicsMissingAField) {

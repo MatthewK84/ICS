@@ -50,7 +50,8 @@ double value(const DataFlash& log, const std::string& type, const std::string& c
 }
 
 TEST(DataFlash, ReadsEveryNumericColumnScaledAsItsTypeSays) {
-  const DataFlash log = parse(numbers());
+  const DataFlashBuilder builder = numbers();
+  const DataFlash log = parse(builder);
   EXPECT_EQ(log.format("NUM")->get().length, 62U);
   EXPECT_EQ(value(log, "NUM", "b"), -5.0);
   EXPECT_EQ(value(log, "NUM", "B"), 250.0);
@@ -164,7 +165,8 @@ TEST(DataFlash, TakesARedefinedFormat) {
 }
 
 TEST(DataFlash, ReadsNothingPastTheEndOfAMessage) {
-  const DataFlash log = parse(numbers());
+  const DataFlashBuilder builder = numbers();
+  const DataFlash log = parse(builder);
   const DataFlashFormat& format = log.format("NUM")->get();
   const std::span<const std::byte> cut = log.messages("NUM").at(0).first(10);
   EXPECT_EQ(read(find_column(format, "Q").value(), cut), std::nullopt);

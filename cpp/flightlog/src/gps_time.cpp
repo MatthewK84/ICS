@@ -3,6 +3,7 @@
 #include <array>
 #include <chrono>
 #include <cstdint>
+#include <numeric>
 
 #include "ics/common/error.hpp"
 #include "ics/common/units.hpp"
@@ -48,11 +49,10 @@ constexpr std::array<LeapSecond, 18> kLeapSeconds{{
 // offset of the last leap second whose effective instant, on that scale, has
 // passed.
 [[nodiscard]] std::int64_t gps_minus_utc(const std::int64_t gps_unix) noexcept {
-  std::int64_t offset = 0;
-  for (const LeapSecond& leap : kLeapSeconds) {
-    offset = gps_unix >= leap.effective_unix + leap.gps_minus_utc ? leap.gps_minus_utc : offset;
-  }
-  return offset;
+  return std::accumulate(kLeapSeconds.begin(), kLeapSeconds.end(), std::int64_t{0},
+                         [gps_unix](const std::int64_t offset, const LeapSecond& leap) {
+                           return gps_unix >= leap.effective_unix + leap.gps_minus_utc ? leap.gps_minus_utc : offset;
+                         });
 }
 
 }  // namespace

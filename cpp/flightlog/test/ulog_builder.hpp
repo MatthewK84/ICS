@@ -1,9 +1,11 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <iterator>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -15,9 +17,7 @@ class ULogBuilder {
  public:
   ULogBuilder() {
     constexpr std::array<std::uint8_t, 8> kHeader{0x55, 0x4c, 0x6f, 0x67, 0x01, 0x12, 0x35, 0x01};
-    for (const std::uint8_t b : kHeader) {
-      bytes_.push_back(static_cast<std::byte>(b));
-    }
+    std::ranges::transform(kHeader, std::back_inserter(bytes_), [](const std::uint8_t b) { return std::byte{b}; });
     bytes_.resize(bytes_.size() + sizeof(std::uint64_t));
   }
 
@@ -29,9 +29,7 @@ class ULogBuilder {
   }
 
   static void put_text(std::vector<std::byte>& out, const std::string_view text) {
-    for (const char c : text) {
-      out.push_back(static_cast<std::byte>(c));
-    }
+    std::ranges::transform(text, std::back_inserter(out), [](const char c) { return static_cast<std::byte>(c); });
   }
 
   ULogBuilder& message(const char type, const std::vector<std::byte>& body) {

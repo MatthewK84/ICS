@@ -26,6 +26,11 @@ namespace ics::flightlog::detail {
 // overflow a time in nanoseconds.
 inline constexpr std::int64_t kMaxBootUs = 4'102'444'800'000'000;
 
+// GNSS times from 2100 on are refused, as by the MAVLink adapter: nobody's
+// clock, and a boot time offset by a later one could overflow a time in
+// nanoseconds.
+inline constexpr std::int64_t kLatestUtcUs = 4'102'444'800'000'000;
+
 // The autopilot's boot clock against UTC, from the log's GNSS times.
 class BootClock {
  public:
@@ -108,7 +113,7 @@ class Latest {
 [[nodiscard]] v1::PliRecord record(const Context& context, const frames::Geodetic& where, v1::PliRecord::FixType fix);
 
 // Sets what a record has of a velocity, NED at its position and rotated
-// into the range frame, and an attitude.
+// into the range frame, and an attitude, each when it is finite.
 void set_motion(v1::PliRecord& out, const std::optional<Ned>& velocity, const std::optional<Quaternion>& attitude,
                 const frames::Geodetic& where, const Context& context);
 

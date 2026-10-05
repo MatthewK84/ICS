@@ -32,6 +32,14 @@ using MetersPerSecond = Quantity<MeterPerSecond>;
   return value.has_value() && std::isfinite(*value) && *value >= 0.0;
 }
 
+[[nodiscard]] bool is_finite(const std::optional<Ned>& v) noexcept {
+  return v.has_value() && std::isfinite(v->north + v->east + v->down);
+}
+
+[[nodiscard]] bool is_finite(const std::optional<Quaternion>& q) noexcept {
+  return q.has_value() && std::isfinite(q->w + q->x + q->y + q->z);
+}
+
 void set_velocity(v1::PliRecord& out, const Ned& velocity, const frames::Geodetic& where, const frames::EnuFrame& range) {
   const frames::EnuVector<MeterPerSecond> at_vehicle{MetersPerSecond(velocity.east), MetersPerSecond(velocity.north),
                                                      MetersPerSecond(-velocity.down)};
@@ -96,10 +104,10 @@ void set_sigmas(v1::PliRecord& out, const std::optional<double> horizontal, cons
 
 void set_motion(v1::PliRecord& out, const std::optional<Ned>& velocity, const std::optional<Quaternion>& attitude,
                 const frames::Geodetic& where, const Context& context) {
-  if (velocity) {
+  if (is_finite(velocity)) {
     set_velocity(out, *velocity, where, context.range);
   }
-  if (attitude) {
+  if (is_finite(attitude)) {
     set_attitude(out, *attitude);
   }
 }
@@ -134,9 +142,9 @@ void stamp(LogContents& contents, const BootClock& clock) {
   stamp_records(contents.states);
   stamp_records(contents.gnss);
   std::ranges::stable_sort(contents.events, {}, &LogEvent::boot_us);
-  for (LogEvent& event : contents.events) {
-    event.event.set_time_utc_ns(utc_ns(event.boot_us));
-    event.event.set_time_basis(basis);
+  for (LogEvent& logged : contents.events) {
+    logged.event.set_time_utc_ns(utc_ns(logged.boot_us));
+    logged.event.set_time_basis(basis);
   }
 }
 

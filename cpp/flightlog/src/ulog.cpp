@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <map>
 #include <optional>
@@ -330,14 +331,14 @@ void ULog::Reader::resolve_formats() {
   while (!ready.empty()) {
     const std::string name(ready.back());
     ready.pop_back();
-    if (!lay_out(name)) {
+    // find, not [], which would key the map by this copy of the name.
+    const auto nesting = users.find(name);
+    if (!lay_out(name) || nesting == users.end()) {
       continue;
     }
-    for (const std::string_view user : users[name]) {
-      if (--waiting[user] == 0) {
-        ready.push_back(user);
-      }
-    }
+    // A user is ready once the last format it nests is laid out.
+    std::ranges::copy_if(nesting->second, std::back_inserter(ready),
+                         [&waiting](const std::string_view user) { return --waiting[user] == 0; });
   }
   static_cast<void>(check(out.formats_.size() <= out.raw_formats_.size()));
   out.counts_.unresolved_formats = out.raw_formats_.size() - out.formats_.size();

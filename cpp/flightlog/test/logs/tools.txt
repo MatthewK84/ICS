@@ -1,0 +1,7 @@
+# Sample logs and test oracles for the onboard-log importer (ICS-025), one per
+# line: name, version or commit, sha256, source. pyulog's sha256 is of its three
+# sample logs as published, concatenated in README.md's order; pymavlink's is of
+# its source distribution on PyPI. Every entry needs an entry in
+# docs/dependency-register.toml.
+pyulog ffbe3755d903e93797a89fb4fce26e0c0420a42f 495300a76fd111376a7992052a6807ddd0f2d37d1db2dde2a15dbcbaa5faf551 https://github.com/PX4/pyulog
+pymavlink 2.4.50 8d65a8b05b2971babeef4b6ca74a247a72276f62f7559466c64e96ece7f10062 https://pypi.org/project/pymavlink/2.4.50/

@@ -121,6 +121,19 @@ TEST(ULog, LaysOutNestedFormatsWhateverTheirOrder) {
   EXPECT_EQ(log.counts().unresolved_formats, 0U);
 }
 
+TEST(ULog, LaysOutFormatsWithLongNames) {
+  // Names too long to be stored inside a std::string, so a view of a freed
+  // copy would be caught under AddressSanitizer.
+  ULogBuilder builder;
+  builder.format("an_outer_format_with_a_long_name:an_inner_format_with_a_long_name inner;")
+      .format("an_inner_format_with_a_long_name:float x;")
+      .format("an_unused_format_with_a_long_name:float y;");
+  const ULog log = parse(builder);
+  EXPECT_EQ(log.format("an_outer_format_with_a_long_name")->get().size, 4U);
+  EXPECT_EQ(log.format("an_unused_format_with_a_long_name")->get().size, 4U);
+  EXPECT_EQ(log.counts().unresolved_formats, 0U);
+}
+
 TEST(ULog, LaysOutAFormatNestingOneFormatTwiceAndSkipsEmptyFields) {
   ULogBuilder builder;
   builder.format("pair:inner a;;inner b;").format("inner:float x;");

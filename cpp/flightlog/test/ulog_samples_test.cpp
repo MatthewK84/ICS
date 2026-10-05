@@ -1,7 +1,9 @@
 // The ULog sample logs (logs/README.md), read with ics::flightlog::ULog and
 // compared with what PX4's pyulog read in them (logs/expected.tsv).
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <map>
 #include <optional>
 #include <span>
@@ -31,7 +33,7 @@ void expect_sample(const ULogFormat& format, const std::span<const std::byte> sa
     std::size_t index = 0;
     if (name.ends_with("]")) {
       index = std::stoul(name.substr(name.find('[') + 1));
-      name = name.substr(0, name.find('['));
+      name.resize(name.find('['));
     }
     const std::optional<ULogField> field = find_field(format, name);
     ASSERT_TRUE(field.has_value()) << name;
@@ -44,11 +46,9 @@ std::vector<std::span<const std::byte>> where(const ULog& log, const std::string
   const ULogFormat& format = log.format(topic)->get();
   const std::optional<ULogField> field = find_field(format, flag);
   std::vector<std::span<const std::byte>> out;
-  for (const std::span<const std::byte> sample : log.samples(topic, 0)) {
-    if (!field || read(*field, sample) != 0.0) {
-      out.push_back(sample);
-    }
-  }
+  std::ranges::copy_if(log.samples(topic, 0), std::back_inserter(out), [&field](const std::span<const std::byte> sample) {
+    return !field || read(*field, sample) != 0.0;
+  });
   return out;
 }
 

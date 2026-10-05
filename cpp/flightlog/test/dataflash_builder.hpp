@@ -14,9 +14,9 @@ class DataFlashBuilder {
  public:
   template <typename T>
   static void put(std::vector<std::byte>& out, const T value) {
-    std::array<std::byte, sizeof(T)> raw{};
-    std::memcpy(raw.data(), &value, sizeof(T));
-    out.insert(out.end(), raw.begin(), raw.end());
+    std::array<std::byte, sizeof(T)> encoded{};
+    std::memcpy(encoded.data(), &value, sizeof(T));
+    out.insert(out.end(), encoded.begin(), encoded.end());
   }
 
   // Text in a fixed-size field, padded with NULs.
@@ -36,13 +36,13 @@ class DataFlashBuilder {
 
   DataFlashBuilder& format(const std::uint8_t type, const std::uint8_t length, const std::string_view name,
                            const std::string_view format, const std::string_view columns) {
-    std::vector<std::byte> body;
-    put(body, type);
-    put(body, length);
-    put_text(body, name, 4);
-    put_text(body, format, 16);
-    put_text(body, columns, 64);
-    return message(128, body);
+    std::vector<std::byte> fields;
+    put(fields, type);
+    put(fields, length);
+    put_text(fields, name, 4);
+    put_text(fields, format, 16);
+    put_text(fields, columns, 64);
+    return message(128, fields);
   }
 
   DataFlashBuilder& raw(const std::vector<std::byte>& bytes) {

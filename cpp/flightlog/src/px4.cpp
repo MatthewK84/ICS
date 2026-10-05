@@ -1,5 +1,6 @@
 // The importer's PX4 half (import.hpp): records and events from a ULog log.
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <format>
@@ -35,9 +36,8 @@ using detail::Reading;
 constexpr double kDegreesE7 = 1e-7;
 constexpr double kMillimetres = 1e-3;
 constexpr std::int64_t kNsPerUs = 1'000;
-// GNSS times from 2100 on are refused, as by the MAVLink adapter: nobody's
-// clock, and later ones would overflow a time in nanoseconds.
-constexpr double kLatestUtcUs = 4'102'444'800'000'000.0;
+constexpr double kLatestUtcUs = static_cast<double>(detail::kLatestUtcUs);
+constexpr double kMaxRelativeUs = 2'147'483'647.0;  // INT32_MAX
 constexpr double kArmed = 2.0;  // vehicle_status ARMING_STATE_ARMED
 constexpr double kMinimumFix = 2.0;
 
@@ -142,17 +142,31 @@ class Fields {
   return gps ? gps : topic(log, "sensor_gps");
 }
 
-// Each GNSS sample with a UTC time: the receiver's time, at the boot time
-// timestamp + timestamp_time_relative, as sensor_gps defines it.
+// The boot time of a GNSS sample's UTC time, timestamp +
+// timestamp_time_relative, as sensor_gps defines it, if it is one ICS takes.
+// The offset is an int32 there, so a larger one is not an offset.
+[[nodiscard]] std::optional<std::int64_t> receiver_boot_us(const Reading& reading) {
+  const double relative_us = reading.values[1];
+  if (!(std::abs(relative_us) <= kMaxRelativeUs)) {
+    return std::nullopt;
+  }
+  const std::int64_t boot_us = reading.boot_us + static_cast<std::int64_t>(relative_us);
+  if (boot_us < 0 || boot_us > detail::kMaxBootUs) {
+    return std::nullopt;
+  }
+  return boot_us;
+}
+
+// Each GNSS sample with a UTC time: the receiver's time, at its boot time.
 void read_clock(const ULog& log, BootClock& clock, ImportCounts& counts) {
   const std::optional<Topic> gps = gnss_topic(log);
   const auto fields = gps ? Fields::make(*gps, {{"time_utc_usec"}, {"timestamp_time_relative"}}) : std::nullopt;
   for (const std::span<const std::byte> sample : fields ? gps->samples : std::vector<std::span<const std::byte>>()) {
     const std::optional<Reading> reading = fields->read(sample);
     const double utc_us = reading ? reading->values[0] : 0.0;
-    const std::int64_t boot_us = reading ? reading->boot_us + static_cast<std::int64_t>(reading->values[1]) : -1;
-    if (utc_us > 0.0 && utc_us < kLatestUtcUs && boot_us >= 0 && boot_us <= detail::kMaxBootUs) {
-      clock.add(boot_us, utc_from_ns(static_cast<std::int64_t>(utc_us) * kNsPerUs));
+    const std::optional<std::int64_t> boot_us = reading ? receiver_boot_us(*reading) : std::nullopt;
+    if (boot_us && utc_us > 0.0 && utc_us < kLatestUtcUs) {
+      clock.add(*boot_us, utc_from_ns(static_cast<std::int64_t>(utc_us) * kNsPerUs));
       ++counts.gnss_times;
     }
   }

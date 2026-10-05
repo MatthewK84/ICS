@@ -44,6 +44,7 @@ using Messages = std::vector<std::span<const std::byte>>;
 constexpr double kMinimumFix = 2.0;
 constexpr double kThreeDimensional = 3.0;
 constexpr double kMaxWhole = 4'294'967'295.0;  // UINT32_MAX
+constexpr std::int64_t kNsPerUs = 1'000;
 
 // One type of message, with its format.
 struct Type {
@@ -155,7 +156,7 @@ void read_clock(const DataFlash& log, BootClock& clock, ImportCounts& counts) {
     const Result<GpsUtc> utc = week >= 1.0 && is_whole(week) && is_whole(ms)
                                    ? utc_from_gps(static_cast<std::uint32_t>(week), static_cast<std::uint32_t>(ms))
                                    : fail(Error::kInvalidArgument);
-    if (utc) {
+    if (utc && to_utc_ns(utc->utc) < detail::kLatestUtcUs * kNsPerUs) {
       clock.add(reading->boot_us, utc->utc);
       ++counts.gnss_times;
       counts.beyond_leap_table += utc->beyond_table ? 1U : 0U;

@@ -28,3 +28,11 @@ target_include_directories(flightlog_test PRIVATE test)
 target_compile_definitions(flightlog_test PRIVATE
   ICS_EGM96_PATH="${ICS_GEOID_DIR}/egm96-5.pgm"
   ICS_FLIGHTLOG_LOGS="${CMAKE_CURRENT_SOURCE_DIR}/test/logs")
+
+# Onboard logs come from vehicles ICS does not control, so both halves of the
+# importer are fuzzed from the reader to the records (ICS-008). The corpora
+# hold short cuts of the sample logs.
+ics_add_fuzzer(ulog_fuzz SOURCES fuzz/ulog_fuzz.cpp LIBRARIES ics::flightlog
+  CORPUS ${CMAKE_CURRENT_SOURCE_DIR}/fuzz/ulog_corpus)
+ics_add_fuzzer(dataflash_fuzz SOURCES fuzz/dataflash_fuzz.cpp LIBRARIES ics::flightlog
+  CORPUS ${CMAKE_CURRENT_SOURCE_DIR}/fuzz/dataflash_corpus)
