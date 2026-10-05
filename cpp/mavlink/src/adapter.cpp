@@ -168,6 +168,10 @@ void Adapter::system_time(const SystemTime& message, const Context& context) {
   }
   const auto utc = std::chrono::microseconds(static_cast<std::int64_t>(message.time_unix_usec));
   vehicles_[context.system].boot_to_utc = Duration(utc) - Duration(std::chrono::milliseconds(message.time_boot_ms));
+  context.out.clocks.push_back(SystemClock{.system = context.system,
+                                           .time_boot_ms = message.time_boot_ms,
+                                           .time_unix_usec = message.time_unix_usec,
+                                           .received = context.received});
 }
 
 void Adapter::position(const GlobalPositionInt& message, const Context& context) {

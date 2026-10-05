@@ -36,6 +36,8 @@ class BootClock {
  public:
   void add(std::int64_t boot_us, UtcTime utc);
   [[nodiscard]] bool empty() const noexcept { return offsets_.empty(); }
+  // Every time added, in boot time order.
+  [[nodiscard]] std::vector<GnssTime> times() const;
   // The UTC time of a boot time: by the latest offset at or before it, or by
   // the first offset. Nothing without any offset.
   [[nodiscard]] std::optional<UtcTime> utc(std::int64_t boot_us) const;
@@ -126,8 +128,8 @@ void set_sigmas(v1::PliRecord& out, std::optional<double> horizontal, std::optio
 
 [[nodiscard]] v1::PliEvent event(const Context& context, v1::PliEvent::Kind kind, std::string detail);
 
-// Times every record and event by the clock, and puts the events in boot
-// time order.
+// Times every record and event by the clock, puts the events in boot time
+// order, and keeps the clock's GNSS times.
 void stamp(LogContents& contents, const BootClock& clock);
 
 }  // namespace ics::flightlog::detail

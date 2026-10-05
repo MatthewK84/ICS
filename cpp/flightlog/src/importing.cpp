@@ -65,6 +65,15 @@ void BootClock::add(const std::int64_t boot_us, const UtcTime utc) {
   offsets_.insert(after, {boot_us, offset});
 }
 
+std::vector<GnssTime> BootClock::times() const {
+  std::vector<GnssTime> out;
+  out.reserve(offsets_.size());
+  std::ranges::transform(offsets_, std::back_inserter(out), [](const std::pair<std::int64_t, Duration>& offset) {
+    return GnssTime{.boot_us = offset.first, .utc = from_boot(offset.first, offset.second)};
+  });
+  return out;
+}
+
 std::optional<UtcTime> BootClock::utc(const std::int64_t boot_us) const {
   if (offsets_.empty()) {
     return std::nullopt;
@@ -128,6 +137,7 @@ v1::PliEvent event(const Context& context, const v1::PliEvent::Kind kind, std::s
 
 void stamp(LogContents& contents, const BootClock& clock) {
   contents.timed = !clock.empty();
+  contents.gnss_times = clock.times();
   const v1::PliTimeBasis basis = contents.timed ? v1::PLI_TIME_BASIS_VEHICLE_GNSS : v1::PLI_TIME_BASIS_UNSPECIFIED;
   const auto utc_ns = [&clock](const std::int64_t boot_us) {
     const std::optional<UtcTime> utc = clock.utc(boot_us);

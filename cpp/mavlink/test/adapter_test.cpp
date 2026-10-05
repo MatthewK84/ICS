@@ -115,6 +115,11 @@ TEST_F(AdapterTest, MakesARecordFromAPositionWithTheVehiclesTimeFixAndAttitude) 
   EXPECT_EQ(record.attitude().y(), -0.5);
   EXPECT_EQ(record.attitude().z(), 0.5);
   EXPECT_TRUE(out_.events.empty());
+  ASSERT_EQ(out_.clocks.size(), 1U);
+  EXPECT_EQ(out_.clocks[0].system, 1U);
+  EXPECT_EQ(out_.clocks[0].time_boot_ms, 654321U);
+  EXPECT_EQ(out_.clocks[0].time_unix_usec, 1790000000123456U);
+  EXPECT_EQ(out_.clocks[0].received, kT0);
 }
 
 TEST_F(AdapterTest, TakesTheReceiptTimeUntilTheVehicleSendsUtc) {
@@ -136,6 +141,7 @@ TEST_F(AdapterTest, TakesTheReceiptTimeUntilTheVehicleSendsUtc) {
     EXPECT_FALSE(position.record.has_attitude());
   }
   EXPECT_EQ(out_.positions[1].record.valid_utc_ns(), to_utc_ns(kT0 + seconds(1)));
+  EXPECT_TRUE(out_.clocks.empty());
 }
 
 TEST_F(AdapterTest, LeavesOutAFixAndAttitudeOlderThanMaxAge) {

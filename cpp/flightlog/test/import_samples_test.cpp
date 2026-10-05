@@ -2,6 +2,7 @@
 // (logs/README.md). Every estimated position and every GNSS fix pyulog or
 // pymavlink counted (logs/expected.tsv) becomes a record, timed from the
 // log's GNSS time where it has one.
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -43,6 +44,7 @@ TEST(ImportSamples, ExtractsEveryStateOfTheSitlPx4LogUntimed) {
   const std::string log = "px4-crossing.ulg";
   const LogContents contents = import(log);
   EXPECT_FALSE(contents.timed);
+  EXPECT_TRUE(contents.gnss_times.empty());
   ASSERT_EQ(contents.states.size(), std::stoul(testing::expected_value(log, "valid_global")));
   EXPECT_EQ(contents.gnss.size(), std::stoul(testing::expected_value(log, "fixed_gps")));
   EXPECT_EQ(contents.counts.gnss_times, 0U);
@@ -83,6 +85,8 @@ TEST(ImportSamples, TimesPx4StatesByTheReceiversUtc) {
   const Expected gps = expected(log, "first_gps").at(0);
   EXPECT_EQ(contents.gnss.front().record.valid_utc_ns(), std::stoll(gps.named("time_utc_usec")) * 1000);
   EXPECT_EQ(contents.gnss.front().record.fix_type(), v1::PliRecord::FIX_TYPE_TWO_DIMENSIONAL);
+  ASSERT_EQ(contents.gnss_times.size(), contents.counts.gnss_times);
+  EXPECT_TRUE(std::ranges::is_sorted(contents.gnss_times, {}, &GnssTime::boot_us));
   EXPECT_FALSE(contents.gnss.front().record.has_vertical_sigma_m());
   EXPECT_EQ(kinds(contents, false),
             (std::vector{v1::PliEvent::KIND_MODE_CHANGED, v1::PliEvent::KIND_ARMED, v1::PliEvent::KIND_MODE_CHANGED,
@@ -133,6 +137,9 @@ TEST(ImportSamples, ExtractsEveryStateOfTheSitlArduCopterLogTimedByGpsWeek) {
                     .utc);
   EXPECT_EQ(first.boot_us, std::stoll(pos.named("TimeUS")));
   EXPECT_EQ(first.record.valid_utc_ns(), gps_utc_ns + ((first.boot_us - std::stoll(gps.named("TimeUS"))) * 1000));
+  ASSERT_EQ(contents.gnss_times.size(), contents.counts.gnss_times);
+  EXPECT_EQ(contents.gnss_times.front().boot_us, std::stoll(gps.named("TimeUS")));
+  EXPECT_EQ(to_utc_ns(contents.gnss_times.front().utc), gps_utc_ns);
   EXPECT_EQ(first.record.entity_id(), "2");
   EXPECT_EQ(first.record.role(), v1::ENTITY_ROLE_TARGET);
   EXPECT_EQ(first.record.source(), v1::PLI_SOURCE_DATAFLASH);

@@ -6,7 +6,8 @@
 // - FrameReader only returns frames of messages ICS reads;
 // - no frame yields more than one record, and every record's latitude,
 //   longitude and height are a real geodetic point;
-// - every event names the system it concerns.
+// - every event names the system it concerns;
+// - every clock pair passed on has a UTC time after 1970 and before 2100.
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -35,6 +36,8 @@ constexpr int kGridWidth = 8;
 constexpr int kGridHeight = 5;
 constexpr std::uint16_t kGridSample = 1000;
 constexpr std::int64_t kStartNs = 1'790'000'000'000'000'000;
+// 2100 as a Unix time, in microseconds: the adapter takes no UTC time from then.
+constexpr std::uint64_t kLatestUnixMicroseconds = 4'102'444'800'000'000;
 
 void require(const bool condition) {
   if (!condition) {
@@ -68,6 +71,9 @@ void require_sound(const Output& out, const std::size_t frames) {
   }
   for (const ics::v1::PliEvent& event : out.events) {
     require(!event.entity_id().empty());
+  }
+  for (const ics::mavlink::SystemClock& clock : out.clocks) {
+    require(clock.time_unix_usec > 0 && clock.time_unix_usec < kLatestUnixMicroseconds);
   }
 }
 
