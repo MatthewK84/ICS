@@ -142,7 +142,7 @@ struct Readable {
 
 // Whether a value is a whole number ICS can take as a uint32.
 [[nodiscard]] bool is_whole(const double value) noexcept {
-  return value >= 0.0 && value <= kMaxWhole && std::trunc(value) == value;
+  return value >= 0.0 && value <= kMaxWhole && std::fmod(value, 1.0) == 0.0;
 }
 
 // Each first-instance GPS message with a time: its week and milliseconds,

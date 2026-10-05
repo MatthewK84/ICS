@@ -99,9 +99,9 @@ TEST(DataFlash, ReadsTextAndHalfFloats) {
 }
 
 TEST(DataFlash, ConvertsHalfFloatsOfEveryKind) {
-  constexpr double kInfinity = std::numeric_limits<double>::infinity();
+  const double infinity = std::numeric_limits<double>::infinity();
   const std::array<std::pair<std::uint16_t, double>, 5> cases{
-      {{0x3C00, 1.0}, {0x0000, 0.0}, {0x7BFF, 65504.0}, {0x7C00, kInfinity}, {0xFC00, -kInfinity}}};
+      {{0x3C00, 1.0}, {0x0000, 0.0}, {0x7BFF, 65504.0}, {0x7C00, infinity}, {0xFC00, -infinity}}};
   for (const auto& [bits, expected] : cases) {
     DataFlashBuilder builder;
     builder.format(kText, 5, "HLF", "g", "g").message(kText, body(bits));
