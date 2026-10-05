@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <numeric>
 #include <optional>
 #include <span>
 #include <vector>
@@ -36,15 +37,16 @@ struct Reference {
 [[nodiscard]] Reference reference(const std::span<const ClockSample> samples) {
   static_cast<void>(check(!samples.empty()));
   const std::int64_t first = offset_ns(samples.front());
-  double sum = 0.0;
-  for (const ClockSample& sample : samples) {
-    sum += static_cast<double>(offset_ns(sample) - first);
-  }
+  const auto moved = [first](const ClockSample& sample) { return static_cast<double>(offset_ns(sample) - first); };
+  const double sum = std::accumulate(samples.begin(), samples.end(), 0.0,
+                                     [&moved](const double total, const ClockSample& sample) {
+                                       return total + moved(sample);
+                                     });
   const double mean = sum / static_cast<double>(samples.size());
-  double spread = 0.0;
-  for (const ClockSample& sample : samples) {
-    spread = std::max(spread, std::abs(static_cast<double>(offset_ns(sample) - first) - mean));
-  }
+  const double spread = std::accumulate(samples.begin(), samples.end(), 0.0,
+                                        [&moved, mean](const double widest, const ClockSample& sample) {
+                                          return std::max(widest, std::abs(moved(sample) - mean));
+                                        });
   return Reference{.offset_ns = first + std::llround(mean), .spread = Nanoseconds(spread)};
 }
 

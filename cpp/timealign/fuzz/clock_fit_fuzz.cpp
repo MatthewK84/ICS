@@ -6,12 +6,14 @@
 //   rejected, with residuals that are finite and not negative;
 // - a drift check measures every position, with an error that is not
 //   negative.
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <iterator>
 #include <span>
 #include <vector>
 
@@ -69,9 +71,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     require_sound(*fit, samples.size());
   }
   std::vector<std::int64_t> positions;
-  for (const ClockSample& sample : samples) {
-    positions.push_back(sample.boot_us);
-  }
+  std::ranges::transform(samples, std::back_inserter(positions), &ClockSample::boot_us);
   const ics::timealign::Injection injection{.ppm = static_cast<double>(static_cast<std::int8_t>(input[2])) * 2.0,
                                             .offset = std::chrono::seconds(input[3] % 16U)};
   const ics::timealign::Withholding withholding{.from = 0.25, .to = static_cast<double>(input[3] / 16U) / 16.0};

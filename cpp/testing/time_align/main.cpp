@@ -66,8 +66,8 @@ struct Plan {
 template <typename T>
 [[nodiscard]] std::optional<T> number(const std::string_view text) noexcept {
   T out{};
-  const std::from_chars_result read = std::from_chars(text.data(), text.data() + text.size(), out);
-  if (read.ec != std::errc() || read.ptr != text.data() + text.size() || text.empty()) {
+  const std::from_chars_result read = std::from_chars(text.begin(), text.end(), out);
+  if (read.ec != std::errc() || read.ptr != text.end() || text.empty()) {
     return std::nullopt;
   }
   return out;

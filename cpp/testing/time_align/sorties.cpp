@@ -7,6 +7,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <utility>
 
@@ -32,8 +33,8 @@ constexpr std::int64_t kNsPerUs = 1'000;
 // The MAVLink system a record is from: the adapter names it in entity_id.
 std::uint8_t system_of(const v1::PliRecord& record) {
   unsigned system = 0;
-  const std::string& id = record.entity_id();
-  const std::from_chars_result read = std::from_chars(id.data(), id.data() + id.size(), system);
+  const std::string_view id = record.entity_id();
+  const std::from_chars_result read = std::from_chars(id.begin(), id.end(), system);
   return read.ec == std::errc() ? static_cast<std::uint8_t>(system) : std::uint8_t{0};
 }
 

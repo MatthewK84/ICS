@@ -209,9 +209,9 @@ bool report_log(const std::size_t index, const std::string& path, const Vehicles
   std::vector<ClockSample> samples =
       sortie ? vehicles.at(static_cast<std::uint8_t>(contents->system_id)).sorties[*sortie].samples
              : std::vector<ClockSample>();
-  for (const flightlog::GnssTime& time : contents->gnss_times) {
-    samples.push_back(ClockSample{.boot_us = time.boot_us, .utc_ns = to_utc_ns(time.utc)});
-  }
+  std::ranges::transform(contents->gnss_times, std::back_inserter(samples), [](const flightlog::GnssTime& time) {
+    return ClockSample{.boot_us = time.boot_us, .utc_ns = to_utc_ns(time.utc)};
+  });
   std::ranges::sort(samples, {}, &ClockSample::boot_us);
   const Result<ClockFit> fit = timealign::fit_clock(samples);
   std::printf(R"({"kind":"log","log":%zu,"system":%u,"sortie":%lld,"samples":%zu,"log_gnss_times":%zu,%s})" "\n",
