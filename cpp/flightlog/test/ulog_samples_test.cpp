@@ -52,66 +52,66 @@ std::vector<std::span<const std::byte>> where(const ULog& log, const std::string
   return out;
 }
 
-class ULogSamples : public ::testing::TestWithParam<std::string> {
- protected:
-  void SetUp() override {
-    bytes_ = testing::log_file(GetParam());
-    Result<ULog> parsed = ULog::parse(bytes_);
-    ASSERT_TRUE(parsed.has_value());
-    log_ = std::move(parsed).value();
+// Runs a check on each sample log, parsed. A failed ASSERT ends the check of
+// that log only.
+void for_each_log(void (*check)(const std::string& name, const ULog& log)) {
+  for (const std::string& name : kLogs) {
+    SCOPED_TRACE(name);
+    const std::vector<std::byte> bytes = testing::log_file(name);
+    const Result<ULog> log = ULog::parse(bytes);
+    ASSERT_TRUE(log.has_value());
+    check(name, *log);
   }
-  [[nodiscard]] const ULog& log() const { return *log_; }
-
- private:
-  std::vector<std::byte> bytes_;
-  std::optional<ULog> log_;
-};
-
-TEST_P(ULogSamples, HoldEverySampleOfEveryTopic) {
-  EXPECT_FALSE(log().counts().corrupt);
-  for (const auto& [topic, count] : testing::expected_counts(GetParam())) {
-    EXPECT_EQ(log().samples(topic, 0).size(), count) << topic;
-  }
-  EXPECT_EQ(log().parameter("MAV_SYS_ID"), std::stod(testing::expected_value(GetParam(), "system_id")));
 }
 
-TEST_P(ULogSamples, ReadTheLoggedStrings) {
-  ASSERT_EQ(log().strings().size(), std::stoul(testing::expected_value(GetParam(), "strings")));
-  const Expected first = expected(GetParam(), "first_string").at(0);
-  EXPECT_EQ(log().strings()[0].timestamp_us, std::stoull(first.values.at(0)));
-  EXPECT_EQ(log().strings()[0].text, first.values.at(1));
+void hold_every_sample_of_every_topic(const std::string& name, const ULog& log) {
+  EXPECT_FALSE(log.counts().corrupt);
+  for (const auto& [topic, count] : testing::expected_counts(name)) {
+    EXPECT_EQ(log.samples(topic, 0).size(), count) << topic;
+  }
+  EXPECT_EQ(log.parameter("MAV_SYS_ID"), std::stod(testing::expected_value(name, "system_id")));
 }
 
-TEST_P(ULogSamples, ReadPositionsGnssVelocityAndAttitudeAsPyulogDoes) {
+void read_the_logged_strings(const std::string& name, const ULog& log) {
+  ASSERT_EQ(log.strings().size(), std::stoul(testing::expected_value(name, "strings")));
+  const Expected first = expected(name, "first_string").at(0);
+  EXPECT_EQ(log.strings()[0].timestamp_us, std::stoull(first.values.at(0)));
+  EXPECT_EQ(log.strings()[0].text, first.values.at(1));
+}
+
+void read_positions_and_gnss(const std::string& name, const ULog& log) {
   const std::vector<std::tuple<std::string, std::string, std::string>> topics{
       {"vehicle_global_position", "lat_lon_valid", "global"}, {"vehicle_gps_position", "", "gps"}};
   for (const auto& [topic, flag, key] : topics) {
-    const std::vector<Expected> first = expected(GetParam(), "first_" + key);
+    const std::vector<Expected> first = expected(name, "first_" + key);
     if (first.empty()) {
       continue;
     }
-    std::vector<std::span<const std::byte>> samples = where(log(), topic, flag);
+    std::vector<std::span<const std::byte>> samples = where(log, topic, flag);
     if (key == "gps") {
-      const ULogField fix = find_field(log().format(topic)->get(), "fix_type").value();
+      const ULogField fix = find_field(log.format(topic)->get(), "fix_type").value();
       std::erase_if(samples, [&fix](const std::span<const std::byte> s) { return read(fix, s) < 2.0; });
     }
     ASSERT_FALSE(samples.empty()) << topic;
-    expect_sample(log().format(topic)->get(), samples.front(), first.at(0));
-    expect_sample(log().format(topic)->get(), samples.back(), expected(GetParam(), "last_" + key).at(0));
+    expect_sample(log.format(topic)->get(), samples.front(), first.at(0));
+    expect_sample(log.format(topic)->get(), samples.back(), expected(name, "last_" + key).at(0));
   }
-  expect_sample(log().format("vehicle_attitude")->get(), log().samples("vehicle_attitude", 0).at(0),
-                expected(GetParam(), "first_attitude").at(0));
-  expect_sample(log().format("vehicle_local_position")->get(), log().samples("vehicle_local_position", 0).at(0),
-                expected(GetParam(), "first_local").at(0));
 }
 
-TEST_P(ULogSamples, ReadEachChangeOfArmingAndNavigationState) {
-  const ULogFormat& format = log().format("vehicle_status")->get();
+void read_velocity_and_attitude(const std::string& name, const ULog& log) {
+  expect_sample(log.format("vehicle_attitude")->get(), log.samples("vehicle_attitude", 0).at(0),
+                expected(name, "first_attitude").at(0));
+  expect_sample(log.format("vehicle_local_position")->get(), log.samples("vehicle_local_position", 0).at(0),
+                expected(name, "first_local").at(0));
+}
+
+void read_each_status_change(const std::string& name, const ULog& log) {
+  const ULogFormat& format = log.format("vehicle_status")->get();
   const ULogField timestamp = find_field(format, "timestamp").value();
   const ULogField arming = find_field(format, "arming_state").value();
   const ULogField nav = find_field(format, "nav_state").value();
   std::vector<std::tuple<std::int64_t, double, double>> changes;
-  for (const std::span<const std::byte> sample : log().samples("vehicle_status", 0)) {
+  for (const std::span<const std::byte> sample : log.samples("vehicle_status", 0)) {
     const std::tuple<std::int64_t, double, double> now{read_integer(timestamp, sample).value(),
                                                         read(arming, sample).value(), read(nav, sample).value()};
     if (changes.empty() || std::get<1>(changes.back()) != std::get<1>(now) ||
@@ -119,7 +119,7 @@ TEST_P(ULogSamples, ReadEachChangeOfArmingAndNavigationState) {
       changes.push_back(now);
     }
   }
-  const std::vector<Expected> lines = expected(GetParam(), "status");
+  const std::vector<Expected> lines = expected(name, "status");
   ASSERT_EQ(changes.size(), lines.size());
   for (std::size_t i = 0; i < lines.size(); ++i) {
     EXPECT_EQ(std::get<0>(changes[i]), std::stoll(lines[i].values.at(0)));
@@ -128,11 +128,16 @@ TEST_P(ULogSamples, ReadEachChangeOfArmingAndNavigationState) {
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(SampleLogs, ULogSamples, ::testing::ValuesIn(kLogs), [](const auto& info) {
-  std::string name = info.param.substr(0, info.param.find('.'));
-  std::erase(name, '-');
-  return name;
-});
+TEST(ULogSamples, HoldEverySampleOfEveryTopic) { for_each_log(hold_every_sample_of_every_topic); }
+
+TEST(ULogSamples, ReadTheLoggedStrings) { for_each_log(read_the_logged_strings); }
+
+TEST(ULogSamples, ReadPositionsGnssVelocityAndAttitudeAsPyulogDoes) {
+  for_each_log(read_positions_and_gnss);
+  for_each_log(read_velocity_and_attitude);
+}
+
+TEST(ULogSamples, ReadEachChangeOfArmingAndNavigationState) { for_each_log(read_each_status_change); }
 
 }  // namespace
 }  // namespace ics::flightlog

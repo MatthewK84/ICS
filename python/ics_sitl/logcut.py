@@ -30,8 +30,9 @@ ULOG_LOGGING_TAGGED: Final = ord("C")
 ULOG_REMOVE_LOGGED: Final = ord("R")
 ULOG_MSG_ID: Final = struct.Struct("<H")
 ULOG_TIMESTAMP: Final = struct.Struct("<Q")
-# Where each kind of message holds its time stamp: after a message ID, a log level, or a level and a tag.
-ULOG_TIMESTAMP_AT: Final = {ULOG_DATA: 2, ULOG_LOGGING: 1, ULOG_LOGGING_TAGGED: 3}
+# Where each kind of message holds its time stamp, as (kind, offset): after a message ID, a log level, or a
+# level and a tag.
+ULOG_TIMESTAMP_AT: Final = ((ULOG_DATA, 2), (ULOG_LOGGING, 1), (ULOG_LOGGING_TAGGED, 3))
 
 DATAFLASH_HEAD: Final = b"\xa3\x95"
 DATAFLASH_FMT_TYPE: Final = 128
@@ -91,7 +92,7 @@ def ulog_messages(data: bytes) -> Iterator[tuple[int, bytes]]:
 
 def ulog_time(kind: int, message: bytes) -> int | None:
     """The time stamp of a data or logging message, or None for any other."""
-    at = ULOG_TIMESTAMP_AT.get(kind)
+    at = next((offset for timed, offset in ULOG_TIMESTAMP_AT if timed == kind), None)
     if at is None:
         return None
     if len(message) < ULOG_MESSAGE.size + at + ULOG_TIMESTAMP.size:
