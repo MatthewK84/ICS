@@ -25,6 +25,7 @@ using testing::DataFlashBuilder;
 
 constexpr std::uint8_t kNumbers = 200;
 constexpr std::uint8_t kText = 201;
+constexpr std::uint8_t kHalf = 202;
 
 DataFlashBuilder numbers() {
   DataFlashBuilder builder;
@@ -141,6 +142,17 @@ TEST(DataFlash, IgnoresFormatsThatDoNotFitTheirLength) {
   }
 }
 
+TEST(DataFlash, TakesFmtDescribingItselfOnlyAtTheLengthItReads) {
+  DataFlashBuilder builder;
+  builder.format(128, 89, "FMT", "BBnNZ", "Type,Length,Name,Format,Columns");
+  builder.format(128, 5, "FMT", "BB", "Type,Length");
+  builder.format(kNumbers, 7, "ONE", "I", "A").message(kNumbers, body(std::uint32_t{1}));
+  const DataFlash log = parse(builder);
+  EXPECT_EQ(log.counts().bad_formats, 1U);
+  EXPECT_EQ(log.format("FMT")->get().length, 89U);
+  EXPECT_EQ(value(log, "ONE", "A"), 1.0);
+}
+
 TEST(DataFlash, TakesARedefinedFormat) {
   DataFlashBuilder builder;
   builder.format(kNumbers, 7, "ONE", "I", "A").message(kNumbers, body(std::uint32_t{1}));
@@ -159,6 +171,19 @@ TEST(DataFlash, ReadsNothingPastTheEndOfAMessage) {
   const DataFlashColumn text{.name = "N", .type = 'N', .offset = 8, .size = 16};
   EXPECT_EQ(read_text(text, cut), std::nullopt);
   EXPECT_EQ(read_text(DataFlashColumn{.name = "n", .type = 'n', .offset = 11, .size = 4}, cut), std::nullopt);
+}
+
+TEST(DataFlash, ReadsNoColumnOfAMessageCutBeforeIt) {
+  DataFlashBuilder builder = numbers();
+  builder.format(kHalf, 5, "HLF", "g", "g").message(kHalf, body(std::uint16_t{0x3C00}));
+  const DataFlash log = parse(builder);
+  for (const std::string type : {"NUM", "HLF"}) {
+    const std::span<const std::byte> message = log.messages(type).at(0);
+    for (const DataFlashColumn& column : log.format(type)->get().columns) {
+      EXPECT_TRUE(read(column, message).has_value()) << column.name;
+      EXPECT_EQ(read(column, message.first(column.offset)), std::nullopt) << column.name;
+    }
+  }
 }
 
 TEST(DataFlash, RefusesALogLargerThanItsLimit) {

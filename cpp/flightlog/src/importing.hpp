@@ -1,9 +1,11 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <optional>
 #include <string>
 #include <utility>
@@ -79,28 +81,27 @@ struct Reading {
 };
 
 // The latest of a series of samples at or before a time, no older than a
-// limit. Times asked for must not go back.
+// limit. A log's times may go back, so the samples are kept in time order.
 template <typename T>
 class Latest {
  public:
   Latest(std::vector<std::pair<std::int64_t, T>> samples, const Duration max_age)
       : samples_(std::move(samples)),
-        max_age_us_(std::chrono::duration_cast<std::chrono::microseconds>(max_age).count()) {}
+        max_age_us_(std::chrono::duration_cast<std::chrono::microseconds>(max_age).count()) {
+    std::ranges::stable_sort(samples_, {}, &std::pair<std::int64_t, T>::first);
+  }
 
-  [[nodiscard]] std::optional<T> at(const std::int64_t boot_us) {
-    while (next_ < samples_.size() && samples_[next_].first <= boot_us) {
-      ++next_;
-    }
-    if (next_ == 0 || boot_us - samples_[next_ - 1].first > max_age_us_) {
+  [[nodiscard]] std::optional<T> at(const std::int64_t boot_us) const {
+    const auto after = std::ranges::upper_bound(samples_, boot_us, {}, &std::pair<std::int64_t, T>::first);
+    if (after == samples_.begin() || boot_us - std::prev(after)->first > max_age_us_) {
       return std::nullopt;
     }
-    return samples_[next_ - 1].second;
+    return std::prev(after)->second;
   }
 
  private:
   std::vector<std::pair<std::int64_t, T>> samples_;
   std::int64_t max_age_us_ = 0;
-  std::size_t next_ = 0;
 };
 
 // A record with the vehicle's identity, a position and a fix type.

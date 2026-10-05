@@ -214,8 +214,8 @@ void read_clock(const DataFlash& log, BootClock& clock, ImportCounts& counts) {
 [[nodiscard]] std::vector<LogRecord> states(const DataFlash& log, const Context& context, ImportCounts& counts) {
   std::vector<LogRecord> out;
   const Readable pos = readable(type(log, "POS"), {"Lat", "Lng", "Alt"});
-  Latest<Ned> velocity(velocities(log), context.settings.max_age);
-  Latest<Quaternion> attitude(attitudes(log), context.settings.max_age);
+  const Latest<Ned> velocity(velocities(log), context.settings.max_age);
+  const Latest<Quaternion> attitude(attitudes(log), context.settings.max_age);
   for (const std::span<const std::byte> message : pos.messages) {
     const std::optional<Reading> reading = pos.columns->read(message);
     const Result<frames::Geodetic> where =

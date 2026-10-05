@@ -200,8 +200,8 @@ void read_clock(const ULog& log, BootClock& clock, ImportCounts& counts) {
   const bool ellipsoid = global && find_field(global->format, "alt_ellipsoid");
   const auto fields =
       global ? Fields::make(*global, {{"lat"}, {"lon"}, {ellipsoid ? "alt_ellipsoid" : "alt"}}) : std::nullopt;
-  Latest<Ned> velocity(velocities(log), context.settings.max_age);
-  Latest<Quaternion> attitude(attitudes(log), context.settings.max_age);
+  const Latest<Ned> velocity(velocities(log), context.settings.max_age);
+  const Latest<Quaternion> attitude(attitudes(log), context.settings.max_age);
   for (const std::span<const std::byte> sample : fields ? global->samples : std::vector<std::span<const std::byte>>()) {
     const std::optional<Reading> reading = fields->read(sample);
     const Result<frames::Geodetic> where = reading ? place(context, reading->values, ellipsoid) : fail(Error::kMalformed);

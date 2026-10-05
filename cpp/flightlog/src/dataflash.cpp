@@ -78,12 +78,14 @@ constexpr std::array<TypeSize, 21> kTypeSizes{{{'a', 64}, {'b', 1},  {'B', 1}, {
   const std::string name = detail::text(body.subspan(2, kNameBytes));
   const std::string format = detail::text(body.subspan(2 + kNameBytes, kFormatBytes));
   const std::string names = detail::text(body.subspan(2 + kNameBytes + kFormatBytes, kColumnsBytes));
+  const std::uint8_t type = std::to_integer<std::uint8_t>(body[0]);
   const std::size_t length = std::to_integer<std::size_t>(body[1]);
   std::optional<std::vector<DataFlashColumn>> columns = lay_out(format, names, length);
-  if (!columns || name.empty()) {
+  // FMT may describe itself, but only as the length this reader takes.
+  if (!columns || name.empty() || (type == kFmtType && length != kFmtLength)) {
     return std::nullopt;
   }
-  return DataFlashFormat{.type = std::to_integer<std::uint8_t>(body[0]), .name = name, .length = length, .columns = std::move(*columns)};
+  return DataFlashFormat{.type = type, .name = name, .length = length, .columns = std::move(*columns)};
 }
 
 [[nodiscard]] DataFlashFormat fmt_format() {
@@ -135,6 +137,8 @@ Result<DataFlash> DataFlash::parse(const std::span<const std::byte> log) {
       ++offset;
       continue;
     }
+    // Every format is at least a header long, so each message moves on.
+    static_cast<void>(check(found->second.length >= kHeaderBytes));
     if (log.size() - offset < found->second.length) {
       out.counts_.truncated = true;
       return out;

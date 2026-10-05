@@ -74,6 +74,23 @@ TEST(ULog, LeavesOutTrailingPaddingAndReadsBooleansAsZeroOrOne) {
   EXPECT_EQ(logged.size(), log.format("pos")->get().size - 2);
   EXPECT_EQ(read(field(log, "pos", "ok"), logged), 1.0);
   EXPECT_EQ(read(field(log, "pos", "_padding0"), logged), std::nullopt);
+  EXPECT_EQ(read(field(log, "pos", "ok"), logged.first(10)), std::nullopt);
+}
+
+TEST(ULog, ReadsEachIntegerTypeOrNothingFromASampleTooShort) {
+  ULogBuilder builder;
+  builder.format("ints:int8_t a;uint8_t b;int16_t c;uint16_t d;int32_t e;uint32_t f;int64_t g;uint64_t h;");
+  builder.add_logged(0, 0, "ints");
+  builder.data(0, sample(std::int8_t{-1}, std::uint8_t{2}, std::int16_t{-3}, std::uint16_t{4}, std::int32_t{-5},
+                         std::uint32_t{6}, std::int64_t{-7}, std::uint64_t{8}));
+  const ULog log = parse(builder);
+  const std::span<const std::byte> logged = log.samples("ints", 0).at(0);
+  const std::vector<std::int64_t> expected{-1, 2, -3, 4, -5, 6, -7, 8};
+  for (std::size_t i = 0; i < expected.size(); ++i) {
+    const ULogField integer = log.format("ints")->get().fields.at(i);
+    EXPECT_EQ(read_integer(integer, logged), expected[i]) << i;
+    EXPECT_EQ(read_integer(integer, std::span<const std::byte>()), std::nullopt) << i;
+  }
 }
 
 TEST(ULog, ReadsTheLargestIntegersExactlyOrNotAtAll) {
@@ -104,6 +121,16 @@ TEST(ULog, LaysOutNestedFormatsWhateverTheirOrder) {
   EXPECT_EQ(log.counts().unresolved_formats, 0U);
 }
 
+TEST(ULog, LaysOutAFormatNestingOneFormatTwiceAndSkipsEmptyFields) {
+  ULogBuilder builder;
+  builder.format("pair:inner a;;inner b;").format("inner:float x;");
+  const ULog log = parse(builder);
+  const ULogFormat& pair = log.format("pair")->get();
+  EXPECT_EQ(pair.size, 8U);
+  EXPECT_EQ(pair.fields.size(), 2U);
+  EXPECT_EQ(find_field(pair, "b")->offset, 4U);
+}
+
 TEST(ULog, CannotLayOutUndefinedCircularOrHugeFormats) {
   ULogBuilder builder;
   builder.format("missing:absent a;").format("loop:loop again;").format("a:b x;").format("b:a y;");
@@ -123,6 +150,7 @@ TEST(ULog, KeepsTheFirstValueOfEachParameterAndTextInformation) {
   builder.key_value('P', "float GAIN", sample(0.5F));
   builder.key_value('P', "double WIDE", sample(1.0));
   builder.key_value('P', "float[2] PAIR", sample(1.0F, 2.0F));
+  builder.key_value('P', "int32_t[2] PAIRS", sample(std::int32_t{1}, std::int32_t{2}));
   builder.key_value('I', "char[3] sys_name", sample(std::array<char, 3>{'P', 'X', '4'}));
   builder.key_value('I', "uint32_t ver_hw", sample(std::uint32_t{1}));
   const ULog log = parse(builder);
@@ -130,6 +158,7 @@ TEST(ULog, KeepsTheFirstValueOfEachParameterAndTextInformation) {
   EXPECT_EQ(log.parameter("GAIN"), 0.5);
   EXPECT_EQ(log.parameter("WIDE"), std::nullopt);
   EXPECT_EQ(log.parameter("PAIR"), std::nullopt);
+  EXPECT_EQ(log.parameter("PAIRS"), std::nullopt);
   EXPECT_EQ(log.info("sys_name"), "PX4");
   EXPECT_EQ(log.info("ver_hw"), std::nullopt);
   EXPECT_FALSE(log.counts().corrupt);
@@ -177,11 +206,21 @@ TEST(ULog, StopsAtAMessageCutShort) {
   }
 }
 
+TEST(ULog, StopsAtAMessageWhoseSizeIsCutShort) {
+  ULogBuilder builder;
+  builder.logging(5, "kept").bytes().push_back(std::byte{1});
+  const ULog log = parse(builder);
+  EXPECT_EQ(log.strings().size(), 1U);
+  EXPECT_TRUE(log.counts().truncated);
+}
+
 TEST(ULog, StopsAtAMalformedMessage) {
   const std::vector<std::pair<char, std::vector<std::byte>>> malformed{
       {'F', sample(std::array<char, 3>{'n', 'o', ';'})},
       {'F', sample(std::array<char, 4>{':', 'a', ' ', 'b'})},
       {'F', sample(std::array<char, 8>{'p', ':', 'f', 'l', 'o', 'a', 't', ';'})},
+      {'A', {}},
+      {'A', sample(std::uint8_t{0}, std::uint8_t{1})},
       {'A', sample(std::uint8_t{0}, std::uint16_t{1})},
       {'D', sample(std::uint8_t{0})},
       {'L', sample(std::uint8_t{0}, std::uint32_t{1})},
@@ -200,7 +239,8 @@ TEST(ULog, StopsAtAMalformedMessage) {
 }
 
 TEST(ULog, RejectsBadArrayCounts) {
-  for (const std::string_view text : {"p:float[] a;", "p:float[x] a;", "p:float[65536] a;",
+  for (const std::string_view text : {"p:float[] a;", "p:float[x] a;", "p:float[-1] a;", "p:float[65536] a;",
+                                      "p: float a;", "p:float ;",
                                       "p:[2] a;", "p:float[2 a;", "p:float[99999999999999999999] a;"}) {
     ULogBuilder builder;
     builder.format(text);
@@ -234,6 +274,14 @@ TEST(ULog, IgnoresAppendedOffsetsThatCannotBeUsed) {
   ULogBuilder unflagged;
   unflagged.flag_bits(0, {20, 0, 0}).logging(1, "only");
   EXPECT_EQ(parse(unflagged).strings().size(), 1U);
+}
+
+TEST(ULog, TakesAFlagBitsMessageCutShortAsTruncated) {
+  ULogBuilder builder;
+  builder.flag_bits(1, {0, 0, 0});
+  builder.bytes().resize(16 + 3 + 10);
+  const ULog log = parse(builder);
+  EXPECT_TRUE(log.counts().truncated);
 }
 
 TEST(ULog, RefusesLogsItCannotRead) {

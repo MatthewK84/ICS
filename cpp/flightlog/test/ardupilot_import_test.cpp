@@ -334,9 +334,12 @@ TEST(ArduPilotImport, JoinsOnlyAVelocityAndAttitudeNoOlderThanTheLimit) {
   pos(log, 3'000, 40.0, -100.0, 700.0F);
   pos(log, 1'002'000, 40.0, -100.0, 700.0F);
   pos(log, 1'002'001, 40.0, -100.0, 700.0F);
+  // Times that go back, as after a damaged stretch.
+  pos(log, 1'500, 40.0, -100.0, 700.0F);
+  pos(log, 2'500, 40.0, -100.0, 700.0F);
   const LogContents contents = imported(log.bytes());
-  ASSERT_EQ(contents.states.size(), 4U);
-  const std::vector<bool> expected{false, true, true, false};
+  ASSERT_EQ(contents.states.size(), 6U);
+  const std::vector<bool> expected{false, true, true, false, false, true};
   for (std::size_t i = 0; i < expected.size(); ++i) {
     EXPECT_EQ(contents.states[i].record.has_velocity_enu_mps(), expected[i]) << i;
     EXPECT_EQ(contents.states[i].record.has_attitude(), expected[i]) << i;

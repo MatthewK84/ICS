@@ -134,6 +134,7 @@ struct ULog::Reader {
   [[nodiscard]] bool read_data(std::span<const std::byte> body);
   [[nodiscard]] bool read_logging(std::span<const std::byte> body, bool tagged);
   void resolve_formats();
+  [[nodiscard]] std::size_t nested_size(const std::string& type) const;
   [[nodiscard]] bool lay_out(const std::string& name);
 };
 
@@ -160,10 +161,12 @@ Result<std::vector<std::size_t>> ULog::Reader::section_ends() const {
     }
   }
   ends.push_back(log.size());
+  static_cast<void>(check(std::ranges::is_sorted(ends)));
   return ends;
 }
 
 void ULog::Reader::read_section(const std::size_t begin, const std::size_t end) {
+  static_cast<void>(check(end <= log.size()));
   std::size_t offset = begin;
   while (offset < end) {
     const std::optional<std::uint16_t> size = read<std::uint16_t>(log.first(end), offset);
@@ -336,16 +339,22 @@ void ULog::Reader::resolve_formats() {
       }
     }
   }
+  static_cast<void>(check(out.formats_.size() <= out.raw_formats_.size()));
   out.counts_.unresolved_formats = out.raw_formats_.size() - out.formats_.size();
+}
+
+std::size_t ULog::Reader::nested_size(const std::string& type) const {
+  // resolve_formats() lays out a format only after every format it nests.
+  static_cast<void>(check(out.formats_.contains(type)));
+  return out.formats_.at(type).size;
 }
 
 bool ULog::Reader::lay_out(const std::string& name) {
   ULogFormat format{.name = name, .fields = {}, .size = 0};
   for (const RawField& raw : out.raw_formats_.at(name)) {
-    // resolve_formats() lays out a format only after every format it nests.
+    static_cast<void>(check(format.size <= kMaxFormatBytes));
     const std::optional<BaseType> base = base_type(raw.type);
-    static_cast<void>(check(base.has_value() || out.formats_.contains(raw.type)));
-    const std::size_t element = base ? base->size : out.formats_.at(raw.type).size;
+    const std::size_t element = base ? base->size : nested_size(raw.type);
     if (element * raw.count > kMaxFormatBytes - format.size) {
       return false;
     }
@@ -441,6 +450,16 @@ template <typename T>
   return value ? std::optional<double>(static_cast<double>(*value)) : std::nullopt;
 }
 
+[[nodiscard]] std::optional<double> as_double(const std::optional<std::int64_t> integer) noexcept {
+  return integer ? std::optional<double>(static_cast<double>(*integer)) : std::nullopt;
+}
+
+// A bool: 0, or 1 for any other byte.
+[[nodiscard]] std::optional<double> as_bool(const std::span<const std::byte> sample, const std::size_t at) noexcept {
+  const std::optional<std::uint8_t> value = read<std::uint8_t>(sample, at);
+  return value ? std::optional<double>(*value != 0 ? 1.0 : 0.0) : std::nullopt;
+}
+
 }  // namespace
 
 std::optional<double> read(const ULogField& field, const std::span<const std::byte> sample, const std::size_t index) noexcept {
@@ -453,14 +472,10 @@ std::optional<double> read(const ULogField& field, const std::span<const std::by
       return as_double<float>(sample, *at);
     case ULogType::kDouble:
       return as_double<double>(sample, *at);
-    case ULogType::kBool: {
-      const std::optional<std::uint8_t> value = read<std::uint8_t>(sample, *at);
-      return value ? std::optional<double>(*value != 0 ? 1.0 : 0.0) : std::nullopt;
-    }
-    default: {
-      const std::optional<std::int64_t> integer = read_integer(field, sample, index);
-      return integer ? std::optional<double>(static_cast<double>(*integer)) : std::nullopt;
-    }
+    case ULogType::kBool:
+      return as_bool(sample, *at);
+    default:
+      return as_double(read_integer(field, sample, index));
   }
 }
 
