@@ -1,6 +1,7 @@
 #include "ics/mavlink/modes.hpp"
 
 #include <cstdint>
+#include <optional>
 
 #include <gtest/gtest.h>
 
@@ -48,6 +49,12 @@ TEST(ModeName, NamesArduCopterModes) {
   EXPECT_EQ(mode_name(heartbeat(kArduPilot, kQuadrotor, 4)), "GUIDED");
   EXPECT_EQ(mode_name(heartbeat(kArduPilot, kHexarotor, 5)), "LOITER");
   EXPECT_EQ(mode_name(heartbeat(kArduPilot, kQuadrotor, 28)), "TURTLE");
+}
+
+TEST(ModeName, NamesArduCopterModesByNumber) {
+  EXPECT_EQ(copter_mode_name(5), "LOITER");
+  EXPECT_EQ(copter_mode_name(3), "AUTO");
+  EXPECT_EQ(copter_mode_name(8), std::nullopt);
 }
 
 TEST(ModeName, GivesTheNumberForOtherVehiclesAndAutopilots) {

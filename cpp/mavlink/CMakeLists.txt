@@ -3,6 +3,7 @@
 # into ics.v1.PliRecord and PliEvent.
 add_library(ics_mavlink STATIC
   src/adapter.cpp
+  src/conversions.cpp
   src/frame.cpp
   src/messages.cpp
   src/modes.cpp)

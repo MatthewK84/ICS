@@ -19,6 +19,7 @@
 #include "ics/frames/egm96.hpp"
 #include "ics/frames/enu.hpp"
 #include "ics/frames/geodetic.hpp"
+#include "ics/mavlink/conversions.hpp"
 #include "ics/mavlink/messages.hpp"
 #include "ics/mavlink/modes.hpp"
 
@@ -34,8 +35,6 @@ constexpr double kMetersPerCentimeter = 1e-2;
 // SYSTEM_TIME's UTC times from 2100 on are refused: they are nobody's clock,
 // and much larger ones would overflow a time in nanoseconds.
 constexpr std::uint64_t kLatestUnixMicroseconds = 4'102'444'800'000'000;
-constexpr char kFirstPrintable = 0x20;
-constexpr char kLastPrintable = 0x7E;
 
 [[nodiscard]] v1::PliEvent event(const std::uint8_t system, const UtcTime time, const v1::PliEvent::Kind kind) {
   v1::PliEvent out;
@@ -45,33 +44,6 @@ constexpr char kLastPrintable = 0x7E;
   out.set_time_basis(v1::PLI_TIME_BASIS_RECEIPT);
   out.set_kind(kind);
   return out;
-}
-
-[[nodiscard]] std::string printable(const std::string_view text) {
-  std::string out(text);
-  std::ranges::replace_if(out, [](const char c) { return c < kFirstPrintable || c > kLastPrintable; }, '?');
-  return out;
-}
-
-[[nodiscard]] v1::PliRecord::FixType fix_type(const std::uint8_t gps_fix_type) noexcept {
-  switch (gps_fix_type) {
-    case 0:  // GPS_FIX_TYPE_NO_GPS
-    case 1:  // GPS_FIX_TYPE_NO_FIX
-      return v1::PliRecord::FIX_TYPE_NONE;
-    case 2:
-      return v1::PliRecord::FIX_TYPE_TWO_DIMENSIONAL;
-    case 3:
-    case 8:  // GPS_FIX_TYPE_PPP
-      return v1::PliRecord::FIX_TYPE_THREE_DIMENSIONAL;
-    case 4:
-      return v1::PliRecord::FIX_TYPE_DGNSS;
-    case 5:
-      return v1::PliRecord::FIX_TYPE_RTK_FLOAT;
-    case 6:
-      return v1::PliRecord::FIX_TYPE_RTK_FIXED;
-    default:  // GPS_FIX_TYPE_STATIC, and any value MAVLink adds
-      return v1::PliRecord::FIX_TYPE_OTHER;
-  }
 }
 
 template <typename T>
