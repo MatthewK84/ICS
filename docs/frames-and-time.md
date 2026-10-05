@@ -87,6 +87,8 @@ The other time scales ICS meets convert to UTC where they enter:
 
 The component doing each conversion owns its leap-second offset and must take it from its source (the PTP announce message, or the GNSS navigation message), not from a constant.
 
+One exception: a log that holds only GPS time, with no offset. ArduPilot's DataFlash logs give each GPS fix as GPS week and milliseconds, so the onboard-log importer ([`cpp/flightlog`](../cpp/flightlog/include/ics/flightlog/gps_time.hpp), ICS-025) converts them with a table of IERS's leap seconds, taken from the tz database's `leap-seconds.list`. The table holds until that list expires, on 2027-06-28. A time past then is still converted with the last offset in the table, and counted (`ImportCounts::beyond_leap_table`), since a leap second announced later would be missing from it. When IERS announces a leap second, or the expiry nears, the table in `gps_time.cpp` must be updated. PX4's ULog logs carry the receiver's UTC (`time_utc_usec`), so they need no table.
+
 ## Golden vectors
 
 [`golden/frames/generate.sh`](../golden/frames/generate.sh) runs GeographicLib 2.3's `CartConvert`, `GeoidEval` and `GeoConvert` over the case lists in [`golden/frames/inputs/`](../golden/frames/inputs), in the ics-cpp image:

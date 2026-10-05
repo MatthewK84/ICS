@@ -234,6 +234,28 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
 - **Skipped and counted.** Detection reports with a range and bearing, which ICS does not convert; with no `object_id`; or with no location, or one that cannot be placed. Status reports, tasks, alerts and the other messages give nothing.
 - **Tests.** Dstl's 83 sample messages and a synthetic session ([samples](sapient/test/samples/README.md)), framed and read back in chunks of every size from 1 to 64 bytes. The fuzz target reads its input as a framed stream and as one message.
 
+## Onboard logs
+
+[`flightlog/`](flightlog) is `ics::flightlog` (ICS-025). It imports the logs an autopilot writes on board, PX4's ULog and ArduPilot's DataFlash, and turns their estimator states, raw GNSS fixes and events into `ics.v1.PliRecord` and `PliEvent`, every sample at the rate the log holds it. After a test, they fill gaps in what the PLI adapters recorded live, and the drift fit (ICS-026) aligns their boot clocks.
+
+| Header | Provides |
+|---|---|
+| [`ulog.hpp`](flightlog/include/ics/flightlog/ulog.hpp) | `ULog`: a ULog log's formats, each topic instance's samples, parameters, information and logged strings, with data appended after a crash. A malformed or truncated message ends a section, keeping what came before |
+| [`dataflash.hpp`](flightlog/include/ics/flightlog/dataflash.hpp) | `DataFlash`: a DataFlash log's formats (FMT) and each type's messages; bytes that start no message are skipped and counted, so a damaged log keeps the messages around the damage |
+| [`gps_time.hpp`](flightlog/include/ics/flightlog/gps_time.hpp) | `utc_from_gps`: UTC from a GPS week and milliseconds, through a leap-second table ([Time](../docs/frames-and-time.md#time)) |
+| [`import.hpp`](flightlog/include/ics/flightlog/import.hpp) | `import_log`: either log as records and events, each with the boot time the log gave it |
+
+| Log | States | GNSS fixes | Events |
+|---|---|---|---|
+| PX4 (ULog) | `vehicle_global_position`, with the latest `vehicle_local_position` velocity and `vehicle_attitude` no older than `max_age` (1 s); `eph` and `epv` are the sigmas | `vehicle_gps_position`, or `sensor_gps`, of fix type 2D or better: degrees and metres since PX4 v1.14, 1e-7 degrees and millimetres before | `vehicle_status` arming and navigation state changes, named as v1.17 names them; logged strings |
+| ArduPilot (DataFlash) | `POS`, with EKF3 core 0's velocity (`XKF1`, or EKF2's `NKF1`) and `ATT` | The first receiver's `GPS` messages of status 2D or better, with the matching `GPA` accuracies | `MODE`, named as ArduCopter names its modes when the log is ArduCopter's; `ARM`; `MSG` text |
+
+- **Time.** Each GNSS sample with a time ties the boot clock to UTC: PX4's `time_utc_usec`, the receiver's own UTC, at `timestamp` + `timestamp_time_relative`; ArduPilot's GPS week and milliseconds. A record or event takes the latest such offset at or before it, or the first one, with `PLI_TIME_BASIS_VEHICLE_GNSS`. A log with no GNSS time, such as one from PX4's SIH simulator, is untimed: `PLI_TIME_BASIS_UNSPECIFIED`, `valid_utc_ns` 0, and only the boot times, for ICS-026 to align. GNSS times from 2100 on, and boot times past 2100 as a Unix time, are refused.
+- **Identity.** `entity_id` is the MAVLink system ID the log's parameters give (`MAV_SYS_ID`; `MAV_SYSID`, or `SYSID_THISMAV` before ArduPilot 4.7), so it matches the MAVLink adapter's; 1 if none does. The role comes from the settings, by system ID.
+- **Left out and counted.** Positions not valid or not on the globe, fixes without a 2D fix, and samples too short or with a boot time ICS does not take. A velocity or attitude that is not finite is left off its record, as is a sigma that is not a finite length.
+- **Import tool.** [`testing/log_import`](testing/log_import/main.cpp) is `ics-log-import LOG LATITUDE LONGITUDE HEIGHT [SYSTEM=ROLE]...`, which imports a log and writes JSON lines, as `ics-mavlink-replay` does. The SITL rig saves both autopilots' logs ([`deploy/sitl`](../deploy/sitl/README.md)).
+- **Tests.** The readers find exactly what pyulog and pymavlink find in five sample logs, two from the SITL rig and three from pyulog ([logs](flightlog/test/logs/README.md)), and every estimated position and fix they count becomes a record. Synthetic logs cover every other case. The two fuzz targets import any input, and check that every record and event keeps the importer's promises.
+
 ## Power-of-Ten checks
 
 The C++ rules from the coding-standards table in [docs/build-plan.md](../docs/build-plan.md) are enforced by tools, not review (ICS-005):

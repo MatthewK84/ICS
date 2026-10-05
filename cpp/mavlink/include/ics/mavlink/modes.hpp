@@ -1,6 +1,9 @@
 #pragma once
 
+#include <cstdint>
+#include <optional>
 #include <string>
+#include <string_view>
 
 #include "ics/mavlink/messages.hpp"
 
@@ -16,5 +19,9 @@ namespace ics::mavlink {
 // Any other autopilot or vehicle, or a mode number neither knows, gives the
 // number: "custom mode 7".
 [[nodiscard]] std::string mode_name(const Heartbeat& heartbeat);
+
+// An ArduCopter flight mode's name, by its number, as in HEARTBEAT's
+// custom_mode and the DataFlash MODE message (ICS-025).
+[[nodiscard]] std::optional<std::string_view> copter_mode_name(std::uint32_t mode);
 
 }  // namespace ics::mavlink

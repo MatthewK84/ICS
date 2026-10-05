@@ -8,8 +8,8 @@
 # TAP port and captures it there, flies the engagement with python -m
 # ics_sitl, and checks the capture holds every datagram the rig counted. Every
 # engagement is flown even if one fails; the script then exits 1. OUT_DIR/NAME
-# keeps each engagement's truth.jsonl, summary.json, tap.pcap, tap-counts.json
-# and container logs.
+# keeps each engagement's truth.jsonl, summary.json, tap.pcap, tap-counts.json,
+# container logs and both autopilots' onboard logs.
 #
 # Needs docker with compose, Python 3.12 (PYTHON, default python3), and root
 # for ip, tc and tcpdump (through sudo unless already root). The images are
@@ -74,6 +74,16 @@ stop_capture() {
   wait "${CAPTURE_PID}" || true
 }
 
+# Copy each autopilot's onboard log out of its container before the containers
+# go (ICS-025): PX4 writes ULog files under log/ in its working directory, and
+# ArduCopter DataFlash files under logs/. An autopilot that never armed has
+# logged nothing, so a missing folder is not an error.
+save_onboard_logs() {
+  local out="$1"
+  docker cp ics-sitl-px4:/var/lib/px4/log "${out}/px4-log" >/dev/null 2>&1 || true
+  docker cp ics-sitl-ardupilot:/var/lib/ardupilot/logs "${out}/ardupilot-logs" >/dev/null 2>&1 || true
+}
+
 stop_all() {
   "${COMPOSE[@]}" down --timeout 5 >/dev/null 2>&1 || true
   "${SUDO[@]}" "${HERE}/tap.sh" down
@@ -91,6 +101,7 @@ fly() {
   start_capture "${out}/tap.pcap" || return 1
   rig run "${engagement}" --px4 "${RIG_FOR_PX4}" --ardupilot "${RIG_FOR_ARDUPILOT}" --out "${out}" || status=1
   stop_capture
+  save_onboard_logs "${out}"
   "${COMPOSE[@]}" --env-file "${out}/containers.env" logs --no-color > "${out}/containers.log" 2>&1 || true
   stop_all
   tap_counts "${out}/tap.pcap" > "${out}/tap-counts.json"

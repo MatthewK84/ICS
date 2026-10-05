@@ -1174,6 +1174,42 @@ reviewed = 2026-10-04
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
+# --- Onboard-log samples and oracles (cpp/flightlog/test/logs/tools.txt) -----
+
+[[project]]
+name = "pyulog"
+ecosystem = "tool"
+packages = ["pyulog"]
+used_for = "Three of its sample ULog logs, copied into cpp/flightlog/test/logs, and its parser, run by expectations.py to write the expected values the onboard-log importer's tests check (ICS-025). Test data and a test oracle only; ICS neither builds nor ships it."
+ships = false
+license = "BSD-3-Clause"
+source = "https://github.com/PX4/pyulog"
+governance = "In the PX4 GitHub organization, hosted by the Dronecode Foundation, a Linux Foundation project; PX4 maintainers review changes and make releases."
+sustainment = "Maintained alongside PX4, which defines the ULog format; its last commit was in August 2026. Pinned by commit and by the sha256 of the copied samples in cpp/flightlog/test/logs/tools.txt. The samples could be replaced by logs from the SITL rig's PX4."
+foreign_influence = "Dronecode Foundation under the Linux Foundation (US non-profit); international contributors."
+single_maintainer = false
+maintainers = "The PX4 maintainers"
+reviewed = 2026-10-05
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "pymavlink"
+ecosystem = "tool"
+packages = ["pymavlink"]
+used_for = "Its DataFlash reader, run by cpp/flightlog/test/logs/expectations.py to write the expected values the onboard-log importer's tests check (ICS-025). A test oracle only: ICS neither links nor ships it, so its LGPL places no obligation on ICS code."
+ships = false
+license = "LGPL-3.0-or-later"
+source = "https://github.com/ArduPilot/pymavlink"
+governance = "In the ArduPilot GitHub organization; the ArduPilot development team reviews changes and publishes releases to PyPI."
+sustainment = "Active, with frequent releases; 2.4.50 was published in September 2026. Pinned by version and the sha256 of its PyPI source distribution in cpp/flightlog/test/logs/tools.txt. ArduPilot's own log tools could replace it as the oracle."
+foreign_influence = "ArduPilot's non-profit organization, whose jurisdiction was not established from the project's pages; international development team."
+single_maintainer = false
+maintainers = "The ArduPilot development team"
+reviewed = 2026-10-05
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
 # --- Toolchain data (deploy/toolchain/tools.txt) -----------------------------
 
 [[project]]

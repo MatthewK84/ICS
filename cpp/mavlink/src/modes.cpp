@@ -99,6 +99,8 @@ constexpr std::array<Named, 26> kCopterModes{{{0, "STABILIZE"},    {1, "ACRO"}, 
 
 }  // namespace
 
+std::optional<std::string_view> copter_mode_name(const std::uint32_t mode) { return find(kCopterModes, mode); }
+
 std::string mode_name(const Heartbeat& heartbeat) {
   std::optional<std::string> name;
   if (heartbeat.autopilot == kAutopilotPx4) {

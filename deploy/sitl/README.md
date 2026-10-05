@@ -74,6 +74,8 @@ Each engagement leaves a folder in the output directory:
 | `tap.pcap` | The capture on the TAP monitor port |
 | `tap-counts.json` | The datagrams the capture holds from and to each autopilot |
 | `containers.log` | Both autopilots' console output |
+| `px4-log/` | PX4's onboard ULog log, in a folder for the day, as PX4 names it |
+| `ardupilot-logs/` | ArduCopter's onboard DataFlash log (`00000001.BIN`) |
 | `replay.jsonl` | In CI, the MAVLink replay of `tap.pcap` (below) |
 
 ## MAVLink replay
@@ -91,6 +93,17 @@ docker run --rm -v "$PWD:/work/ics" -w /work/ics -v /tmp/sitl-records:/tmp/sitl-
   cpp/build/gcc-release/testing/mavlink_replay/ics-mavlink-replay "$out/tap.pcap" 40 -100 700 > "$out/replay.jsonl"
 PYTHONPATH=python python3 -m ics_sitl compare --truth "$out/truth.jsonl" --replay "$out/replay.jsonl"
 ```
+
+## Onboard logs
+
+`ics-log-import` ([ICS-025](https://github.com/MatthewK84/ICS/issues/25), [`cpp/flightlog`](../../cpp/README.md#onboard-logs)) imports either autopilot's onboard log and writes JSON lines, the same way:
+
+```sh
+docker run --rm -v "$PWD:/work/ics" -w /work/ics -v /tmp/sitl-records:/tmp/sitl-records ics-cpp:ci \
+  cpp/build/gcc-release/testing/log_import/ics-log-import "$out/ardupilot-logs/00000001.BIN" 40 -100 700 2=target
+```
+
+PX4's built-in simulator gives its GNSS no UTC time, so PX4's log is untimed: its records carry only boot times. ArduCopter's log is timed by GPS week once its GNSS has a fix. The importer's sample logs are cut from these logs ([`cpp/flightlog/test/logs`](../../cpp/flightlog/test/logs/README.md)).
 
 ## What to expect from the autopilots
 

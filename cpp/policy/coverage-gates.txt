@@ -22,3 +22,4 @@ cpp/cot 0.21
 cpp/lattice 0.20
 cpp/sapient 0.11
 cpp/services/capd 0.08
+cpp/flightlog 0.09
