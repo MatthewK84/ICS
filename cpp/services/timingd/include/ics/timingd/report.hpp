@@ -18,14 +18,14 @@ namespace ics::timingd {
 
 // Sets the fields of report that change with each poll from quality, sampled
 // at utc. An unbounded error is INT64_MAX nanoseconds. station_id is set once,
-// when the report is made; PTP does not carry gnss_satellite_count or
-// irig_b_locked, so they stay 0 and false, and camera_offsets stays empty
-// until the strobe calibration fills it.
+// when the report is made, and camera_offsets whenever the strobe
+// calibration's offsets file changes (ICS-029); PTP does not carry
+// gnss_satellite_count or irig_b_locked, so they stay 0 and false.
 void fill(const timing::Quality& quality, UtcTime utc, v1::TimeQuality& report) noexcept;
 
-// The most bytes a report for the station can take: every field at its
-// longest encoding.
-[[nodiscard]] std::size_t max_report_size(std::string_view station_id);
+// The most bytes a report like this one can take: its station_id and
+// camera_offsets, and every other field at its longest encoding.
+[[nodiscard]] std::size_t max_report_size(const v1::TimeQuality& report);
 
 // report serialized into buffer: the bytes written, or none when it does not
 // fit, which an ics::check reports. No bytes read as an empty TimeQuality,

@@ -1,7 +1,9 @@
 #include "ics/timingd/service.hpp"
 
+#include <chrono>
 #include <cstddef>
 #include <filesystem>
+#include <fstream>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -13,6 +15,7 @@
 #include "ics/logging/json_line.hpp"
 #include "ics/logging/logger.hpp"
 #include "ics/testing/no_allocation_scope.hpp"
+#include "ics/timing/camera_offsets.hpp"
 #include "ics/timing/clock_state.hpp"
 #include "ics/timingd/config.hpp"
 #include "ics/v1/time_quality.pb.h"
@@ -89,7 +92,9 @@ TEST(Service, LogsOnlyChanges) {
     rig.ptp4l.answer(rig.config.client_socket, first);
     rig.service.step(rig.logger);
   }
-  EXPECT_EQ(count(rig.log.str(), "\n"), 2U);
+  // ptp4l answering, the clock state, and no camera offsets file yet.
+  EXPECT_EQ(count(rig.log.str(), "\n"), 3U);
+  EXPECT_EQ(count(rig.log.str(), R"("event":"camera_offsets_none")"), 1U);
 }
 
 TEST(Service, TreatsASilentPtp4lAsFreeRunning) {
@@ -120,6 +125,54 @@ TEST(Service, StepsWithoutAllocatingOnceSettled) {
   EXPECT_EQ(rig.service.state(), ClockState::kLocked);
   ASSERT_TRUE(subscriber.next().has_value());
   EXPECT_TRUE(subscriber.next().has_value());
+}
+
+TEST(Service, PublishesTheStrobeCalibrationsOffsets) {
+  Rig rig;
+  const Subscriber subscriber(rig.config.publish_socket);
+  rig.ptp4l.answer(rig.config.client_socket, 0);
+  rig.service.step(rig.logger);
+  EXPECT_EQ(subscriber.next().value().camera_offsets_size(), 0);
+  EXPECT_EQ(count(rig.log.str(), R"("event":"camera_offsets_none")"), 1U);
+  ics::v1::TimeQuality::CameraOffset offset;
+  offset.set_camera_id("phantom-1");
+  offset.set_offset_ns(37'400);
+  offset.set_offset_sigma_ns(40);
+  offset.set_measured_utc_ns(1'791'331'240'000'000'000);
+  const ics::timing::CameraOffsets ours{.station_id = "station-1", .offsets = {offset, offset}};
+  ASSERT_TRUE(ics::timing::write_camera_offsets(rig.config.camera_offsets_file, ours).has_value());
+  rig.ptp4l.answer(rig.config.client_socket, 4);
+  rig.service.step(rig.logger);
+  const ics::v1::TimeQuality report = subscriber.next().value();
+  ASSERT_EQ(report.camera_offsets_size(), 2);
+  EXPECT_EQ(report.camera_offsets(0).offset_ns(), 37'400);
+  EXPECT_EQ(count(rig.log.str(), R"("event":"camera_offsets","count":2)"), 1U);
+  // Unchanged, the file is not read again.
+  rig.ptp4l.answer(rig.config.client_socket, 8);
+  rig.service.step(rig.logger);
+  EXPECT_EQ(subscriber.next().value().camera_offsets_size(), 2);
+  EXPECT_EQ(count(rig.log.str(), R"("event":"camera_offsets")"), 1U);
+}
+
+TEST(Service, PublishesNoOffsetsFromAFileItCannotUse) {
+  Rig rig;
+  const Subscriber subscriber(rig.config.publish_socket);
+  ics::v1::TimeQuality::CameraOffset offset;
+  offset.set_camera_id("phantom-1");
+  offset.set_measured_utc_ns(1);
+  const ics::timing::CameraOffsets theirs{.station_id = "station-2", .offsets = {offset}};
+  ASSERT_TRUE(ics::timing::write_camera_offsets(rig.config.camera_offsets_file, theirs).has_value());
+  rig.ptp4l.answer(rig.config.client_socket, 0);
+  rig.service.step(rig.logger);
+  EXPECT_EQ(subscriber.next().value().camera_offsets_size(), 0);
+  EXPECT_EQ(count(rig.log.str(), R"("event":"camera_offsets_unusable","error":"another station's")"), 1U);
+  std::ofstream(rig.config.camera_offsets_file, std::ios::trunc) << "not an offsets file";
+  std::filesystem::last_write_time(rig.config.camera_offsets_file,
+                                   std::filesystem::last_write_time(rig.config.camera_offsets_file) + std::chrono::seconds(1));
+  rig.ptp4l.answer(rig.config.client_socket, 4);
+  rig.service.step(rig.logger);
+  EXPECT_EQ(subscriber.next().value().camera_offsets_size(), 0);
+  EXPECT_EQ(count(rig.log.str(), R"("event":"camera_offsets_unusable","error":"malformed")"), 1U);
 }
 
 TEST(Service, ReportsSocketsItCannotOpen) {

@@ -13,6 +13,9 @@ ptp4l_socket = "/var/run/ptp4l-ro"
 client_socket = "/run/ics-timingd/ptp4l-client"
 # Where subscribers connect for ics.v1.TimeQuality reports.
 publish_socket = "/run/ics-timingd/time-quality"
+# The camera offsets the strobe analyzer writes (ics-strobe-analyzer). A
+# missing file means no camera is calibrated yet.
+camera_offsets_file = "/var/lib/ics/camera-offsets.binpb"
 # ptp4l's domainNumber.
 ptp_domain = 0
 # How often ptp4l is polled and a report published, 10 ms to 1 s. Holdover is

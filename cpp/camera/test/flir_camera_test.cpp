@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <span>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -13,6 +14,7 @@
 #include "ics/camera/flir_sdk.hpp"
 #include "ics/camera/mapped_file.hpp"
 #include "ics/camera/segment_camera.hpp"
+#include "ics/camera/strobe.hpp"
 #include "ics/camera/trigger_schedule.hpp"
 #include "ics/common/error.hpp"
 #include "ics/common/units.hpp"
@@ -62,7 +64,17 @@ Cine read_back(const std::filesystem::path& path) {
 
 TEST(FlirCamera, SavesASegmentAsACineOfItsFramesInUtc) {
   const ScratchDir dir;
-  EmulatedX6980 sdk(TriggerSchedule{.first = utc_from_ns(kEpochNs + 300), .interval = milliseconds(150)}, true);
+  // A 50 µs strobe at the second, lighting the first two pixels at 10 counts
+  // a microsecond over a background of 1,000.
+  const StrobeScene scene{
+      .schedule = StrobeSchedule{.pulse_width = microseconds(50), .latency = {}, .delay_step = {}, .sweep_steps = 1},
+      .roi = Roi{.x = 0, .y = 0, .width = 2, .height = 1},
+      .stamp_offset = {},
+      .background = 1000.0,
+      .gain_per_us = 10.0,
+      .noise_sigma = 0.0,
+      .seed = 0};
+  EmulatedX6980 sdk(TriggerSchedule{.first = utc_from_ns(kEpochNs + 300), .interval = milliseconds(150)}, true, scene);
   StationTime station(utc_from_ns(kEpochNs));
   FlirCamera camera(sdk, station);
   EXPECT_EQ(camera.save(0, FrameRange{.first = 0, .count = 1}, dir.path() / "early.cine").error(), Error::kOutOfRange);
@@ -86,10 +98,14 @@ TEST(FlirCamera, SavesASegmentAsACineOfItsFramesInUtc) {
   // second: stamped 1,992 µs.
   EXPECT_EQ(cine.frame_times[4], utc_from_ns(kEpochNs) + microseconds(1992));
   EXPECT_EQ(cine.exposures[4], microseconds(500));
-  // Each frame's pixels follow its 8-byte annotation; frame 2's hold 2.
+  // Each frame's pixels follow its 8-byte annotation, in turn: frame 0's
+  // first pixel holds 1,000 + 497 (0x05D9), frame -2's 1,000 (0x03E8).
   const Result<MappedFile> file = MappedFile::open(path);
-  EXPECT_EQ(file.value().bytes()[cine.image_offsets[4] + 8], std::byte{2});
-  EXPECT_EQ(file.value().bytes()[cine.image_offsets[0] + 8], std::byte{0xFE});
+  const std::span<const std::byte> bytes = file.value().bytes();
+  EXPECT_EQ(bytes[cine.image_offsets[2] + 8], std::byte{0xD9});
+  EXPECT_EQ(bytes[cine.image_offsets[2] + 9], std::byte{0x05});
+  EXPECT_EQ(bytes[cine.image_offsets[0] + 8], std::byte{0xE8});
+  EXPECT_EQ(bytes[cine.image_offsets[0] + 9], std::byte{0x03});
 }
 
 TEST(FlirCamera, TakesAMissingYearFromTheTriggerAcrossNewYear) {

@@ -4,9 +4,13 @@
 // - one time and one image offset per frame, and an exposure per frame or
 //   none; a size and a frame rate that are not zero;
 // - frame metadata and a verification for every frame;
+// - a rectangle's mean brightness, read from every frame's image without
+//   reading past the bytes, as a number from 0 to 65,535;
 // - a cine the writer can write reads back as the same cine. The writer
 //   fills every image, so a few bytes can ask it for a gibibyte: only cines
 //   whose images fit in 16 MiB make the round trip.
+#include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -15,6 +19,7 @@
 
 #include "ics/camera/cine.hpp"
 #include "ics/camera/frame_meta.hpp"
+#include "ics/camera/image.hpp"
 #include "ics/camera/offload.hpp"
 #include "ics/common/error.hpp"
 #include "ics/v1/camera_frame_meta.pb.h"
@@ -41,6 +46,17 @@ void require_sound(const Cine& cine) {
   require(meta.size() == frames);
   const ics::camera::SegmentCheck check = ics::camera::verify_segment(cine, {});
   require(check.frames == frames && check.spacing_error.count() >= 0 && check.trigger_error.count() >= 0);
+}
+
+// Up to the first 8 x 8 pixels of each frame.
+void require_readable_images(const std::span<const std::byte> input, const Cine& cine) {
+  constexpr std::uint32_t kSide = 8;
+  constexpr double kMaxPixel = 65'535.0;
+  const ics::camera::Roi corner{.x = 0, .y = 0, .width = std::min(cine.width, kSide), .height = std::min(cine.height, kSide)};
+  for (std::size_t frame = 0; frame < cine.image_offsets.size(); ++frame) {
+    const ics::Result<double> mean = ics::camera::roi_mean(input, cine, frame, corner);
+    require(!mean || (std::isfinite(*mean) && *mean >= 0.0 && *mean <= kMaxPixel));
+  }
 }
 
 bool small(const Cine& cine) {
@@ -72,6 +88,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   const ics::Result<Cine> cine = ics::camera::read_cine(input);
   if (cine) {
     require_sound(*cine);
+    require_readable_images(input, *cine);
   }
   if (cine && small(*cine)) {
     require_round_trip(*cine);

@@ -59,21 +59,29 @@ TEST(Report, WritesAnUnboundedErrorAsTheLargestInteger) {
 TEST(Report, SizesTheLargestReport) {
   // Eight fields of a tag and up to 10 bytes; the station takes a tag, a
   // length and its text.
-  EXPECT_EQ(ics::timingd::max_report_size(""), 65U);
-  EXPECT_EQ(ics::timingd::max_report_size("station-1"), 76U);
   TimeQuality report;
+  EXPECT_EQ(ics::timingd::max_report_size(report), 65U);
   report.set_station_id("station-1");
+  EXPECT_EQ(ics::timingd::max_report_size(report), 76U);
   const Quality extreme{ClockState::kFreeRunning, nanoseconds::min(), nanoseconds::min(), nanoseconds::min(),
                         nanoseconds::min()};
   ics::timingd::fill(extreme, ics::utc_from_ns(std::numeric_limits<std::int64_t>::min()), report);
-  EXPECT_LE(report.ByteSizeLong(), ics::timingd::max_report_size("station-1"));
+  EXPECT_LE(report.ByteSizeLong(), ics::timingd::max_report_size(report));
+  // Camera offsets add their own length.
+  TimeQuality::CameraOffset* offset = report.add_camera_offsets();
+  offset->set_camera_id("phantom-1");
+  offset->set_offset_ns(-37'400);
+  offset->set_offset_sigma_ns(40);
+  offset->set_measured_utc_ns(std::numeric_limits<std::int64_t>::max());
+  EXPECT_EQ(ics::timingd::max_report_size(report), 76U + 2U + offset->ByteSizeLong());
+  EXPECT_LE(report.ByteSizeLong(), ics::timingd::max_report_size(report));
 }
 
 TEST(Report, SerializesWithoutAllocating) {
   TimeQuality report;
   report.set_station_id("station-1");
   ics::timingd::fill(Quality{}, ics::utc_from_ns(kUtcNs), report);
-  std::vector<std::byte> buffer(ics::timingd::max_report_size("station-1"));
+  std::vector<std::byte> buffer(ics::timingd::max_report_size(report));
   std::span<const std::byte> written;
   {
     const ics::testing::NoAllocationScope no_allocation;

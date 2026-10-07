@@ -23,6 +23,7 @@ TEST(TimingdConfig, ReadsTheExample) {
   EXPECT_EQ(config->ptp4l_socket, "/var/run/ptp4l-ro");
   EXPECT_EQ(config->client_socket, "/run/ics-timingd/ptp4l-client");
   EXPECT_EQ(config->publish_socket, "/run/ics-timingd/time-quality");
+  EXPECT_EQ(config->camera_offsets_file, "/var/lib/ics/camera-offsets.binpb");
   EXPECT_EQ(config->ptp_domain, 0);
   EXPECT_EQ(config->poll_interval, std::chrono::milliseconds(100));
   EXPECT_EQ(config->model.asymmetry_bound, std::chrono::microseconds(1));
@@ -52,8 +53,8 @@ colour = "blue"
   for (const ics::config::ConfigError& error : config.error()) {
     fields.insert(error.field);
   }
-  EXPECT_EQ(fields, (std::set<std::string>{"timing.station_id", "timing.ptp_domain", "timing.poll_interval_ns",
-                                           "timing.asymmetry_bound_ns", "timing.colour"}));
+  EXPECT_EQ(fields, (std::set<std::string>{"timing.station_id", "timing.camera_offsets_file", "timing.ptp_domain",
+                                           "timing.poll_interval_ns", "timing.asymmetry_bound_ns", "timing.colour"}));
 }
 
 }  // namespace

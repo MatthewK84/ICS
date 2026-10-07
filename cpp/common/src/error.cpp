@@ -22,6 +22,8 @@ std::string_view to_string(const Error error) noexcept {
       return "unavailable";
     case Error::kUnwritable:
       return "unwritable";
+    case Error::kUnconstrained:
+      return "unconstrained";
   }
   return "unknown";
 }

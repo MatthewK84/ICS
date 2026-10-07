@@ -1,0 +1,30 @@
+# An example ics-strobe-analyzer config (ICS-029); see cpp/README.md. The
+# analyzer reads its config from /etc/ics/ics-strobe.toml. Every setting is
+# required.
+
+[log]
+level = "info"
+service = "ics-strobe-analyzer"
+
+[strobe]
+# The station, as named in the range configuration, and the camera, as named
+# in the station configuration.
+station_id = "station-1"
+camera_id = "phantom-1"
+# The camera offsets file ics-timingd reads (its camera_offsets_file).
+offsets_file = "/var/lib/ics/camera-offsets.binpb"
+# Where the strobe's light falls in the camera's images, in pixels, rows as
+# the images store them.
+roi_x_px = 600
+roi_y_px = 400
+roi_width_px = 16
+roi_height_px = 16
+# The strobe: its pulse, its delay after the PPS edge, and the sweep the
+# delay generator steps through, one step a second. A step shorter than the
+# pulse makes a pulse straddle every exposure edge the sweep crosses.
+pulse_width_ns = 20_000
+latency_ns = 1_500
+delay_step_ns = 5_000
+sweep_steps = 40
+# How far either side of 0 to search for the offset.
+max_offset_ns = 1_000_000

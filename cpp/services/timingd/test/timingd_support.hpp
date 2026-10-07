@@ -32,6 +32,7 @@ inline Config test_config(const timing::testing::TempDir& dir) {
   config.ptp4l_socket = dir / "ptp4l-ro";
   config.client_socket = dir / "client";
   config.publish_socket = dir / "time-quality";
+  config.camera_offsets_file = dir / "offsets.binpb";
   config.poll_interval = std::chrono::milliseconds(50);
   config.model = {std::chrono::microseconds(1), 50.0};
   return config;
