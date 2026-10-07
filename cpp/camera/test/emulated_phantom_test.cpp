@@ -11,7 +11,7 @@
 
 #include "ics/camera/cine.hpp"
 #include "ics/camera/mapped_file.hpp"
-#include "ics/camera/phantom.hpp"
+#include "ics/camera/segment_camera.hpp"
 #include "ics/common/error.hpp"
 #include "ics/common/units.hpp"
 #include "scratch_dir.hpp"
@@ -29,6 +29,8 @@ constexpr std::int64_t kEpochNs = 1'791'331'200'000'000'000;
 CameraSettings settings() {
   return CameraSettings{.width = 32,
                         .height = 16,
+                        .window_x = 0,
+                        .window_y = 0,
                         .frame_rate = 4000,
                         .exposure = microseconds(200),
                         .segment_frames = 100,
@@ -59,10 +61,16 @@ TEST(EmulatedPhantom, AcceptsOnlySettingsItCanRecord) {
     EXPECT_EQ(camera.configure(s).error(), Error::kInvalidArgument) << name;
   }
   EmulatedPhantom camera(kSchedule);
-  const Result<CameraSettings> applied = camera.configure(settings());
+  CameraSettings offset = settings();
+  offset.window_x = 8;
+  offset.window_y = 4;
+  const Result<CameraSettings> applied = camera.configure(offset);
   ASSERT_TRUE(applied.has_value());
   EXPECT_TRUE(applied->irig);
   EXPECT_EQ(applied->frame_rate, 4000U);
+  // It reads the full sensor's position, whatever offset is asked.
+  EXPECT_EQ(applied->window_x, 0U);
+  EXPECT_EQ(applied->window_y, 0U);
 }
 
 TEST(EmulatedPhantom, ArmsThenTriggersEachSegmentOnSchedule) {

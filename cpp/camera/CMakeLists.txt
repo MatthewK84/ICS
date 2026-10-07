@@ -1,11 +1,17 @@
-# ics::camera (ICS-027): reads the cine files a Phantom saves and times their
-# frames, drives a Phantom through a camera interface (an emulated camera
-# until the Phantom SDK is available), and offloads and verifies segments.
+# ics::camera (ICS-027, ICS-028): reads the cine files a Phantom saves and
+# times their frames, drives a Phantom and a FLIR X6980-HS through one camera
+# interface (emulated cameras until their SDKs are available), and offloads
+# and verifies segments.
 add_library(ics_camera STATIC
   src/cine_read.cpp
   src/cine_write.cpp
   src/emulated_phantom.cpp
+  src/emulated_x6980.cpp
+  src/emulation.cpp
+  src/file_out.cpp
+  src/flir_camera.cpp
   src/frame_meta.cpp
+  src/irig.cpp
   src/mapped_file.cpp
   src/offload.cpp)
 add_library(ics::camera ALIAS ics_camera)
@@ -16,8 +22,11 @@ ics_add_gtest(camera_test
   SOURCES
     test/cine_test.cpp
     test/emulated_phantom_test.cpp
+    test/emulated_x6980_test.cpp
     test/fixture_test.cpp
+    test/flir_camera_test.cpp
     test/frame_meta_test.cpp
+    test/irig_test.cpp
     test/mapped_file_test.cpp
     test/offload_test.cpp
   LIBRARIES ics::camera)

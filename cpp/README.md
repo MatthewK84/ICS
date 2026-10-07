@@ -278,29 +278,45 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
 
 ## Cameras
 
-[`camera/`](camera) is `ics::camera` (ICS-027, CPP-12). It records segments on a Phantom high-speed camera, saves each as a cine file over the camera's 10GbE link, and checks each saved segment's frame times. ICS does not have the Phantom SDK yet, so an emulated Phantom stands in for the camera. The SDK binding, and a run on a real camera, are left for a later issue.
+[`camera/`](camera) is `ics::camera` (ICS-027 and ICS-028, CPP-12 and CPP-13). It records segments on the high-speed cameras, a Phantom (visible) and a FLIR X6980-HS (mid-wave infrared). It saves each segment as a cine file and checks every saved segment's frame times. ICS does not have either camera's SDK yet, so emulated cameras stand in for both. Under the Risk Management Framework, ICS is built in its entirety before any test on real hardware. The SDK bindings and runs on real cameras are in the backlog ([#140](https://github.com/MatthewK84/ICS/issues/140) for the Phantom).
 
 | Header | Provides |
 |---|---|
-| [`cine.hpp`](camera/include/ics/camera/cine.hpp) | `read_cine`: a cine's frame numbers, trigger time, image size, frame rate and exposure, each frame's time and exposure, and where its images lie, all checked against the bytes; `write_cine`: a cine of the times given, with images of zeros; `from_time64` and `to_time64` |
+| [`cine.hpp`](camera/include/ics/camera/cine.hpp) | `read_cine`: a cine's frame numbers, trigger time, image size, frame rate and exposure, each frame's time and exposure, and where its images lie, all checked against the bytes; `write_cine`: a cine of the times and images given, or of images of zeros; `from_time64` and `to_time64` |
 | [`mapped_file.hpp`](camera/include/ics/camera/mapped_file.hpp) | `MappedFile`: a saved cine mapped read-only |
-| [`phantom.hpp`](camera/include/ics/camera/phantom.hpp) | `PhantomCamera`: configure, arm segments, trigger, and save frames as a cine; `TimeQualitySource`: the station's time quality |
-| [`emulated_phantom.hpp`](camera/include/ics/camera/emulated_phantom.hpp) | `EmulatedPhantom`: a camera in software whose clock follows IRIG-B exactly, triggered on a schedule |
-| [`frame_meta.hpp`](camera/include/ics/camera/frame_meta.hpp) | `TimeAuthority` and `frame_meta`: a `CameraFrameMeta` for each frame of a cine |
+| [`segment_camera.hpp`](camera/include/ics/camera/segment_camera.hpp) | `SegmentCamera`: configure (window, frame rate, exposure, segments), arm segments, trigger, and save frames as a cine; `TimeQualitySource`: the station's time quality |
+| [`emulated_phantom.hpp`](camera/include/ics/camera/emulated_phantom.hpp) | `EmulatedPhantom`: a Phantom in software whose clock follows IRIG-B exactly, triggered on a schedule (`trigger_schedule.hpp`) |
+| [`irig.hpp`](camera/include/ics/camera/irig.hpp) | `IrigStamp` and `utc_from_irig`: an IRIG-B time stamp to UTC, with or without its year ([Camera clocks](../docs/frames-and-time.md#camera-clocks)) |
+| [`flir_sdk.hpp`](camera/include/ics/camera/flir_sdk.hpp) | `FlirSdk`: what ICS needs from the X6980's SDK, frame by frame, each frame with its IRIG-B stamp and pixels |
+| [`emulated_x6980.hpp`](camera/include/ics/camera/emulated_x6980.hpp) | `EmulatedX6980`: the X6980's SDK in software, with a 640 × 512 sensor and microsecond IRIG-B stamps, with or without the year |
+| [`flir_camera.hpp`](camera/include/ics/camera/flir_camera.hpp) | `FlirCamera`: the X6980 as a `SegmentCamera`, converting each stamp to UTC and writing the frames as a cine |
+| [`frame_meta.hpp`](camera/include/ics/camera/frame_meta.hpp) | `TimeAuthority` and `frame_meta`: a `CameraFrameMeta` for each frame of a cine, with its camera kind and sensor window offset |
 | [`offload.hpp`](camera/include/ics/camera/offload.hpp) | `record_and_offload` and `verify_segment`: the "Done when" sequence and check, below |
 
 - **The format.** ICS reads a cine as the PIMS project's reader lays it out ([soft-matter/pims](https://github.com/soft-matter/pims) `cine.py`, BSD-3-Clause). PIMS is a reference only, and no PIMS code is used; Vision Research's own format document could not be fetched from the build environment. PIMS 0.7 reads ICS's sample cine exactly as `read_cine` does ([fixtures](camera/test/fixtures/README.md)). A frame's time is tagged block 1002, a TIME64 ([Camera clocks](../docs/frames-and-time.md#camera-clocks)). A cine without frame times is refused.
+- **The X6980's segments are cines too.** FLIR's own recording format (`.ats`) is undocumented, and the only open reader of it ([pyFlir](https://pypi.org/project/pyflir/), MIT) finds frames by a sync marker and reads no times. So `FlirCamera` reads each frame from the SDK with its IRIG-B stamp and pixels, converts the stamp to UTC, and writes the segment with `write_cine`: 16-bit pixels, 14 bits of them significant. The rest of the sequence, the verification and ICS-062's decoding are the same for both cameras. The setup inside the file names Phantom software version 702, and the camera kind is in each frame's `CameraFrameMeta`.
 - **Timed by IRIG.** Whether a frame's time is IRIG time comes from what ICS knows, not from the file: the settings the camera reports it applied (`CameraSettings::irig`), and `TimeQuality.irig_b_locked` when the segment was recorded. Frames are `TIME_SOURCE_IRIG` only when both say so, and `TIME_SOURCE_HOST` otherwise.
-- **The sequence.** `record_and_offload` configures the camera, arms it for the plan's segments, and triggers each in turn. It then saves the plan's frames of each segment as `cine-NNN.cine`, maps the file, reads it and verifies it.
+- **Sensor window.** `CameraSettings::window_x` and `window_y` place the window on the sensor. Each frame's `CameraFrameMeta.window_x_px` and `window_y_px` record them as the camera applied them, for registration. The emulated Phantom applies 0 and 0 whatever is asked.
+- **The sequence.** `record_and_offload` configures the camera, arms it for the plan's segments, and triggers each in turn. It then saves the plan's frames of each segment as `cine-NNN.cine`, maps the file, reads it and verifies it. The plan names the camera kind.
 - **Verification.** A segment verifies when all of these hold:
   - it has the planned number of frames, starting at the planned frame number;
   - its frames are IRIG-timed;
   - consecutive frames are one frame period apart, within 1 µs (`kSpacingTolerance`);
   - its trigger is within one frame period of the time the camera reported, both in the cine's header and where the first frame's time and number put it;
   - it starts after the previous segment ends.
-- **Done when.** Ten back-to-back segments offload with verified times on the emulated camera: 5,000 frames/s, 500 frames a segment with 400 after the trigger, triggers 120 ms apart, and 300 frames of each saved. Segments not timed by IRIG do not verify.
-- **Bench tool.** [`testing/phantom_bench`](testing/phantom_bench/main.cpp) is `ics-phantom-bench`. It runs that sequence on the emulated camera and saves the cines in the working directory, which is not an argument because CodeQL's path-injection rule rejects a path taken from the command line. It prints a JSON line for each segment and one for the verdict, and exits 1 unless every segment verifies. It is registered as a test, so CI runs it in every sanitizer build.
-- **Tests.** Tests cover every refusal of the reader and writer. They run the emulator, the sequence and the check on the emulated camera, and on a camera that fails at each step. The fuzz target reads any bytes. It checks that each cine it reads keeps the reader's promises, and that a cine the writer can write, with images up to 16 MiB, reads back unchanged.
+- **Done when.** Ten back-to-back segments offload with verified times on each emulated camera, 300 frames of each 500-frame segment saved, 400 of them after the trigger:
+  - the Phantom at 5,000 frames/s, with triggers 120 ms apart;
+  - the X6980 at 1,004 frames/s in a 64 × 32 window at (288, 240), with triggers 600 ms apart and stamps without the year. Its microsecond stamps put consecutive frames 996 µs or 997 µs apart, at most 984 ns from the 996,015.9 ns period, within the 1 µs tolerance.
+
+  Segments not timed by IRIG do not verify.
+- **Bench tool.** [`testing/camera_bench`](testing/camera_bench/main.cpp) is `ics-camera-bench phantom|x6980`. It runs that sequence on an emulated camera and saves the cines in the working directory, which is not an argument because CodeQL's path-injection rule rejects a path taken from the command line. It prints a JSON line for each segment and one for the verdict, and exits 1 unless every segment verifies. It is registered as a test for each camera, so CI runs both in every sanitizer build.
+- **Tests.** Tests cover:
+  - every refusal of the reader and writer;
+  - IRIG-B conversion: New Year, leap days and fields out of range;
+  - the emulators, the sequence and the check on both emulated cameras;
+  - a camera, and an X6980 SDK, that fails or hands over bad frames at each step.
+
+  The fuzz target reads any bytes. It checks that each cine it reads keeps the reader's promises, and that a cine the writer can write, with images up to 16 MiB, reads back unchanged.
 
 ## Power-of-Ten checks
 

@@ -377,6 +377,8 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED CameraFrameMeta final : public ::go
     kWidthPxFieldNumber = 10,
     kHeightPxFieldNumber = 11,
     kBitsPerPixelFieldNumber = 12,
+    kWindowXPxFieldNumber = 13,
+    kWindowYPxFieldNumber = 14,
   };
   // string station_id = 1 [json_name = "stationId"];
   void clear_station_id() ;
@@ -513,11 +515,31 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED CameraFrameMeta final : public ::go
   void _internal_set_bits_per_pixel(::uint32_t value);
 
   public:
+  // uint32 window_x_px = 13 [json_name = "windowXPx"];
+  void clear_window_x_px() ;
+  [[nodiscard]] ::uint32_t window_x_px() const;
+  void set_window_x_px(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_window_x_px() const;
+  void _internal_set_window_x_px(::uint32_t value);
+
+  public:
+  // uint32 window_y_px = 14 [json_name = "windowYPx"];
+  void clear_window_y_px() ;
+  [[nodiscard]] ::uint32_t window_y_px() const;
+  void set_window_y_px(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_window_y_px() const;
+  void _internal_set_window_y_px(::uint32_t value);
+
+  public:
   // @@protoc_insertion_point(class_scope:ics.v1.CameraFrameMeta)
  private:
   class _Internal;
   using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<4, 12,
+      ::google::protobuf::internal::TcParseTable<4, 14,
                           0, 68,
                           2>;
   static constexpr ParseTableT_ InternalGenerateParseTable_(
@@ -558,6 +580,8 @@ class  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED CameraFrameMeta final : public ::go
     ::uint32_t width_px_;
     ::uint32_t height_px_;
     ::uint32_t bits_per_pixel_;
+    ::uint32_t window_x_px_;
+    ::uint32_t window_y_px_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -986,6 +1010,54 @@ inline ::uint32_t CameraFrameMeta::_internal_bits_per_pixel() const {
 inline void CameraFrameMeta::_internal_set_bits_per_pixel(::uint32_t value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.bits_per_pixel_ = value;
+}
+
+// uint32 window_x_px = 13 [json_name = "windowXPx"];
+inline void CameraFrameMeta::clear_window_x_px() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.window_x_px_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0], 0x00001000U);
+}
+inline ::uint32_t CameraFrameMeta::window_x_px() const {
+  // @@protoc_insertion_point(field_get:ics.v1.CameraFrameMeta.window_x_px)
+  return _internal_window_x_px();
+}
+inline void CameraFrameMeta::set_window_x_px(::uint32_t value) {
+  _internal_set_window_x_px(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00001000U);
+  // @@protoc_insertion_point(field_set:ics.v1.CameraFrameMeta.window_x_px)
+}
+inline ::uint32_t CameraFrameMeta::_internal_window_x_px() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.window_x_px_;
+}
+inline void CameraFrameMeta::_internal_set_window_x_px(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.window_x_px_ = value;
+}
+
+// uint32 window_y_px = 14 [json_name = "windowYPx"];
+inline void CameraFrameMeta::clear_window_y_px() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.window_y_px_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0], 0x00002000U);
+}
+inline ::uint32_t CameraFrameMeta::window_y_px() const {
+  // @@protoc_insertion_point(field_get:ics.v1.CameraFrameMeta.window_y_px)
+  return _internal_window_y_px();
+}
+inline void CameraFrameMeta::set_window_y_px(::uint32_t value) {
+  _internal_set_window_y_px(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
+  // @@protoc_insertion_point(field_set:ics.v1.CameraFrameMeta.window_y_px)
+}
+inline ::uint32_t CameraFrameMeta::_internal_window_y_px() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.window_y_px_;
+}
+inline void CameraFrameMeta::_internal_set_window_y_px(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.window_y_px_ = value;
 }
 
 #ifdef __GNUC__

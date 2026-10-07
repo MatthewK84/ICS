@@ -4,25 +4,19 @@
 #include <filesystem>
 #include <vector>
 
-#include "ics/camera/phantom.hpp"
+#include "ics/camera/segment_camera.hpp"
+#include "ics/camera/trigger_schedule.hpp"
 #include "ics/common/error.hpp"
-#include "ics/common/units.hpp"
 
 namespace ics::camera {
-
-// When the emulated camera's triggers come, by its IRIG clock: the first at
-// first, and each later one interval after the one before.
-struct TriggerSchedule {
-  UtcTime first{};
-  Duration interval{};
-};
 
 // A Phantom in software, for the tests and the bench until ICS has the SDK.
 // Its clock follows IRIG-B exactly when the settings turn IRIG on; each
 // frame's time is its trigger's time plus its number of frame periods, and
 // each segment holds the frames up to its trigger and after it. Saved cines
-// have images of zeros.
-class EmulatedPhantom final : public PhantomCamera {
+// have images of zeros. It reads the full sensor's position: whatever window
+// offset is asked, it applies 0 and 0, and reports so.
+class EmulatedPhantom final : public SegmentCamera {
  public:
   explicit EmulatedPhantom(const TriggerSchedule& schedule) noexcept : schedule_(schedule) {}
 

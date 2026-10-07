@@ -10,7 +10,7 @@
 
 #include "ics/camera/cine.hpp"
 #include "ics/camera/frame_meta.hpp"
-#include "ics/camera/phantom.hpp"
+#include "ics/camera/segment_camera.hpp"
 #include "ics/common/error.hpp"
 #include "ics/common/units.hpp"
 #include "ics/v1/camera_frame_meta.pb.h"
@@ -26,6 +26,7 @@ inline constexpr Duration kSpacingTolerance = std::chrono::microseconds(1);
 struct OffloadPlan {
   std::string station_id;
   std::string camera_id;
+  v1::CameraFrameMeta::CameraKind camera_kind = v1::CameraFrameMeta::CAMERA_KIND_UNSPECIFIED;
   std::uint32_t segments = 0;
   // The frames of each segment to keep: the rest are trimmed.
   FrameRange frames{};
@@ -80,7 +81,7 @@ struct OffloadReport {
 // the plan's frames of each segment as "cine-NNN.cine" in the plan's
 // directory, reads each back and verifies its times. Fails as the camera
 // does, and with read_cine's errors for a cine that cannot be read back.
-[[nodiscard]] Result<OffloadReport> record_and_offload(PhantomCamera& camera, const CameraSettings& settings,
+[[nodiscard]] Result<OffloadReport> record_and_offload(SegmentCamera& camera, const CameraSettings& settings,
                                                        const OffloadPlan& plan, TimeQualitySource& quality);
 
 }  // namespace ics::camera

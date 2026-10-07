@@ -9,13 +9,18 @@
 
 namespace ics::camera {
 
-// The settings ICS applies to a Phantom, and that the camera reports back as
+// The settings ICS applies to a camera, and that the camera reports back as
 // it applied them.
 struct CameraSettings {
   // The image size, in pixels.
   std::uint32_t width = 0;
   std::uint32_t height = 0;
-  // Frames per second, and each frame's exposure.
+  // Where the sensor window's top-left pixel sits on the sensor, in pixels
+  // from its first column and first row; 0 and 0 for a full frame.
+  std::uint32_t window_x = 0;
+  std::uint32_t window_y = 0;
+  // Frames per second, and each frame's exposure (a FLIR camera's
+  // integration time).
   std::uint32_t frame_rate = 0;
   Duration exposure{};
   // The frames each segment holds, and how many of them follow its trigger.
@@ -39,16 +44,18 @@ struct SegmentStatus {
   FrameRange recorded{};
 };
 
-// What ICS needs from a Phantom. An emulated camera implements it now, and a
-// binding of the Phantom SDK will once ICS has the SDK (ICS-027).
-class PhantomCamera {
+// What ICS needs from a high-speed camera that records segments into its
+// memory and saves them as cine files. The emulated Phantom (ICS-027) and the
+// FLIR X6980-HS (ICS-028) implement it; bindings of the cameras' SDKs will
+// once ICS has them.
+class SegmentCamera {
  public:
-  PhantomCamera() = default;
-  PhantomCamera(const PhantomCamera&) = delete;
-  PhantomCamera& operator=(const PhantomCamera&) = delete;
-  PhantomCamera(PhantomCamera&&) = delete;
-  PhantomCamera& operator=(PhantomCamera&&) = delete;
-  virtual ~PhantomCamera() = default;
+  SegmentCamera() = default;
+  SegmentCamera(const SegmentCamera&) = delete;
+  SegmentCamera& operator=(const SegmentCamera&) = delete;
+  SegmentCamera(SegmentCamera&&) = delete;
+  SegmentCamera& operator=(SegmentCamera&&) = delete;
+  virtual ~SegmentCamera() = default;
 
   // Applies the settings, and returns them as the camera applied them.
   [[nodiscard]] virtual Result<CameraSettings> configure(const CameraSettings& settings) = 0;
@@ -59,7 +66,7 @@ class PhantomCamera {
   // frames are recorded; the camera then records into the next segment.
   [[nodiscard]] virtual Result<SegmentStatus> trigger() = 0;
   // Saves frames of a recorded segment as a cine file, over the camera's
-  // 10GbE link.
+  // data link.
   [[nodiscard]] virtual Status save(std::uint32_t segment, const FrameRange& frames,
                                     const std::filesystem::path& path) = 0;
 };

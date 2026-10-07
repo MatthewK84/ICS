@@ -24,4 +24,4 @@ cpp/sapient 0.11
 cpp/services/capd 0.08
 cpp/flightlog 0.09
 cpp/timealign 0.40
-cpp/camera 0.13
+cpp/camera 0.14

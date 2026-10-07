@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -31,11 +32,15 @@ struct TimeAuthority {
 [[nodiscard]] TimeAuthority time_authority(bool irig_configured, const v1::TimeQuality& quality,
                                            std::string_view camera_id);
 
-// What a segment's frames carry to name them.
-struct SegmentName {
+// Where a segment's frames came from: what names them, the kind of camera,
+// and the sensor window's offset as the camera applied it.
+struct SegmentSource {
   std::string station_id;
   std::string camera_id;
+  v1::CameraFrameMeta::CameraKind camera_kind = v1::CameraFrameMeta::CAMERA_KIND_UNSPECIFIED;
   std::string segment_id;
+  std::uint32_t window_x = 0;
+  std::uint32_t window_y = 0;
 };
 
 // Each saved frame's metadata. A frame's exposure starts at its cine time
@@ -43,7 +48,7 @@ struct SegmentName {
 // from a strobe's frame to its true time, so it also takes up where in the
 // exposure the camera stamps a frame. An IRIG-timed frame is
 // TIME_SOURCE_IRIG; any other is TIME_SOURCE_HOST, and does not verify.
-[[nodiscard]] std::vector<v1::CameraFrameMeta> frame_meta(const Cine& cine, const SegmentName& name,
+[[nodiscard]] std::vector<v1::CameraFrameMeta> frame_meta(const Cine& cine, const SegmentSource& source,
                                                           const TimeAuthority& authority);
 
 }  // namespace ics::camera

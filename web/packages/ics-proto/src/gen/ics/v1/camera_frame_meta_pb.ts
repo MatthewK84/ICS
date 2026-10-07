@@ -13,7 +13,7 @@ import type { Message, UnknownEnum } from "@bufbuild/protobuf";
  * Describes the file ics/v1/camera_frame_meta.proto.
  */
 export const file_ics_v1_camera_frame_meta: GenFile = /*@__PURE__*/
-  fileDesc("Ch5pY3MvdjEvY2FtZXJhX2ZyYW1lX21ldGEucHJvdG8SBmljcy52MSLDBAoPQ2FtZXJhRnJhbWVNZXRhEhIKCnN0YXRpb25faWQYASABKAkSEQoJY2FtZXJhX2lkGAIgASgJEjcKC2NhbWVyYV9raW5kGAMgASgOMiIuaWNzLnYxLkNhbWVyYUZyYW1lTWV0YS5DYW1lcmFLaW5kEhIKCnNlZ21lbnRfaWQYBCABKAkSEwoLZnJhbWVfaW5kZXgYBSABKAQSHQoVZXhwb3N1cmVfc3RhcnRfdXRjX25zGAYgASgDEhwKFGV4cG9zdXJlX2R1cmF0aW9uX25zGAcgASgDEjcKC3RpbWVfc291cmNlGAggASgOMiIuaWNzLnYxLkNhbWVyYUZyYW1lTWV0YS5UaW1lU291cmNlEh4KFnRpbWVfb2Zmc2V0X2FwcGxpZWRfbnMYCSABKAMSEAoId2lkdGhfcHgYCiABKA0SEQoJaGVpZ2h0X3B4GAsgASgNEhYKDmJpdHNfcGVyX3BpeGVsGAwgASgNIn0KCkNhbWVyYUtpbmQSGwoXQ0FNRVJBX0tJTkRfVU5TUEVDSUZJRUQQABIiCh5DQU1FUkFfS0lORF9ISUdIX1NQRUVEX1ZJU0lCTEUQARIUChBDQU1FUkFfS0lORF9NV0lSEAISGAoUQ0FNRVJBX0tJTkRfVFJBQ0tJTkcQAyJVCgpUaW1lU291cmNlEhsKF1RJTUVfU09VUkNFX1VOU1BFQ0lGSUVEEAASFAoQVElNRV9TT1VSQ0VfSVJJRxABEhQKEFRJTUVfU09VUkNFX0hPU1QQAmIGcHJvdG8z");
+  fileDesc("Ch5pY3MvdjEvY2FtZXJhX2ZyYW1lX21ldGEucHJvdG8SBmljcy52MSLtBAoPQ2FtZXJhRnJhbWVNZXRhEhIKCnN0YXRpb25faWQYASABKAkSEQoJY2FtZXJhX2lkGAIgASgJEjcKC2NhbWVyYV9raW5kGAMgASgOMiIuaWNzLnYxLkNhbWVyYUZyYW1lTWV0YS5DYW1lcmFLaW5kEhIKCnNlZ21lbnRfaWQYBCABKAkSEwoLZnJhbWVfaW5kZXgYBSABKAQSHQoVZXhwb3N1cmVfc3RhcnRfdXRjX25zGAYgASgDEhwKFGV4cG9zdXJlX2R1cmF0aW9uX25zGAcgASgDEjcKC3RpbWVfc291cmNlGAggASgOMiIuaWNzLnYxLkNhbWVyYUZyYW1lTWV0YS5UaW1lU291cmNlEh4KFnRpbWVfb2Zmc2V0X2FwcGxpZWRfbnMYCSABKAMSEAoId2lkdGhfcHgYCiABKA0SEQoJaGVpZ2h0X3B4GAsgASgNEhYKDmJpdHNfcGVyX3BpeGVsGAwgASgNEhMKC3dpbmRvd194X3B4GA0gASgNEhMKC3dpbmRvd195X3B4GA4gASgNIn0KCkNhbWVyYUtpbmQSGwoXQ0FNRVJBX0tJTkRfVU5TUEVDSUZJRUQQABIiCh5DQU1FUkFfS0lORF9ISUdIX1NQRUVEX1ZJU0lCTEUQARIUChBDQU1FUkFfS0lORF9NV0lSEAISGAoUQ0FNRVJBX0tJTkRfVFJBQ0tJTkcQAyJVCgpUaW1lU291cmNlEhsKF1RJTUVfU09VUkNFX1VOU1BFQ0lGSUVEEAASFAoQVElNRV9TT1VSQ0VfSVJJRxABEhQKEFRJTUVfU09VUkNFX0hPU1QQAmIGcHJvdG8z");
 
 /**
  * When and how one frame was exposed. The image itself stays in the camera's
@@ -108,6 +108,24 @@ export type CameraFrameMeta = Message<"ics.v1.CameraFrameMeta"> & {
    * @generated from field: uint32 bits_per_pixel = 12;
    */
   bitsPerPixel: number;
+
+  /**
+   * The sensor column the image's first column was read from, in pixels from
+   * the sensor's first column: the horizontal offset of the sensor window the
+   * camera applied, and 0 for a full frame.
+   *
+   * @generated from field: uint32 window_x_px = 13;
+   */
+  windowXPx: number;
+
+  /**
+   * The sensor row the image's first row was read from, in pixels from the
+   * sensor's first row: the vertical offset of the sensor window the camera
+   * applied, and 0 for a full frame.
+   *
+   * @generated from field: uint32 window_y_px = 14;
+   */
+  windowYPx: number;
 };
 
 /**

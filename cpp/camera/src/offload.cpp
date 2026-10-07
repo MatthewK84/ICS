@@ -16,7 +16,7 @@
 #include "ics/camera/cine.hpp"
 #include "ics/camera/frame_meta.hpp"
 #include "ics/camera/mapped_file.hpp"
-#include "ics/camera/phantom.hpp"
+#include "ics/camera/segment_camera.hpp"
 #include "ics/common/check.hpp"
 #include "ics/common/error.hpp"
 #include "ics/common/units.hpp"
@@ -30,6 +30,12 @@ constexpr double kNsPerSecond = 1e9;
 struct Recorded {
   SegmentStatus status;
   TimeAuthority authority;
+};
+
+// The segments recorded, and the settings the camera applied to them.
+struct Recording {
+  CameraSettings applied;
+  std::vector<Recorded> segments;
 };
 
 [[nodiscard]] Duration magnitude(const double ns) noexcept { return Duration(std::llround(std::abs(ns))); }
@@ -52,7 +58,8 @@ struct Recorded {
 
 // Saves a recorded segment's planned frames, reads the cine back and
 // verifies it.
-[[nodiscard]] Result<SegmentCheck> offload(PhantomCamera& camera, const OffloadPlan& plan, const Recorded& segment,
+[[nodiscard]] Result<SegmentCheck> offload(SegmentCamera& camera, const OffloadPlan& plan,
+                                           const CameraSettings& applied, const Recorded& segment,
                                            const std::optional<UtcTime> previous_last) {
   const std::string name = segment_name(segment.status.segment);
   const std::filesystem::path path = plan.directory / (name + ".cine");
@@ -68,28 +75,34 @@ struct Recorded {
                                                                   .authority = segment.authority});
   outcome.segment = segment.status.segment;
   outcome.path = path;
-  outcome.meta = frame_meta(
-      *cine, SegmentName{.station_id = plan.station_id, .camera_id = plan.camera_id, .segment_id = name},
-      segment.authority);
+  outcome.meta = frame_meta(*cine,
+                            SegmentSource{.station_id = plan.station_id,
+                                          .camera_id = plan.camera_id,
+                                          .camera_kind = plan.camera_kind,
+                                          .segment_id = name,
+                                          .window_x = applied.window_x,
+                                          .window_y = applied.window_y},
+                            segment.authority);
   return outcome;
 }
 
 // Arms the camera and records the plan's segments.
-[[nodiscard]] Result<std::vector<Recorded>> record(PhantomCamera& camera, const CameraSettings& settings,
-                                                   const OffloadPlan& plan, TimeQualitySource& quality) {
+[[nodiscard]] Result<Recording> record(SegmentCamera& camera, const CameraSettings& settings,
+                                       const OffloadPlan& plan, TimeQualitySource& quality) {
   const Result<CameraSettings> applied = camera.configure(settings);
   const Status armed = applied ? camera.arm(plan.segments) : fail(applied.error());
   if (!armed) {
     return fail(armed.error());
   }
-  std::vector<Recorded> out;
-  out.reserve(plan.segments);
+  Recording out{.applied = *applied, .segments = {}};
+  out.segments.reserve(plan.segments);
   for (std::uint32_t i = 0; i < plan.segments; ++i) {
     const Result<SegmentStatus> status = camera.trigger();
     if (!status) {
       return fail(status.error());
     }
-    out.push_back(Recorded{.status = *status, .authority = time_authority(applied->irig, quality.current(), plan.camera_id)});
+    out.segments.push_back(
+        Recorded{.status = *status, .authority = time_authority(applied->irig, quality.current(), plan.camera_id)});
   }
   return out;
 }
@@ -118,16 +131,16 @@ SegmentCheck verify_segment(const Cine& cine, const SegmentExpectation& expected
   return out;
 }
 
-Result<OffloadReport> record_and_offload(PhantomCamera& camera, const CameraSettings& settings,
+Result<OffloadReport> record_and_offload(SegmentCamera& camera, const CameraSettings& settings,
                                          const OffloadPlan& plan, TimeQualitySource& quality) {
-  const Result<std::vector<Recorded>> recorded = record(camera, settings, plan, quality);
+  const Result<Recording> recorded = record(camera, settings, plan, quality);
   if (!recorded) {
     return fail(recorded.error());
   }
   OffloadReport report{.segments = {}, .verified = true};
   std::optional<UtcTime> previous_last;
-  for (const Recorded& segment : *recorded) {
-    Result<SegmentCheck> checked = offload(camera, plan, segment, previous_last);
+  for (const Recorded& segment : recorded->segments) {
+    Result<SegmentCheck> checked = offload(camera, plan, recorded->applied, segment, previous_last);
     if (!checked) {
       return fail(checked.error());
     }

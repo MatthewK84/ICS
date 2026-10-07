@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1eics/v1/camera_frame_meta.proto\x12\x06ics.v1\"\xe5\x05\n\x0f\x43\x61meraFrameMeta\x12\x1d\n\nstation_id\x18\x01 \x01(\tR\tstationId\x12\x1b\n\tcamera_id\x18\x02 \x01(\tR\x08\x63\x61meraId\x12\x43\n\x0b\x63\x61mera_kind\x18\x03 \x01(\x0e\x32\".ics.v1.CameraFrameMeta.CameraKindR\ncameraKind\x12\x1d\n\nsegment_id\x18\x04 \x01(\tR\tsegmentId\x12\x1f\n\x0b\x66rame_index\x18\x05 \x01(\x04R\nframeIndex\x12\x31\n\x15\x65xposure_start_utc_ns\x18\x06 \x01(\x03R\x12\x65xposureStartUtcNs\x12\x30\n\x14\x65xposure_duration_ns\x18\x07 \x01(\x03R\x12\x65xposureDurationNs\x12\x43\n\x0btime_source\x18\x08 \x01(\x0e\x32\".ics.v1.CameraFrameMeta.TimeSourceR\ntimeSource\x12\x33\n\x16time_offset_applied_ns\x18\t \x01(\x03R\x13timeOffsetAppliedNs\x12\x19\n\x08width_px\x18\n \x01(\rR\x07widthPx\x12\x1b\n\theight_px\x18\x0b \x01(\rR\x08heightPx\x12$\n\x0e\x62its_per_pixel\x18\x0c \x01(\rR\x0c\x62itsPerPixel\"}\n\nCameraKind\x12\x1b\n\x17\x43\x41MERA_KIND_UNSPECIFIED\x10\x00\x12\"\n\x1e\x43\x41MERA_KIND_HIGH_SPEED_VISIBLE\x10\x01\x12\x14\n\x10\x43\x41MERA_KIND_MWIR\x10\x02\x12\x18\n\x14\x43\x41MERA_KIND_TRACKING\x10\x03\"U\n\nTimeSource\x12\x1b\n\x17TIME_SOURCE_UNSPECIFIED\x10\x00\x12\x14\n\x10TIME_SOURCE_IRIG\x10\x01\x12\x14\n\x10TIME_SOURCE_HOST\x10\x02\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1eics/v1/camera_frame_meta.proto\x12\x06ics.v1\"\xa5\x06\n\x0f\x43\x61meraFrameMeta\x12\x1d\n\nstation_id\x18\x01 \x01(\tR\tstationId\x12\x1b\n\tcamera_id\x18\x02 \x01(\tR\x08\x63\x61meraId\x12\x43\n\x0b\x63\x61mera_kind\x18\x03 \x01(\x0e\x32\".ics.v1.CameraFrameMeta.CameraKindR\ncameraKind\x12\x1d\n\nsegment_id\x18\x04 \x01(\tR\tsegmentId\x12\x1f\n\x0b\x66rame_index\x18\x05 \x01(\x04R\nframeIndex\x12\x31\n\x15\x65xposure_start_utc_ns\x18\x06 \x01(\x03R\x12\x65xposureStartUtcNs\x12\x30\n\x14\x65xposure_duration_ns\x18\x07 \x01(\x03R\x12\x65xposureDurationNs\x12\x43\n\x0btime_source\x18\x08 \x01(\x0e\x32\".ics.v1.CameraFrameMeta.TimeSourceR\ntimeSource\x12\x33\n\x16time_offset_applied_ns\x18\t \x01(\x03R\x13timeOffsetAppliedNs\x12\x19\n\x08width_px\x18\n \x01(\rR\x07widthPx\x12\x1b\n\theight_px\x18\x0b \x01(\rR\x08heightPx\x12$\n\x0e\x62its_per_pixel\x18\x0c \x01(\rR\x0c\x62itsPerPixel\x12\x1e\n\x0bwindow_x_px\x18\r \x01(\rR\twindowXPx\x12\x1e\n\x0bwindow_y_px\x18\x0e \x01(\rR\twindowYPx\"}\n\nCameraKind\x12\x1b\n\x17\x43\x41MERA_KIND_UNSPECIFIED\x10\x00\x12\"\n\x1e\x43\x41MERA_KIND_HIGH_SPEED_VISIBLE\x10\x01\x12\x14\n\x10\x43\x41MERA_KIND_MWIR\x10\x02\x12\x18\n\x14\x43\x41MERA_KIND_TRACKING\x10\x03\"U\n\nTimeSource\x12\x1b\n\x17TIME_SOURCE_UNSPECIFIED\x10\x00\x12\x14\n\x10TIME_SOURCE_IRIG\x10\x01\x12\x14\n\x10TIME_SOURCE_HOST\x10\x02\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,9 +32,9 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'ics.v1.camera_frame_meta_pb
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_CAMERAFRAMEMETA']._serialized_start=43
-  _globals['_CAMERAFRAMEMETA']._serialized_end=784
-  _globals['_CAMERAFRAMEMETA_CAMERAKIND']._serialized_start=572
-  _globals['_CAMERAFRAMEMETA_CAMERAKIND']._serialized_end=697
-  _globals['_CAMERAFRAMEMETA_TIMESOURCE']._serialized_start=699
-  _globals['_CAMERAFRAMEMETA_TIMESOURCE']._serialized_end=784
+  _globals['_CAMERAFRAMEMETA']._serialized_end=848
+  _globals['_CAMERAFRAMEMETA_CAMERAKIND']._serialized_start=636
+  _globals['_CAMERAFRAMEMETA_CAMERAKIND']._serialized_end=761
+  _globals['_CAMERAFRAMEMETA_TIMESOURCE']._serialized_start=763
+  _globals['_CAMERAFRAMEMETA_TIMESOURCE']._serialized_end=848
 # @@protoc_insertion_point(module_scope)

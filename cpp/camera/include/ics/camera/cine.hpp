@@ -56,12 +56,17 @@ struct Cine {
 // the layout, including a cine without frame times.
 [[nodiscard]] Result<Cine> read_cine(std::span<const std::byte> bytes);
 
-// Writes a cine holding the frame times and exposures given, with images of
-// zeros, as the emulated camera saves them. image_offsets is ignored. Fails
-// with Error::kInvalidArgument for a cine read_cine would refuse, a time the
-// format cannot hold, an exposure it cannot hold (4.29 s for the setup's,
-// under 1 s for a frame's), a side over 65,535 pixels, a bit count that is
-// not a whole number of bytes, more than 2^20 frames or a file over 1 GiB.
+// Writes a cine holding the frame times and exposures given, and the images:
+// each frame's pixels in turn, width x height x bit_count / 8 bytes a frame,
+// as the camera read them. image_offsets is ignored. Fails with
+// Error::kInvalidArgument for images of any other size, a cine read_cine
+// would refuse, a time the format cannot hold, an exposure it cannot hold
+// (4.29 s for the setup's, under 1 s for a frame's), a side over 65,535
+// pixels, a bit count that is not a whole number of bytes, more than 2^20
+// frames or a file over 1 GiB.
+[[nodiscard]] Result<std::vector<std::byte>> write_cine(const Cine& cine, std::span<const std::byte> images);
+
+// The same, with images of zeros, as the emulated Phantom saves them.
 [[nodiscard]] Result<std::vector<std::byte>> write_cine(const Cine& cine);
 
 }  // namespace ics::camera
