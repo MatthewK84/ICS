@@ -75,6 +75,7 @@ TEST(Run, ServesTheConfigFileUntilSigterm) {
                       << "station_id = \"station-1\"\nptp4l_socket = \"" << (dir / "ptp4l-ro").native() << "\"\n"
                       << "client_socket = \"" << (dir / "client").native() << "\"\n"
                       << "publish_socket = \"" << (dir / "time-quality").native() << "\"\n"
+                      << "camera_offsets_file = \"" << (dir / "offsets.binpb").native() << "\"\n"
                       << "ptp_domain = 0\npoll_interval_ns = 10_000_000\nasymmetry_bound_ns = 1_000\n"
                       << "holdover_drift_ns_per_s = 50.0\n";
   const BlockedSigterm blocked;

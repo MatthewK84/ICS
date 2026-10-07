@@ -119,10 +119,19 @@ Each poll interval, `ics-timingd` sends GET requests for four data sets (current
 | `holdover` | The port is `SLAVE` and the grandmaster announces class 7, or one of the ITU-T G.8275 holdover classes (135, 140 to 160) |
 | `free_running` | Anything else, including a `ptp4l` that does not answer within the poll interval |
 
-The report's `error_bound_ns` is a model, not a measurement: |offset| plus the accuracy the grandmaster announces (IEEE 1588-2019 Table 5) plus `asymmetry_bound_ns` when locked; the same plus `holdover_drift_ns_per_s` times the time in holdover; and unbounded, written as INT64_MAX, when free-running. Holdover is timed from the first poll that shows it. PTP does not carry `gnss_satellite_count` or `irig_b_locked`, so they stay 0 and false, and `camera_offsets` stays empty until the strobe calibration fills it.
+The report's `error_bound_ns` is a model, not a measurement: |offset| plus the accuracy the grandmaster announces (IEEE 1588-2019 Table 5) plus `asymmetry_bound_ns` when locked; the same plus `holdover_drift_ns_per_s` times the time in holdover; and unbounded, written as INT64_MAX, when free-running. Holdover is timed from the first poll that shows it. PTP does not carry `gnss_satellite_count` or `irig_b_locked`, so they stay 0 and false.
 
 - **Reports.** The build plan has `ics-timingd` serve reports as a gRPC server stream. gRPC is not in the toolchain yet, because Conan Center's gRPC package needs an older protobuf than the 7.35.0 the lockfile pins. Until it is, [`publisher.hpp`](timing/include/ics/timing/publisher.hpp) sends each report to every subscriber on a local `SOCK_SEQPACKET` socket (`publish_socket`), one serialized `TimeQuality` per message, which is a server stream's shape. Up to 16 subscribers; one that cannot take a report at once is dropped and must reconnect.
-- **Logs.** `started`; `clock_state` when the state changes, with `state`, `ptp_offset_ns` and `error_bound_ns`; `ptp4l_answering` and, as a warning, `ptp4l_unavailable` when `ptp4l` starts or stops answering; `start_failed`; and `stopped`, with the `signal`.
+- **Camera offsets.** `camera_offsets` comes from the camera offsets file the strobe analyzer writes ([Strobe calibration](#strobe-calibration)), named by `camera_offsets_file`. [`camera_offsets.hpp`](timing/include/ics/timing/camera_offsets.hpp) reads and writes it: a serialized `TimeQuality` with only `station_id` and `camera_offsets` set, at most 1 MiB, written to a temporary file, synced and renamed over the old one, so a reader never sees half a file.
+  - Each poll checks the file's modification time, which allocates nothing. Only when it changes is the file read again, and its offsets copied into every report until it next changes.
+  - A missing file means no camera is calibrated yet, and the reports carry no offsets.
+  - A file that is malformed, or another station's, is logged and used for nothing.
+  - An offset stays until the next calibration replaces it; its `measured_utc_ns` says how old it is.
+- **Logs.**
+  - `started`, `start_failed`, and `stopped`, with the `signal`.
+  - `clock_state` when the state changes, with `state`, `ptp_offset_ns` and `error_bound_ns`.
+  - `ptp4l_answering` when `ptp4l` starts answering, and as a warning, `ptp4l_unavailable` when it stops.
+  - When the camera offsets file changes: `camera_offsets` with their `count`; `camera_offsets_none` for no file; or as a warning, `camera_offsets_unusable` with the `error`.
 - **Running.** `ics-timingd` takes no arguments. It reads `/etc/ics/ics-timingd.toml`, a config like [`ics-timingd.toml`](services/timingd/ics-timingd.toml); the path is fixed so the service only ever opens that one file (CodeQL's path-injection rule rejects a path taken from the command line). It runs until SIGINT or SIGTERM and exits 0. It exits 1 when it cannot open a socket, and 2 for an argument or a bad config file, which it reports field by field.
 - **Allocation.** Once running, a poll that changes nothing allocates nothing: the tests run one inside `NoAllocationScope`. Only log lines allocate.
 - **Bench.** The [timing bench](../deploy/timing-bench/README.md) checks, every night, that holdover is flagged within 1 s of GNSS loss, and describes the same check on real hardware.
@@ -290,6 +299,8 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
 | [`flir_sdk.hpp`](camera/include/ics/camera/flir_sdk.hpp) | `FlirSdk`: what ICS needs from the X6980's SDK, frame by frame, each frame with its IRIG-B stamp and pixels |
 | [`emulated_x6980.hpp`](camera/include/ics/camera/emulated_x6980.hpp) | `EmulatedX6980`: the X6980's SDK in software, with a 640 × 512 sensor and microsecond IRIG-B stamps, with or without the year |
 | [`flir_camera.hpp`](camera/include/ics/camera/flir_camera.hpp) | `FlirCamera`: the X6980 as a `SegmentCamera`, converting each stamp to UTC and writing the frames as a cine |
+| [`strobe.hpp`](camera/include/ics/camera/strobe.hpp) | `StrobeSchedule` and `strobe_light`: the PPS strobe's pulses and the light an exposure holds; `StrobeScene`: what an emulated camera sees of it (ICS-029) |
+| [`image.hpp`](camera/include/ics/camera/image.hpp) | `roi_mean`: the mean pixel value in a rectangle of a frame's image, from unpacked 8- or 16-bit pixels (ICS-029) |
 | [`frame_meta.hpp`](camera/include/ics/camera/frame_meta.hpp) | `TimeAuthority` and `frame_meta`: a `CameraFrameMeta` for each frame of a cine, with its camera kind and sensor window offset |
 | [`offload.hpp`](camera/include/ics/camera/offload.hpp) | `record_and_offload` and `verify_segment`: the "Done when" sequence and check, below |
 
@@ -317,6 +328,39 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
   - a camera, and an X6980 SDK, that fails or hands over bad frames at each step.
 
   The fuzz target reads any bytes. It checks that each cine it reads keeps the reader's promises, and that a cine the writer can write, with images up to 16 MiB, reads back unchanged.
+
+## Strobe calibration
+
+[`strobe/`](strobe) is `ics::strobe` (ICS-029, CPP-04). It measures each camera's time offset, its frame time stamp less the true start of the frame's exposure, from the PPS strobe the camera recorded. It publishes the offset through `ics-timingd`'s camera offsets file. `frame_meta` (ICS-027, ICS-028) subtracts the latest offset from every frame time, so the calibration corrects every frame downstream ([Camera clocks](../docs/frames-and-time.md#camera-clocks)).
+
+| Header | Provides |
+|---|---|
+| [`detect.hpp`](strobe/include/ics/strobe/detect.hpp) | `read_segment`: each frame's mean brightness in the strobe's rectangle (`camera::roi_mean`), and which frames the strobe lit |
+| [`fit.hpp`](strobe/include/ics/strobe/fit.hpp) | `fit_offset`: the offset that best explains the frames, with its one-sigma uncertainty |
+| [`analyze.hpp`](strobe/include/ics/strobe/analyze.hpp) | `analyze_folder`: a calibration's cines to a `TimeQuality.CameraOffset`; `publish`: the offset into the station's camera offsets file |
+| [`config.hpp`](strobe/include/ics/strobe/config.hpp), [`run.hpp`](strobe/include/ics/strobe/run.hpp) | `ics-strobe-analyzer`'s settings and command |
+
+- **The strobe.** An LED lights for `pulse_width` at each UTC second, after its own `latency` and a sweep delay. A delay generator steps the sweep delay by `delay_step` each second, through `sweep_steps` steps (`camera::StrobeSchedule`). The camera records one segment around each PPS, saved as a cine.
+- **Detection.** In each segment, a frame is lit when its rectangle's mean brightness exceeds the segment's median by six robust sigmas (1.4826 median absolute deviations), and by at least one count. Only segments with consecutive lit frames are fitted. Segments with no lit frame are left out: the pulse fell between exposures, or the strobe missed a second. So are segments whose lit frames are apart, as from stray light. Each is counted.
+- **The fit.** A frame's brightness is modeled as gain × (strobe light within its exposure) + background. The exposure is taken to start at the frame's stamp less the offset, so the fit searches offsets within `max_offset` of 0: on a 250 ns grid, then to the nanosecond, solving the gain and background by least squares at each.
+  - The sigma is the residuals' RMS over the information the frames carry about the offset, once gain and background are fitted too.
+  - The fit fails with `Error::kUnconstrained` when the frames carry no such information, when the best offset lies at the search's edge, or when a full pulse's brightness is under ten times the residuals' RMS.
+  - With no sweep, every lit frame holds the same light, so a larger gain times less of the pulse fits as well as the true one, and the fit fails rather than guessing.
+  - A delay step shorter than the pulse makes a pulse straddle every exposure edge the sweep crosses.
+- **Tool.** [`ics-strobe-analyzer`](strobe/tool/main.cpp) takes no arguments.
+  - It reads `/etc/ics/ics-strobe.toml`, a config like [`ics-strobe.toml`](strobe/ics-strobe.toml), and analyzes every `*.cine` in the working folder.
+  - It replaces its camera's offset in the offsets file, keeping the other cameras', and logs `camera_offset` with the offset, its sigma and the segments behind it.
+  - It exits 0 when the offset is published, 1 when the cines could not be analyzed or the offset published, and 2 for an argument or a bad config file.
+- **Done when.** Offsets within 5 µs on the bench. Under RMF, ICS is built in its entirety before any test on real hardware, so the bench is emulated for now, as for ICS-027 and ICS-028.
+  - The emulated cameras render the strobe's light into their images, with Gaussian noise, and stamp each frame late by a known offset (`camera::StrobeScene`).
+  - [`testing/strobe_bench`](testing/strobe_bench/main.cpp) is `ics-strobe-bench phantom|x6980`. It records 40 segments, measures the offset, publishes it and reads it back through the offsets file. It is a test for each camera in every preset.
+  - The Phantom (5,000 frames/s, 150 µs exposures, a 20 µs pulse swept by 5 µs) is stamped 37.4 µs late, and measures 37.404 µs with a sigma of 26 ns.
+  - The X6980 (1,004 frames/s, 800 µs, a 30 µs pulse swept by 25 µs) is stamped 112.6 µs early, and measures −113.067 µs with a sigma of 51 ns. Its stamps, truncated to the microsecond, read 0.5 µs early on average, and that is part of its offset.
+- **Tests.**
+  - The fit, on synthetic frames: offsets either side of 0, and each way it refuses.
+  - Detection on cines written for it.
+  - The analysis, `publish`, the settings and the command, on the emulated cameras.
+  - The offsets file's fuzz target reads any bytes, and checks that what it accepts keeps its promises and reads back unchanged.
 
 ## Power-of-Ten checks
 

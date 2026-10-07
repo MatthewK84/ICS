@@ -162,6 +162,7 @@ station_id = "timing-bench"
 ptp4l_socket = "${WORK}/st-ro"
 client_socket = "${WORK}/timingd-client"
 publish_socket = "${WORK}/time-quality"
+camera_offsets_file = "${WORK}/camera-offsets.binpb"
 ptp_domain = 0
 poll_interval_ns = 100_000_000
 asymmetry_bound_ns = 1_000

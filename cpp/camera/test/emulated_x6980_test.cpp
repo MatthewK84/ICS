@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <initializer_list>
 #include <string>
 #include <utility>
 #include <vector>
@@ -13,6 +14,7 @@
 #include "ics/camera/flir_sdk.hpp"
 #include "ics/camera/irig.hpp"
 #include "ics/camera/segment_camera.hpp"
+#include "ics/camera/strobe.hpp"
 #include "ics/camera/trigger_schedule.hpp"
 #include "ics/common/error.hpp"
 #include "ics/common/units.hpp"
@@ -112,12 +114,62 @@ TEST(EmulatedX6980, ReadsTheFramesASegmentHolds) {
   // 1 / 1,004 s after the trigger is 996,015.9 ns: 996,016 ns, at 996,316 ns
   // past the microsecond, stamped 996 µs after it.
   EXPECT_EQ(utc_from_irig(last.stamp, {}).value(), utc_from_ns(kEpochNs) + microseconds(996));
+  // Without a scene, every pixel is 0.
   ASSERT_EQ(last.pixels.size(), 32U * 16U * 2U);
-  EXPECT_EQ(last.pixels[0], std::byte{1});
+  EXPECT_EQ(last.pixels[0], std::byte{0});
   EXPECT_EQ(last.pixels[1], std::byte{0});
-  // Frame -1's pixels hold its low 14 bits, 0x3FFF.
-  EXPECT_EQ(frames->front().pixels[2], std::byte{0xFF});
-  EXPECT_EQ(frames->front().pixels[3], std::byte{0x3F});
+}
+
+// A 50 µs strobe at each second's start, lighting the first 4 x 2 pixels at
+// 10 counts a microsecond over a background of 100, seen by a camera that
+// stamps 3 µs late.
+StrobeScene scene() {
+  return StrobeScene{
+      .schedule = StrobeSchedule{.pulse_width = microseconds(50), .latency = {}, .delay_step = {}, .sweep_steps = 1},
+      .roi = Roi{.x = 0, .y = 0, .width = 4, .height = 2},
+      .stamp_offset = microseconds(3),
+      .background = 100.0,
+      .gain_per_us = 10.0,
+      .noise_sigma = 0.0,
+      .seed = 0};
+}
+
+std::uint32_t pixel(const FlirFrame& frame, const std::size_t index) {
+  return std::to_integer<std::uint32_t>(frame.pixels[2 * index]) |
+         (std::to_integer<std::uint32_t>(frame.pixels[(2 * index) + 1]) << 8U);
+}
+
+TEST(EmulatedX6980, LightsItsPixelsAsTheSceneAndStampsLate) {
+  EmulatedX6980 camera(kSchedule, true, scene());
+  ASSERT_TRUE(camera.configure(settings()).has_value());
+  ASSERT_TRUE(camera.arm(1).has_value());
+  const Result<FlirTrigger> fired = camera.trigger();
+  ASSERT_TRUE(fired.has_value());
+  EXPECT_EQ(utc_from_irig(fired->stamp, {}).value(), utc_from_ns(kEpochNs) + microseconds(3));
+  const Result<std::vector<FlirFrame>> frames = camera.read(0, FrameRange{.first = -1, .count = 2});
+  ASSERT_TRUE(frames.has_value());
+  const FlirFrame& lit = frames->back();
+  EXPECT_EQ(utc_from_irig(lit.stamp, {}).value(), utc_from_ns(kEpochNs) + microseconds(3));
+  // Frame 0's exposure starts 0.3 µs into the pulse: 49.7 µs of it, 597
+  // counts in the rectangle; 100 beside it, and in frame -1, before it.
+  EXPECT_EQ(pixel(lit, 0), 597U);
+  EXPECT_EQ(pixel(lit, 32 + 3), 597U);
+  EXPECT_EQ(pixel(lit, 4), 100U);
+  EXPECT_EQ(pixel(lit, 2 * 32), 100U);
+  EXPECT_EQ(pixel(frames->front(), 0), 100U);
+}
+
+TEST(EmulatedX6980, RefusesASceneThatDoesNotSuitTheSettings) {
+  StrobeScene outside = scene();
+  outside.roi.x = 29;
+  StrobeScene no_pulse = scene();
+  no_pulse.schedule.pulse_width = {};
+  StrobeScene negative = scene();
+  negative.gain_per_us = -1.0;
+  for (const StrobeScene& bad : {outside, no_pulse, negative}) {
+    EmulatedX6980 camera(kSchedule, true, bad);
+    EXPECT_EQ(camera.configure(settings()).error(), Error::kInvalidArgument);
+  }
 }
 
 }  // namespace

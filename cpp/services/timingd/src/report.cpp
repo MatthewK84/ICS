@@ -29,11 +29,12 @@ void fill(const timing::Quality& quality, const UtcTime utc, v1::TimeQuality& re
   report.set_error_bound_ns(quality.error_bound.count());
 }
 
-std::size_t max_report_size(const std::string_view station_id) {
+std::size_t max_report_size(const v1::TimeQuality& report) {
   // A negative integer takes the longest varint, 10 bytes.
   constexpr std::int64_t kLongest = -1;
   v1::TimeQuality largest;
-  largest.set_station_id(station_id);
+  largest.set_station_id(report.station_id());
+  *largest.mutable_camera_offsets() = report.camera_offsets();
   largest.set_time_utc_ns(kLongest);
   largest.set_clock_state(v1::TimeQuality::CLOCK_STATE_FREE_RUNNING);
   largest.set_holdover_duration_ns(kLongest);

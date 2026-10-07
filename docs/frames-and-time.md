@@ -111,7 +111,15 @@ A FLIR X6980-HS's decoder latches an IRIG-B time stamp for each frame: the day o
 - **Day 366 and leap seconds.** Day 366 exists only in a leap year. A leap second (second 60) has no UTC time ICS can count, and is refused.
 - **Resolution.** Microsecond stamps put consecutive frames whole microseconds apart: at 1,004 frames/s, 996 µs or 997 µs against a 996,015.9 ns period. That is at most 984 ns off, within the 1 µs spacing tolerance the verification allows.
 
-`ics::camera` ([`cpp/camera`](../cpp/README.md#cameras), ICS-027 and ICS-028) sets each frame's `exposure_start_utc_ns` to its cine time less the camera's latest measured offset (`TimeQuality.CameraOffset`). Where in the exposure the camera stamps a frame is part of that offset, which the strobe calibration (ICS-029) measures. Until then the offset list is empty, and nothing is removed.
+`ics::camera` ([`cpp/camera`](../cpp/README.md#cameras), ICS-027 and ICS-028) sets each frame's `exposure_start_utc_ns` to its cine time less the camera's latest measured offset (`TimeQuality.CameraOffset`). Until a camera is calibrated it has no offset, and nothing is removed.
+
+The strobe calibration ([`cpp/strobe`](../cpp/README.md#strobe-calibration), ICS-029) measures the offset: the camera's stamp less the true start of the frame's exposure.
+- An LED lights for a known time at each UTC second, from the GNSS PPS, and a delay generator sweeps its delay across a frame period, a step a second.
+- The analyzer fits each frame's brightness to the strobe light its exposure would hold at each candidate offset.
+- Everything that puts a stamp off the true exposure start is part of the offset: where in the exposure the camera stamps, its decoder's latency, and a stamp's truncation. An X6980's microsecond stamps read 0.5 µs early on average.
+- The strobe's own latency from the PPS edge to light is configured, not measured. An error in it is an error in every offset.
+
+`ics-timingd` publishes the offsets in every `TimeQuality` report.
 
 A frame is `TIME_SOURCE_IRIG` only when the settings the camera reports it applied follow IRIG-B, and `TimeQuality.irig_b_locked` was true when its segment was recorded. Otherwise it is `TIME_SOURCE_HOST`, and its segment does not verify.
 

@@ -1,8 +1,11 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
+#include <vector>
 
 #include "ics/camera/segment_camera.hpp"
+#include "ics/camera/strobe.hpp"
 #include "ics/camera/trigger_schedule.hpp"
 #include "ics/common/units.hpp"
 
@@ -30,5 +33,19 @@ namespace ics::camera::detail {
 // on the schedule: its trigger and the frames around it.
 [[nodiscard]] SegmentStatus scheduled(const CameraSettings& settings, const TriggerSchedule& schedule,
                                       std::uint32_t segment) noexcept;
+
+// Whether a scene suits a camera with these settings: no strobe (an empty
+// rectangle), or a valid schedule, a rectangle within the image, and no
+// negative background, gain or noise.
+[[nodiscard]] bool fits_scene(const StrobeScene& scene, const CameraSettings& settings) noexcept;
+
+// The pixels of a frame whose exposure truly starts at start, as the scene
+// lights them: little-endian 16-bit words, row by row, each rounded and held
+// to 0 to max_value. key makes each frame's noise its own.
+[[nodiscard]] std::vector<std::byte> render(const StrobeScene& scene, const CameraSettings& settings, UtcTime start,
+                                            std::uint32_t max_value, std::uint64_t key);
+
+// A key for a frame's noise: its segment and number.
+[[nodiscard]] std::uint64_t frame_key(std::uint32_t segment, std::int32_t number) noexcept;
 
 }  // namespace ics::camera::detail

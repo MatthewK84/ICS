@@ -20,6 +20,7 @@ enum class Error : std::uint16_t {
   kMalformed = 7,        // Data that does not follow its format, such as a corrupt geoid grid.
   kUnavailable = 8,      // A peer that did not answer in time, or refused, such as ptp4l (ICS-019).
   kUnwritable = 9,       // A file that cannot be created, written or synced (ICS-020).
+  kUnconstrained = 10,   // Data that does not pin the value sought down, such as an unlit strobe edge (ICS-029).
 };
 
 // The name of an error, such as "full"; "unknown" for a value not listed above.

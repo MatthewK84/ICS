@@ -7,6 +7,7 @@
 #include "ics/common/error.hpp"
 #include "ics/common/units.hpp"
 #include "ics/logging/logger.hpp"
+#include "ics/timing/camera_offsets.hpp"
 #include "ics/timing/clock_state.hpp"
 #include "ics/timing/ptp_client.hpp"
 #include "ics/timing/publisher.hpp"
@@ -28,7 +29,11 @@ class Service {
   // Polls ptp4l, waiting up to the poll interval for its answers, and
   // publishes the report. Logs "clock_state" when the state changes, and
   // "ptp4l_answering" or "ptp4l_unavailable" when ptp4l starts or stops
-  // answering; a ptp4l that does not answer means free-running.
+  // answering; a ptp4l that does not answer means free-running. When the
+  // camera offsets file changes, the report takes its offsets, and logs
+  // "camera_offsets" with their count; or, for a file it cannot use, it takes
+  // none and logs "camera_offsets_none" for no file, or warns
+  // "camera_offsets_unusable" with the error.
   void step(const logging::Logger& logger);
 
   [[nodiscard]] timing::ClockState state() const noexcept { return tracker_.state(); }
@@ -38,10 +43,12 @@ class Service {
   Service(timing::PtpClient client, timing::Publisher publisher, const Config& config);
   void log_answering(const logging::Logger& logger, const Result<timing::Snapshot>& polled);
   void log_state(const logging::Logger& logger, const timing::Quality& quality);
+  void update_offsets(const logging::Logger& logger);
 
   timing::PtpClient client_;
   timing::Publisher publisher_;
   timing::QualityTracker tracker_;
+  timing::CameraOffsetsWatcher offsets_;
   Duration poll_timeout_;
   v1::TimeQuality report_;
   std::vector<std::byte> buffer_;

@@ -27,6 +27,7 @@ Config read_config(config::Reader& root) {
   out.ptp4l_socket = timing.text("ptp4l_socket");
   out.client_socket = timing.text("client_socket");
   out.publish_socket = timing.text("publish_socket");
+  out.camera_offsets_file = timing.text("camera_offsets_file");
   out.ptp_domain = static_cast<std::uint8_t>(timing.integer("ptp_domain", 0, kMaxDomain));
   out.poll_interval = timing.duration("poll_interval_ns", kMinPollInterval, kMaxPollInterval);
   out.model.asymmetry_bound = timing.duration("asymmetry_bound_ns", Duration::zero(), kMaxAsymmetryBound);

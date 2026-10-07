@@ -5,6 +5,7 @@
 
 #include "ics/camera/flir_sdk.hpp"
 #include "ics/camera/segment_camera.hpp"
+#include "ics/camera/strobe.hpp"
 #include "ics/camera/trigger_schedule.hpp"
 #include "ics/common/error.hpp"
 
@@ -18,15 +19,19 @@ inline constexpr std::uint32_t kX6980SensorHeight = 512;
 // has the SDK. Its IRIG-B decoder follows UTC exactly and latches each
 // frame's time to the microsecond, with the year when stamps_year is set, as
 // an IRIG source sending IEEE 1344 control functions makes it. Each frame's
-// time is its trigger's time plus its number of frame periods, and every
-// pixel of a frame holds its number's low 14 bits.
+// exposure starts at its trigger's time plus its number of frame periods.
+// The scene's strobe lights its pixels, 14 of each pixel's 16 bits, and its
+// decoder stamps each frame and trigger the scene's stamp offset late; with
+// no scene, pixels are zeros and stamps exact.
 class EmulatedX6980 final : public FlirSdk {
  public:
   EmulatedX6980(const TriggerSchedule& schedule, const bool stamps_year) noexcept
       : schedule_(schedule), stamps_year_(stamps_year) {}
+  EmulatedX6980(const TriggerSchedule& schedule, const bool stamps_year, const StrobeScene& scene) noexcept
+      : schedule_(schedule), stamps_year_(stamps_year), scene_(scene) {}
 
-  // Fails with Error::kInvalidArgument for a window not on the sensor, no
-  // frame rate, an integration time not shorter than a frame period, a
+  // Fails with Error::kInvalidArgument for a window not on the sensor, a
+  // scene that does not suit the settings, no frame rate, an integration time not shorter than a frame period, a
   // segment of no frames or more than 2^20, more post-trigger frames than it
   // holds, or a schedule whose segments would overlap.
   [[nodiscard]] Result<CameraSettings> configure(const CameraSettings& settings) override;
@@ -43,6 +48,7 @@ class EmulatedX6980 final : public FlirSdk {
  private:
   TriggerSchedule schedule_;
   bool stamps_year_;
+  StrobeScene scene_{};
   CameraSettings settings_{};
   bool configured_ = false;
   std::uint32_t armed_ = 0;
