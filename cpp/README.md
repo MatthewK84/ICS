@@ -276,6 +276,32 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
 - **On SITL.** On a 150 s `crossing` engagement, ArduCopter's clock drifts −0.16 ppm and its pairs are 0.13 ms RMS from the line. With 100 ppm injected either way and the middle 60 % withheld, every position aligns within 21 µs. Its positions arrive 0.78 s to 0.80 s after their aligned times: its simulated GNSS time is that far behind the host's clock. PX4 SIH's offsets spread over 1.9 s, so its sortie is not checked. On CI's runners, across the three engagements, ArduCopter aligns within 41 µs and PX4 SIH's pairs are 0.8 ms to 1.1 ms RMS from their line.
 - **Tests.** Synthetic clocks cover every case, and [`test/fixtures`](timealign/test/fixtures/README.md) holds that engagement's clock pairs and position times, as the rig's own decoder read them, for the check. The fuzz target fits any pairs and checks that each fit and check keeps its promises.
 
+## Cameras
+
+[`camera/`](camera) is `ics::camera` (ICS-027, CPP-12). It records segments on a Phantom high-speed camera, saves each as a cine file over the camera's 10GbE link, and checks each saved segment's frame times. ICS does not have the Phantom SDK yet, so an emulated Phantom stands in for the camera. The SDK binding, and a run on a real camera, are left for a later issue.
+
+| Header | Provides |
+|---|---|
+| [`cine.hpp`](camera/include/ics/camera/cine.hpp) | `read_cine`: a cine's frame numbers, trigger time, image size, frame rate and exposure, each frame's time and exposure, and where its images lie, all checked against the bytes; `write_cine`: a cine of the times given, with images of zeros; `from_time64` and `to_time64` |
+| [`mapped_file.hpp`](camera/include/ics/camera/mapped_file.hpp) | `MappedFile`: a saved cine mapped read-only |
+| [`phantom.hpp`](camera/include/ics/camera/phantom.hpp) | `PhantomCamera`: configure, arm segments, trigger, and save frames as a cine; `TimeQualitySource`: the station's time quality |
+| [`emulated_phantom.hpp`](camera/include/ics/camera/emulated_phantom.hpp) | `EmulatedPhantom`: a camera in software whose clock follows IRIG-B exactly, triggered on a schedule |
+| [`frame_meta.hpp`](camera/include/ics/camera/frame_meta.hpp) | `TimeAuthority` and `frame_meta`: a `CameraFrameMeta` for each frame of a cine |
+| [`offload.hpp`](camera/include/ics/camera/offload.hpp) | `record_and_offload` and `verify_segment`: the "Done when" sequence and check, below |
+
+- **The format.** ICS reads a cine as the PIMS project's reader lays it out ([soft-matter/pims](https://github.com/soft-matter/pims) `cine.py`, BSD-3-Clause). PIMS is a reference only, and no PIMS code is used; Vision Research's own format document could not be fetched from the build environment. PIMS 0.7 reads ICS's sample cine exactly as `read_cine` does ([fixtures](camera/test/fixtures/README.md)). A frame's time is tagged block 1002, a TIME64 ([Camera clocks](../docs/frames-and-time.md#camera-clocks)). A cine without frame times is refused.
+- **Timed by IRIG.** Whether a frame's time is IRIG time comes from what ICS knows, not from the file: the settings the camera reports it applied (`CameraSettings::irig`), and `TimeQuality.irig_b_locked` when the segment was recorded. Frames are `TIME_SOURCE_IRIG` only when both say so, and `TIME_SOURCE_HOST` otherwise.
+- **The sequence.** `record_and_offload` configures the camera, arms it for the plan's segments, and triggers each in turn. It then saves the plan's frames of each segment as `cine-NNN.cine`, maps the file, reads it and verifies it.
+- **Verification.** A segment verifies when all of these hold:
+  - it has the planned number of frames, starting at the planned frame number;
+  - its frames are IRIG-timed;
+  - consecutive frames are one frame period apart, within 1 µs (`kSpacingTolerance`);
+  - its trigger is within one frame period of the time the camera reported, both in the cine's header and where the first frame's time and number put it;
+  - it starts after the previous segment ends.
+- **Done when.** Ten back-to-back segments offload with verified times on the emulated camera: 5,000 frames/s, 500 frames a segment with 400 after the trigger, triggers 120 ms apart, and 300 frames of each saved. Segments not timed by IRIG do not verify.
+- **Bench tool.** [`testing/phantom_bench`](testing/phantom_bench/main.cpp) is `ics-phantom-bench`. It runs that sequence on the emulated camera and saves the cines in the working directory, which is not an argument because CodeQL's path-injection rule rejects a path taken from the command line. It prints a JSON line for each segment and one for the verdict, and exits 1 unless every segment verifies. It is registered as a test, so CI runs it in every sanitizer build.
+- **Tests.** Tests cover every refusal of the reader and writer. They run the emulator, the sequence and the check on the emulated camera, and on a camera that fails at each step. The fuzz target reads any bytes. It checks that each cine it reads keeps the reader's promises, and that a cine the writer can write, with images up to 16 MiB, reads back unchanged.
+
 ## Power-of-Ten checks
 
 The C++ rules from the coding-standards table in [docs/build-plan.md](../docs/build-plan.md) are enforced by tools, not review (ICS-005):
