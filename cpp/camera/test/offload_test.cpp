@@ -12,8 +12,11 @@
 
 #include "ics/camera/cine.hpp"
 #include "ics/camera/emulated_phantom.hpp"
+#include "ics/camera/emulated_x6980.hpp"
+#include "ics/camera/flir_camera.hpp"
 #include "ics/camera/frame_meta.hpp"
-#include "ics/camera/phantom.hpp"
+#include "ics/camera/segment_camera.hpp"
+#include "ics/camera/trigger_schedule.hpp"
 #include "ics/common/error.hpp"
 #include "ics/common/units.hpp"
 #include "ics/v1/camera_frame_meta.pb.h"
@@ -33,6 +36,8 @@ constexpr std::int64_t kEpochNs = 1'791'331'200'000'000'000;
 CameraSettings settings() {
   return CameraSettings{.width = 64,
                         .height = 32,
+                        .window_x = 0,
+                        .window_y = 0,
                         .frame_rate = 5000,
                         .exposure = microseconds(150),
                         .segment_frames = 500,
@@ -45,6 +50,7 @@ CameraSettings settings() {
 class FixedQuality final : public TimeQualitySource {
  public:
   explicit FixedQuality(const bool locked) {
+    quality_.set_time_utc_ns(kEpochNs);
     quality_.set_irig_b_locked(locked);
     v1::TimeQuality::CameraOffset* offset = quality_.add_camera_offsets();
     offset->set_camera_id("phantom-1");
@@ -59,6 +65,7 @@ class FixedQuality final : public TimeQualitySource {
 OffloadPlan plan(const std::filesystem::path& directory) {
   return OffloadPlan{.station_id = "north",
                      .camera_id = "phantom-1",
+                     .camera_kind = v1::CameraFrameMeta::CAMERA_KIND_HIGH_SPEED_VISIBLE,
                      .segments = 10,
                      .frames = FrameRange{.first = -50, .count = 300},
                      .directory = directory};
@@ -90,9 +97,48 @@ TEST(Offload, TenBackToBackSegmentsOffloadWithVerifiedTimes) {
     EXPECT_EQ(frame.segment_id(), "cine-00" + std::to_string(s));
     EXPECT_EQ(frame.frame_index(), 50U);
     EXPECT_EQ(frame.time_source(), v1::CameraFrameMeta::TIME_SOURCE_IRIG);
+    EXPECT_EQ(frame.camera_kind(), v1::CameraFrameMeta::CAMERA_KIND_HIGH_SPEED_VISIBLE);
     EXPECT_EQ(frame.exposure_start_utc_ns(), kEpochNs + (s * 120'000'000LL) - 250);
     EXPECT_EQ(frame.exposure_duration_ns(), 150'000);
   }
+}
+
+// The X6980: a 64 x 32 window at (288, 240), 1,004 frames/s, so a frame
+// period of 996,015.9 ns, stamped to the microsecond without the year;
+// triggers 600 ms apart, 0.3 µs past a microsecond.
+TEST(Offload, TenBackToBackX6980SegmentsOffloadWithVerifiedTimes) {
+  const ScratchDir dir;
+  EmulatedX6980 sdk(TriggerSchedule{.first = utc_from_ns(kEpochNs + 300), .interval = milliseconds(600)}, false);
+  FixedQuality quality(true);
+  FlirCamera camera(sdk, quality);
+  CameraSettings s = settings();
+  s.window_x = 288;
+  s.window_y = 240;
+  s.frame_rate = 1004;
+  s.exposure = microseconds(800);
+  OffloadPlan p = plan(dir.path());
+  p.camera_kind = v1::CameraFrameMeta::CAMERA_KIND_MWIR;
+  const Result<OffloadReport> report = record_and_offload(camera, s, p, quality);
+  ASSERT_TRUE(report.has_value());
+  EXPECT_TRUE(report->verified);
+  ASSERT_EQ(report->segments.size(), 10U);
+  Duration worst{};
+  for (const SegmentCheck& saved : report->segments) {
+    EXPECT_TRUE(saved.verified) << saved.segment;
+    EXPECT_EQ(saved.frames, 300U);
+    worst = std::max(worst, saved.spacing_error);
+    const v1::CameraFrameMeta& frame = saved.meta[50];
+    EXPECT_EQ(frame.camera_kind(), v1::CameraFrameMeta::CAMERA_KIND_MWIR);
+    EXPECT_EQ(frame.time_source(), v1::CameraFrameMeta::TIME_SOURCE_IRIG);
+    EXPECT_EQ(frame.bits_per_pixel(), 14U);
+    EXPECT_EQ(frame.window_x_px(), 288U);
+    EXPECT_EQ(frame.window_y_px(), 240U);
+    EXPECT_EQ(frame.exposure_duration_ns(), 800'000);
+    EXPECT_EQ(frame.exposure_start_utc_ns(), kEpochNs + (saved.segment * 600'000'000LL) - 250);
+  }
+  // Microsecond stamps of a 996,015.9 ns period are 996 µs or 997 µs apart:
+  // at most 984.1 ns off, within kSpacingTolerance.
+  EXPECT_EQ(worst, Duration(984));
 }
 
 TEST(Offload, SegmentsNotTimedByIrigDoNotVerify) {
@@ -113,7 +159,7 @@ TEST(Offload, SegmentsNotTimedByIrigDoNotVerify) {
 }
 
 // A camera that fails at a given step, or saves a file that is not a cine.
-class FailingCamera final : public PhantomCamera {
+class FailingCamera final : public SegmentCamera {
  public:
   enum class Step { kConfigure, kArm, kTrigger, kSave, kGarbage };
   explicit FailingCamera(const Step step) : step_(step) {}

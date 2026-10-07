@@ -83,7 +83,7 @@ The other time scales ICS meets convert to UTC where they enter:
 |---|---|---|
 | PTP grandmaster (ics-timingd, ICS-019) | TAI | UTC = TAI − 37 s, the offset since 2017-01-01; the grandmaster announces it as `currentUtcOffset` |
 | GNSS receivers and autopilot logs (ICS-021 to ICS-026) | GPS time | GPS = TAI − 19 s, so UTC = GPS − 18 s since 2017-01-01; the offset changes with each leap second |
-| Cameras (ICS-027, ICS-028) | IRIG-B time code, in UTC | Time of year from the code and the year from its control functions, in the camera; ICS removes the measured camera offset (`TimeQuality.CameraOffset`) ([Camera clocks](#camera-clocks)) |
+| Cameras (ICS-027, ICS-028) | IRIG-B time code, in UTC | Time of year from the code, and the year from its control functions or, without them, from the station's UTC: the Phantom converts in the camera, and ICS converts the X6980's stamps. ICS then removes the measured camera offset (`TimeQuality.CameraOffset`) ([Camera clocks](#camera-clocks)) |
 
 The component doing each conversion owns its leap-second offset and must take it from its source (the PTP announce message, or the GNSS navigation message), not from a constant.
 
@@ -103,7 +103,15 @@ An onboard log of a sortie is timed from the same `SYSTEM_TIME` pairs, so that i
 
 A Phantom's clock follows its IRIG-B input when set to, and the camera stamps each frame with it. A cine file holds each frame's time as a TIME64: seconds since 1970-01-01T00:00:00Z in the high 32 bits, and a binary fraction of a second in the low 32 bits. The fraction's steps are 0.23 ns, so a time survives the round trip to the nanosecond, and the format runs out in 2106.
 
-`ics::camera` ([`cpp/camera`](../cpp/README.md#cameras), ICS-027) sets each frame's `exposure_start_utc_ns` to its cine time less the camera's latest measured offset (`TimeQuality.CameraOffset`). Where in the exposure the camera stamps a frame is part of that offset, which the strobe calibration (ICS-029) measures. Until then the offset list is empty, and nothing is removed.
+A FLIR X6980-HS's decoder latches an IRIG-B time stamp for each frame: the day of the year, the time of day to the microsecond, and the year only when the IRIG source sends it in its IEEE 1344 control functions. `ics::camera` converts the stamp to UTC itself (`utc_from_irig`, ICS-028) and keeps it in the segment's cine like a Phantom's.
+
+- **A missing year.** The year is chosen, from the one before the reference's, the reference's own and the one after, as the year that puts the stamp nearest the reference. A stamp from 31 December read on 1 January is then last year's.
+  - A trigger's reference is the station's UTC as `ics-timingd` last sampled it (`TimeQuality.time_utc_ns`). Until it has sampled one, a trigger stamped without its year fails rather than guessing.
+  - A frame's reference is its segment's trigger, so a segment recorded across midnight on 31 December keeps its order.
+- **Day 366 and leap seconds.** Day 366 exists only in a leap year. A leap second (second 60) has no UTC time ICS can count, and is refused.
+- **Resolution.** Microsecond stamps put consecutive frames whole microseconds apart: at 1,004 frames/s, 996 µs or 997 µs against a 996,015.9 ns period. That is at most 984 ns off, within the 1 µs spacing tolerance the verification allows.
+
+`ics::camera` ([`cpp/camera`](../cpp/README.md#cameras), ICS-027 and ICS-028) sets each frame's `exposure_start_utc_ns` to its cine time less the camera's latest measured offset (`TimeQuality.CameraOffset`). Where in the exposure the camera stamps a frame is part of that offset, which the strobe calibration (ICS-029) measures. Until then the offset list is empty, and nothing is removed.
 
 A frame is `TIME_SOURCE_IRIG` only when the settings the camera reports it applied follow IRIG-B, and `TimeQuality.irig_b_locked` was true when its segment was recorded. Otherwise it is `TIME_SOURCE_HOST`, and its segment does not verify.
 

@@ -58,9 +58,14 @@ TEST(TimeAuthority, TakesTheCamerasLatestOffsetAndBothSourcesOfIrig) {
 }
 
 TEST(FrameMeta, TimesEachFrameLessTheCameraOffset) {
-  const SegmentName name{.station_id = "north", .camera_id = "phantom-1", .segment_id = "cine-004"};
+  const SegmentSource source{.station_id = "north",
+                             .camera_id = "phantom-1",
+                             .camera_kind = v1::CameraFrameMeta::CAMERA_KIND_HIGH_SPEED_VISIBLE,
+                             .segment_id = "cine-004",
+                             .window_x = 320,
+                             .window_y = 256};
   const std::vector<v1::CameraFrameMeta> frames =
-      frame_meta(two_frames(), name, time_authority(true, quality(true), "phantom-1"));
+      frame_meta(two_frames(), source, time_authority(true, quality(true), "phantom-1"));
   ASSERT_EQ(frames.size(), 2U);
   EXPECT_EQ(frames[1].station_id(), "north");
   EXPECT_EQ(frames[1].camera_id(), "phantom-1");
@@ -73,6 +78,8 @@ TEST(FrameMeta, TimesEachFrameLessTheCameraOffset) {
   EXPECT_EQ(frames[1].width_px(), 64U);
   EXPECT_EQ(frames[1].height_px(), 32U);
   EXPECT_EQ(frames[1].bits_per_pixel(), 12U);
+  EXPECT_EQ(frames[1].window_x_px(), 320U);
+  EXPECT_EQ(frames[1].window_y_px(), 256U);
   // A frame's own exposure when the cine has it, else the setup's.
   EXPECT_EQ(frames[0].exposure_duration_ns(), 140'000);
   EXPECT_EQ(frames[1].exposure_duration_ns(), 150'000);
@@ -81,7 +88,7 @@ TEST(FrameMeta, TimesEachFrameLessTheCameraOffset) {
 TEST(FrameMeta, MarksFramesNotTimedByIrigAsHostTimed) {
   Cine cine = two_frames();
   cine.real_bpp = 0;
-  const std::vector<v1::CameraFrameMeta> frames = frame_meta(cine, SegmentName{}, time_authority(true, quality(false), "x"));
+  const std::vector<v1::CameraFrameMeta> frames = frame_meta(cine, SegmentSource{}, time_authority(true, quality(false), "x"));
   EXPECT_EQ(frames[0].time_source(), v1::CameraFrameMeta::TIME_SOURCE_HOST);
   EXPECT_EQ(frames[0].bits_per_pixel(), 16U);
   EXPECT_EQ(frames[0].exposure_start_utc_ns(), kEpochNs);

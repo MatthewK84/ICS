@@ -53,6 +53,7 @@ using detail::put_i32;
 using detail::put_u16;
 using detail::put_u32;
 using detail::put_u64;
+using detail::store;
 
 // The whole setup as PIMS lays it out, which it reads as software version
 // 702 lays it out, so every field it reads lies within it.
@@ -169,25 +170,30 @@ void put_exposures(const std::span<std::byte> out, const Cine& cine, const Layou
 }
 
 // Each frame's image block: an annotation of nothing but its size and the
-// image's, then the image, all zeros.
-void put_images(const std::span<std::byte> out, const Cine& cine, const Layout& at) {
+// image's, then the image, from the images given or all zeros.
+void put_images(const std::span<std::byte> out, const Cine& cine, const Layout& at,
+                const std::span<const std::byte> images) {
   const std::size_t block = kAnnotationMinimum + at.pixels;
   for (std::size_t i = 0; i < cine.frame_times.size(); ++i) {
     const std::size_t image = at.images + (i * block);
     put_u64(out, at.offsets + (i * sizeof(std::uint64_t)), image);
     put_u32(out, image, kAnnotationMinimum);
     put_u32(out, image + sizeof(std::uint32_t), static_cast<std::uint32_t>(at.pixels));
+    if (!images.empty()) {
+      store(out, image + kAnnotationMinimum, images.subspan(i * at.pixels, at.pixels));
+    }
   }
 }
 
 }  // namespace
 
-Result<std::vector<std::byte>> write_cine(const Cine& cine) {
+Result<std::vector<std::byte>> write_cine(const Cine& cine, const std::span<const std::byte> images) {
   if (!writable(cine)) {
     return fail(Error::kInvalidArgument);
   }
   const Layout at = layout_of(cine);
-  if (at.total > kMaxBytes) {
+  const bool sized = images.empty() || images.size() == at.pixels * cine.frame_times.size();
+  if (at.total > kMaxBytes || !sized) {
     return fail(Error::kInvalidArgument);
   }
   std::vector<std::byte> out(at.total);
@@ -198,8 +204,10 @@ Result<std::vector<std::byte>> write_cine(const Cine& cine) {
   if (!cine.exposures.empty()) {
     put_exposures(out, cine, at);
   }
-  put_images(out, cine, at);
+  put_images(out, cine, at, images);
   return out;
 }
+
+Result<std::vector<std::byte>> write_cine(const Cine& cine) { return write_cine(cine, {}); }
 
 }  // namespace ics::camera

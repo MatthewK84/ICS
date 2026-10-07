@@ -48,11 +48,11 @@ constexpr CameraFrameMeta::ParseTableT_ CameraFrameMeta::InternalGenerateParseTa
     {
       PROTOBUF_FIELD_OFFSET(CameraFrameMeta, _impl_._has_bits_),
       0, // no _extensions_
-      12, 120,  // max_field_number, fast_idx_mask
+      14, 120,  // max_field_number, fast_idx_mask
       offsetof(ParseTableT_, field_lookup_table),
-      4294963200,  // skipmap
+      4294950912,  // skipmap
       offsetof(ParseTableT_, field_entries),
-      12,  // num_field_entries
+      14,  // num_field_entries
       0,  // num_aux_entries
       offsetof(ParseTableT_, field_names),  // no aux_entries
       class_data,
@@ -111,8 +111,14 @@ constexpr CameraFrameMeta::ParseTableT_ CameraFrameMeta::InternalGenerateParseTa
       {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(CameraFrameMeta, _impl_.bits_per_pixel_), 11>(),
        {96, 11, 0,
         PROTOBUF_FIELD_OFFSET(CameraFrameMeta, _impl_.bits_per_pixel_)}},
-      {::_pbi::TcParser::MiniParse, {}},
-      {::_pbi::TcParser::MiniParse, {}},
+      // uint32 window_x_px = 13 [json_name = "windowXPx"];
+      {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(CameraFrameMeta, _impl_.window_x_px_), 12>(),
+       {104, 12, 0,
+        PROTOBUF_FIELD_OFFSET(CameraFrameMeta, _impl_.window_x_px_)}},
+      // uint32 window_y_px = 14 [json_name = "windowYPx"];
+      {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(CameraFrameMeta, _impl_.window_y_px_), 13>(),
+       {112, 13, 0,
+        PROTOBUF_FIELD_OFFSET(CameraFrameMeta, _impl_.window_y_px_)}},
       {::_pbi::TcParser::MiniParse, {}},
     }}, {{
       65535, 65535
@@ -141,6 +147,10 @@ constexpr CameraFrameMeta::ParseTableT_ CameraFrameMeta::InternalGenerateParseTa
       {PROTOBUF_FIELD_OFFSET(CameraFrameMeta, _impl_.height_px_), _Internal::kHasBitsOffset + 10, 0, (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
       // uint32 bits_per_pixel = 12 [json_name = "bitsPerPixel"];
       {PROTOBUF_FIELD_OFFSET(CameraFrameMeta, _impl_.bits_per_pixel_), _Internal::kHasBitsOffset + 11, 0, (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
+      // uint32 window_x_px = 13 [json_name = "windowXPx"];
+      {PROTOBUF_FIELD_OFFSET(CameraFrameMeta, _impl_.window_x_px_), _Internal::kHasBitsOffset + 12, 0, (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
+      // uint32 window_y_px = 14 [json_name = "windowYPx"];
+      {PROTOBUF_FIELD_OFFSET(CameraFrameMeta, _impl_.window_y_px_), _Internal::kHasBitsOffset + 13, 0, (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
     }},
     // no aux_entries
     {{
@@ -175,7 +185,9 @@ inline constexpr CameraFrameMeta::Impl_::Impl_(
         time_offset_applied_ns_{::int64_t{0}},
         width_px_{0u},
         height_px_{0u},
-        bits_per_pixel_{0u} {}
+        bits_per_pixel_{0u},
+        window_x_px_{0u},
+        window_y_px_{0u} {}
 
 template <typename>
 constexpr CameraFrameMeta::CameraFrameMeta(::_pbi::ConstantInitialized,
@@ -280,7 +292,7 @@ const ::uint32_t
         protodesc_cold) = {
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::ics::v1::CameraFrameMeta, _impl_._has_bits_),
-        15, // hasbit index offset
+        17, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::ics::v1::CameraFrameMeta, _impl_.station_id_),
         PROTOBUF_FIELD_OFFSET(::ics::v1::CameraFrameMeta, _impl_.camera_id_),
         PROTOBUF_FIELD_OFFSET(::ics::v1::CameraFrameMeta, _impl_.camera_kind_),
@@ -293,6 +305,8 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::ics::v1::CameraFrameMeta, _impl_.width_px_),
         PROTOBUF_FIELD_OFFSET(::ics::v1::CameraFrameMeta, _impl_.height_px_),
         PROTOBUF_FIELD_OFFSET(::ics::v1::CameraFrameMeta, _impl_.bits_per_pixel_),
+        PROTOBUF_FIELD_OFFSET(::ics::v1::CameraFrameMeta, _impl_.window_x_px_),
+        PROTOBUF_FIELD_OFFSET(::ics::v1::CameraFrameMeta, _impl_.window_y_px_),
         0,
         1,
         4,
@@ -305,6 +319,8 @@ const ::uint32_t
         9,
         10,
         11,
+        12,
+        13,
 };
 
 static const ::_pbi::MigrationSchema
@@ -318,7 +334,7 @@ static const ::_pbi::MessageGlobalsBase* PROTOBUF_NONNULL const
 const char descriptor_table_protodef_ics_2fv1_2fcamera_5fframe_5fmeta_2eproto[] ABSL_ATTRIBUTE_SECTION_VARIABLE(
     protodesc_cold) = {
     "\n\036ics/v1/camera_frame_meta.proto\022\006ics.v1"
-    "\"\345\005\n\017CameraFrameMeta\022\035\n\nstation_id\030\001 \001(\t"
+    "\"\245\006\n\017CameraFrameMeta\022\035\n\nstation_id\030\001 \001(\t"
     "R\tstationId\022\033\n\tcamera_id\030\002 \001(\tR\010cameraId"
     "\022C\n\013camera_kind\030\003 \001(\0162\".ics.v1.CameraFra"
     "meMeta.CameraKindR\ncameraKind\022\035\n\nsegment"
@@ -331,18 +347,20 @@ const char descriptor_table_protodef_ics_2fv1_2fcamera_5fframe_5fmeta_2eproto[] 
     "pplied_ns\030\t \001(\003R\023timeOffsetAppliedNs\022\031\n\010"
     "width_px\030\n \001(\rR\007widthPx\022\033\n\theight_px\030\013 \001"
     "(\rR\010heightPx\022$\n\016bits_per_pixel\030\014 \001(\rR\014bi"
-    "tsPerPixel\"}\n\nCameraKind\022\033\n\027CAMERA_KIND_"
-    "UNSPECIFIED\020\000\022\"\n\036CAMERA_KIND_HIGH_SPEED_"
-    "VISIBLE\020\001\022\024\n\020CAMERA_KIND_MWIR\020\002\022\030\n\024CAMER"
-    "A_KIND_TRACKING\020\003\"U\n\nTimeSource\022\033\n\027TIME_"
-    "SOURCE_UNSPECIFIED\020\000\022\024\n\020TIME_SOURCE_IRIG"
-    "\020\001\022\024\n\020TIME_SOURCE_HOST\020\002b\006proto3"
+    "tsPerPixel\022\036\n\013window_x_px\030\r \001(\rR\twindowX"
+    "Px\022\036\n\013window_y_px\030\016 \001(\rR\twindowYPx\"}\n\nCa"
+    "meraKind\022\033\n\027CAMERA_KIND_UNSPECIFIED\020\000\022\"\n"
+    "\036CAMERA_KIND_HIGH_SPEED_VISIBLE\020\001\022\024\n\020CAM"
+    "ERA_KIND_MWIR\020\002\022\030\n\024CAMERA_KIND_TRACKING\020"
+    "\003\"U\n\nTimeSource\022\033\n\027TIME_SOURCE_UNSPECIFI"
+    "ED\020\000\022\024\n\020TIME_SOURCE_IRIG\020\001\022\024\n\020TIME_SOURC"
+    "E_HOST\020\002b\006proto3"
 };
 static ::absl::once_flag descriptor_table_ics_2fv1_2fcamera_5fframe_5fmeta_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_ics_2fv1_2fcamera_5fframe_5fmeta_2eproto = {
     false,
     false,
-    792,
+    856,
     descriptor_table_protodef_ics_2fv1_2fcamera_5fframe_5fmeta_2eproto,
     "ics/v1/camera_frame_meta.proto",
     &descriptor_table_ics_2fv1_2fcamera_5fframe_5fmeta_2eproto_once,
@@ -410,9 +428,9 @@ CameraFrameMeta::CameraFrameMeta(
                offsetof(Impl_, frame_index_),
            reinterpret_cast<const char*>(&from._impl_) +
                offsetof(Impl_, frame_index_),
-           offsetof(Impl_, bits_per_pixel_) -
+           offsetof(Impl_, window_y_px_) -
                offsetof(Impl_, frame_index_) +
-               sizeof(Impl_::bits_per_pixel_));
+               sizeof(Impl_::window_y_px_));
 
   // @@protoc_insertion_point(copy_constructor:ics.v1.CameraFrameMeta)
 }
@@ -429,9 +447,9 @@ inline void CameraFrameMeta::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
   ::memset(reinterpret_cast<char*>(&_impl_) +
                offsetof(Impl_, frame_index_),
            0,
-           offsetof(Impl_, bits_per_pixel_) -
+           offsetof(Impl_, window_y_px_) -
                offsetof(Impl_, frame_index_) +
-               sizeof(Impl_::bits_per_pixel_));
+               sizeof(Impl_::window_y_px_));
 }
 CameraFrameMeta::~CameraFrameMeta() {
   // @@protoc_insertion_point(destructor:ics.v1.CameraFrameMeta)
@@ -500,10 +518,10 @@ PROTOBUF_NOINLINE void CameraFrameMeta::Clear() {
         reinterpret_cast<char*>(&_impl_.exposure_duration_ns_) -
         reinterpret_cast<char*>(&_impl_.frame_index_)) + sizeof(_impl_.exposure_duration_ns_));
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x00000f00U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00003f00U)) {
     ::memset(&_impl_.time_offset_applied_ns_, 0, static_cast<::size_t>(
-        reinterpret_cast<char*>(&_impl_.bits_per_pixel_) -
-        reinterpret_cast<char*>(&_impl_.time_offset_applied_ns_)) + sizeof(_impl_.bits_per_pixel_));
+        reinterpret_cast<char*>(&_impl_.window_y_px_) -
+        reinterpret_cast<char*>(&_impl_.time_offset_applied_ns_)) + sizeof(_impl_.window_y_px_));
   }
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
@@ -639,6 +657,24 @@ PROTOBUF_NOINLINE void CameraFrameMeta::Clear() {
     }
   }
 
+  // uint32 window_x_px = 13 [json_name = "windowXPx"];
+  if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+    if (this_._internal_window_x_px() != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteUInt32ToArray(
+          13, this_._internal_window_x_px(), target);
+    }
+  }
+
+  // uint32 window_y_px = 14 [json_name = "windowYPx"];
+  if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+    if (this_._internal_window_y_px() != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteUInt32ToArray(
+          14, this_._internal_window_y_px(), target);
+    }
+  }
+
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
     target =
         ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
@@ -722,7 +758,7 @@ PROTOBUF_NOINLINE void CameraFrameMeta::Clear() {
       }
     }
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x00000f00U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00003f00U)) {
     // int64 time_offset_applied_ns = 9 [json_name = "timeOffsetAppliedNs"];
     if (CheckHasBit(cached_has_bits, 0x00000100U)) {
       if (this_._internal_time_offset_applied_ns() != 0) {
@@ -749,6 +785,20 @@ PROTOBUF_NOINLINE void CameraFrameMeta::Clear() {
       if (this_._internal_bits_per_pixel() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
             this_._internal_bits_per_pixel());
+      }
+    }
+    // uint32 window_x_px = 13 [json_name = "windowXPx"];
+    if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+      if (this_._internal_window_x_px() != 0) {
+        total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
+            this_._internal_window_x_px());
+      }
+    }
+    // uint32 window_y_px = 14 [json_name = "windowYPx"];
+    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+      if (this_._internal_window_y_px() != 0) {
+        total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
+            this_._internal_window_y_px());
       }
     }
   }
@@ -823,7 +873,7 @@ void CameraFrameMeta::MergeImpl(::google::protobuf::MessageLite& to_msg,
       }
     }
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x00000f00U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00003f00U)) {
     if (CheckHasBit(cached_has_bits, 0x00000100U)) {
       if (from._internal_time_offset_applied_ns() != 0) {
         _this->_impl_.time_offset_applied_ns_ = from._impl_.time_offset_applied_ns_;
@@ -842,6 +892,16 @@ void CameraFrameMeta::MergeImpl(::google::protobuf::MessageLite& to_msg,
     if (CheckHasBit(cached_has_bits, 0x00000800U)) {
       if (from._internal_bits_per_pixel() != 0) {
         _this->_impl_.bits_per_pixel_ = from._impl_.bits_per_pixel_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+      if (from._internal_window_x_px() != 0) {
+        _this->_impl_.window_x_px_ = from._impl_.window_x_px_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+      if (from._internal_window_y_px() != 0) {
+        _this->_impl_.window_y_px_ = from._impl_.window_y_px_;
       }
     }
   }
@@ -868,8 +928,8 @@ void CameraFrameMeta::InternalSwap(CameraFrameMeta* PROTOBUF_RESTRICT PROTOBUF_N
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.camera_id_, &other->_impl_.camera_id_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.segment_id_, &other->_impl_.segment_id_, arena);
   ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(CameraFrameMeta, _impl_.bits_per_pixel_)
-      + sizeof(CameraFrameMeta::_impl_.bits_per_pixel_)
+      PROTOBUF_FIELD_OFFSET(CameraFrameMeta, _impl_.window_y_px_)
+      + sizeof(CameraFrameMeta::_impl_.window_y_px_)
       - PROTOBUF_FIELD_OFFSET(CameraFrameMeta, _impl_.frame_index_)>(
           reinterpret_cast<char*>(&_impl_.frame_index_),
           reinterpret_cast<char*>(&other->_impl_.frame_index_));

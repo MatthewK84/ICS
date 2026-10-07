@@ -132,6 +132,20 @@ TEST(Cine, WritesOnlyWhatItCanRead) {
   }
 }
 
+TEST(Cine, WritesTheImagesGiven) {
+  const Cine cine = sample(2, false);
+  // 8 x 4 pixels of 2 bytes a frame.
+  std::vector<std::byte> images(2 * 64);
+  images[0] = std::byte{0xA1};
+  images[64] = std::byte{0xB2};
+  const std::vector<std::byte> bytes = write_cine(cine, images).value();
+  const Cine read = read_cine(bytes).value();
+  EXPECT_EQ(bytes[read.image_offsets[0] + 8], std::byte{0xA1});
+  EXPECT_EQ(bytes[read.image_offsets[1] + 8], std::byte{0xB2});
+  images.pop_back();
+  EXPECT_EQ(write_cine(cine, images).error(), Error::kInvalidArgument);
+}
+
 TEST(Cine, RefusesWhatDoesNotFollowTheLayout) {
   const std::vector<std::byte> good = written(sample(3, true));
   const std::size_t exposures_at = kTagsAt + 8 + (3 * 8);

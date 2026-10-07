@@ -57,4 +57,12 @@ message CameraFrameMeta {
   uint32 height_px = 11;
   // Bits per pixel in the recorded image.
   uint32 bits_per_pixel = 12;
+  // The sensor column the image's first column was read from, in pixels from
+  // the sensor's first column: the horizontal offset of the sensor window the
+  // camera applied, and 0 for a full frame.
+  uint32 window_x_px = 13;
+  // The sensor row the image's first row was read from, in pixels from the
+  // sensor's first row: the vertical offset of the sensor window the camera
+  // applied, and 0 for a full frame.
+  uint32 window_y_px = 14;
 }
