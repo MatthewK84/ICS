@@ -121,6 +121,7 @@ void add_aligned(const retime::Vehicles& vehicles, Pli& out) {
   }
   return written.and_then([&] { return writer->close(); })
       .and_then([](std::filesystem::path segment) {
+        static_cast<void>(ics::check(!segment.empty()));
         return store::archive_segment(segment).map([&segment](const store::ArchiveCounts&) { return segment; });
       })
       .map_error([&](const Error error) {
@@ -134,6 +135,7 @@ void add_aligned(const retime::Vehicles& vehicles, Pli& out) {
   for (const mavlink::RoleAssignment& role : roles) {
     out.push_back({.system = role.system, .role = role.role});
   }
+  static_cast<void>(ics::check(out.size() == roles.size()));
   return out;
 }
 
@@ -186,6 +188,8 @@ Result<ImportCounts> import_sortie(const ImportConfig& config, const std::filesy
             }));
             return sortie;
           });
+  // Every aligned record is one of pli's.
+  static_cast<void>(ics::check(counts.aligned_records <= pli.records.size()));
   counts.log_records = pli.records.size() - counts.aligned_records;
   counts.log_events = pli.events.size();
   return read.and_then([&] { return store(config.store_folder, pli, now, reason); })
