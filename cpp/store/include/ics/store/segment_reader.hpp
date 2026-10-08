@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <optional>
 #include <vector>
 
@@ -59,6 +60,12 @@ class SegmentReader {
   bool has_magic_ = false;
   bool stopped_ = false;
 };
+
+// Reads the segment at path to the end of its sound entries, calling visit
+// with each, and returns its sound bytes. Fails as SegmentReader::open and
+// next() do.
+[[nodiscard]] Result<std::uint64_t> read_segment(const std::filesystem::path& path,
+                                                 const std::function<void(const Entry&)>& visit);
 
 // Cuts the segment at path back to its sound entries, so a segment torn by a
 // crash ends at its last whole entry, and syncs it; a torn magic is cut to an

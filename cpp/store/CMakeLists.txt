@@ -7,6 +7,7 @@ add_library(ics_store STATIC
   src/files.cpp
   src/parquet_schema.cpp
   src/parquet_writer.cpp
+  src/query.cpp
   src/segment_format.cpp
   src/segment_reader.cpp
   src/segment_writer.cpp
@@ -21,6 +22,7 @@ ics_add_gtest(store_test
     test/crc32c_test.cpp
     test/parquet_schema_test.cpp
     test/parquet_writer_test.cpp
+    test/query_test.cpp
     test/segment_format_test.cpp
     test/segment_reader_test.cpp
     test/segment_writer_test.cpp

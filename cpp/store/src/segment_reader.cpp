@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <span>
 #include <utility>
@@ -105,6 +106,19 @@ Result<std::uint64_t> SegmentReader::skip_to_end() {
     entry = next();
   }
   return entry.map([this](const std::optional<Entry>&) { return sound_bytes_; });
+}
+
+Result<std::uint64_t> read_segment(const std::filesystem::path& path,
+                                   const std::function<void(const Entry&)>& visit) {
+  Result<SegmentReader> reader = SegmentReader::open(path);
+  if (!reader) {
+    return fail(reader.error());
+  }
+  Result<std::optional<Entry>> entry = reader->next();
+  for (; entry && entry->has_value(); entry = reader->next()) {
+    visit(**entry);
+  }
+  return entry.map([&reader](const std::optional<Entry>&) { return reader->sound_bytes(); });
 }
 
 Result<std::uint64_t> cut_torn_tail(const std::filesystem::path& path) {
