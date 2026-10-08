@@ -51,6 +51,7 @@ void SapientLink::step(const UtcTime now, std::vector<v1::PliRecord>& out, const
 
 // Starts a connection; finish_connect learns how it went.
 void SapientLink::connect(const UtcTime now, const logging::Logger& logger) {
+  static_cast<void>(ics::check(state_ == State::kWaiting));
   ++counts_.connections;
   socket_ = timing::Fd(::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0));
   if (!socket_.valid()) {
@@ -66,6 +67,7 @@ void SapientLink::connect(const UtcTime now, const logging::Logger& logger) {
 // A connection attempt is over once the socket can be written: it connected
 // if it has a peer.
 void SapientLink::finish_connect(const UtcTime now, const logging::Logger& logger) {
+  static_cast<void>(ics::check(state_ == State::kConnecting));
   pollfd ready = descriptor();
   if (::poll(&ready, 1, 0) != 1) {
     return;
@@ -82,6 +84,7 @@ void SapientLink::finish_connect(const UtcTime now, const logging::Logger& logge
 }
 
 void SapientLink::read(const UtcTime now, std::vector<v1::PliRecord>& out, const logging::Logger& logger) {
+  static_cast<void>(ics::check(state_ == State::kConnected));
   for (int count = 0; count < kMaxReads && state_ == State::kConnected; ++count) {
     const ssize_t got = ::recv(socket_.get(), buffer_.data(), buffer_.size(), MSG_DONTWAIT);
     const int error = errno;
@@ -97,6 +100,7 @@ void SapientLink::read(const UtcTime now, std::vector<v1::PliRecord>& out, const
 
 void SapientLink::take(const std::span<const std::byte> bytes, const UtcTime now, std::vector<v1::PliRecord>& out,
                        const logging::Logger& logger) {
+  static_cast<void>(ics::check(bytes.size() <= buffer_.size()));
   for (const sapient::Message& message : reader_.feed(bytes)) {
     ++counts_.messages;
     std::optional<v1::PliRecord> record = adapter_.receive(message, now);
@@ -111,7 +115,6 @@ void SapientLink::take(const std::span<const std::byte> bytes, const UtcTime now
 }
 
 void SapientLink::drop(const UtcTime now, const logging::Logger& logger, const std::string_view why) {
-  static_cast<void>(ics::check(state_ != State::kWaiting || !socket_.valid()));
   socket_ = timing::Fd();
   reader_ = sapient::StreamReader();
   state_ = State::kWaiting;

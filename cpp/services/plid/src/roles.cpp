@@ -7,6 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include "ics/common/check.hpp"
+
 namespace ics::plid {
 namespace {
 
@@ -43,6 +45,7 @@ Result<std::vector<NamedRole>> parse_roles(const std::vector<std::string>& texts
       reason = "a role must be ID=ROLE, with ROLE one of target, interceptor, debris and other: " + text;
       return fail(Error::kInvalidArgument);
     }
+    static_cast<void>(ics::check(equals < text.size()));
     out.push_back({.id = text.substr(0, equals), .role = *role});
   }
   return out;

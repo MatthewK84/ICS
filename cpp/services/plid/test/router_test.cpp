@@ -84,11 +84,14 @@ TEST(Router, SendsTheCotPortToTheCotAdapter) {
   Router router(mavlink(), cot(6969));
   ASSERT_TRUE(router.accept(captured(text(kAtak), 6969, kStart).packet).has_value());
   ASSERT_TRUE(router.accept(captured(text("not xml"), 6969, kStart).packet).has_value());
+  std::string chat(kAtak);
+  chat.replace(chat.find("a-f-G-U-C"), 9, "b-t-f");
+  ASSERT_TRUE(router.accept(captured(text(chat), 6969, kStart).packet).has_value());
   Pli pli;
   router.take(pli);
   ASSERT_EQ(pli.records.size(), 1U);
   EXPECT_EQ(pli.records[0].entity_id(), "ANDROID-1");
-  EXPECT_EQ(router.counts().cot_events, 1U);
+  EXPECT_EQ(router.counts().cot_events, 2U);
   EXPECT_EQ(router.counts().cot_unreadable, 1U);
   EXPECT_EQ(router.counts().mavlink_frames, 0U);
 }

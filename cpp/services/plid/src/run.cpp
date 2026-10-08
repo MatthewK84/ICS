@@ -45,6 +45,8 @@ namespace {
   for (bool running = true; running && stepped;) {
     std::vector<pollfd> ready = service.descriptors();
     ready.push_back(pollfd{stop, POLLIN, 0});
+    // Each TAP port and file, the SAPIENT socket and the stop signals.
+    static_cast<void>(ics::check(ready.size() <= (2 * kMaxCaptures) + 2));
     static_cast<void>(::poll(ready.data(), ready.size(), kPollTimeoutMs));
     stepped = service.step(logging::system_now(), logger);
     running = (ready.back().revents & POLLIN) == 0;
@@ -73,7 +75,7 @@ int serve(const Config& config, const std::filesystem::path& geoid, const loggin
                           {"query_socket", config.query_socket.native()}});
   const Status ran = loop(*service, logger, stop.get());
   const Status closed = service->close(logger);
-  if (!ran || !closed) {
+  if (!ran.and_then([&closed] { return closed; })) {
     return kExitFailed;
   }
   logger.info("stopped", {{"signal", stop_signal(stop.get())}, {"stored", static_cast<std::int64_t>(service->ingest().stored())}});

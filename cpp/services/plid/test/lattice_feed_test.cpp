@@ -47,7 +47,10 @@ std::string entity(const std::string& id) {
 }
 
 TEST(LatticeFeed, HandsOnARecordForEachEntity) {
-  const TestServer server({stream({entity("E-1"), entity("E-2"), R"(data: {"event":"heartbeat"})" "\n\n"}, true)});
+  const std::string unlocated =
+      R"(data: {"event":"entity","eventType":"EVENT_TYPE_UPDATE","entity":{"entityId":"E-0"}})" "\n\n";
+  const TestServer server(
+      {stream({unlocated, entity("E-1"), entity("E-2"), R"(data: {"event":"heartbeat"})" "\n\n"}, true)});
   Logged logged;
   std::vector<ics::v1::PliRecord> records;
   {

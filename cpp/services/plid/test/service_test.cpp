@@ -180,6 +180,12 @@ TEST(Service, ArchivesWhatAnEarlierRunLeft) {
   }
   const std::filesystem::path unusable = folder / ics::store::segment_name(kStart - minutes(4));
   std::ofstream(unusable) << "not a segment";
+  const std::filesystem::path archived = folder / ics::store::segment_name(kStart - minutes(6));
+  {
+    ics::store::SegmentWriter writer = ics::store::SegmentWriter::open(folder / "", kStart - minutes(6)).value();
+    ASSERT_TRUE(writer.close().has_value());
+    ASSERT_TRUE(ics::store::archive_segment(archived).has_value());
+  }
   Logged logged;
   {
     Service service = open(replay_config(folder / ""), logged.logger);
@@ -189,6 +195,7 @@ TEST(Service, ArchivesWhatAnEarlierRunLeft) {
   EXPECT_FALSE(ics::store::is_archived(unusable));
   EXPECT_TRUE(logged.has(R"("event":"segment_recovered")"));
   EXPECT_TRUE(logged.has(R"("event":"segment_unusable")"));
+  EXPECT_FALSE(logged.has(archived.native()));
 }
 
 TEST(Service, ReadsAFileInBoundedBatches) {

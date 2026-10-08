@@ -106,6 +106,18 @@ TEST(Serve, StopsWhenItCannotStore) {
   EXPECT_TRUE(logged.has(R"("event":"store_failed")"));
 }
 
+TEST(Serve, ReportsNoDescriptorForTheStopSignals) {
+  const TempDir dir;
+  Logged logged;
+  int status = 0;
+  {
+    const ics::timing::testing::DescriptorLimit limit;
+    status = ics::plid::serve(replay_config(dir / ""), ICS_EGM96_PATH, logged.logger);
+  }
+  EXPECT_EQ(status, ics::plid::kExitFailed);
+  EXPECT_TRUE(logged.has(R"("event":"start_failed")"));
+}
+
 TEST(Serve, ReportsWhatStopsItStarting) {
   const TempDir dir;
   Logged logged;

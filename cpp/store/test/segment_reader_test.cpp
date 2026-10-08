@@ -170,6 +170,11 @@ TEST(SegmentReader, ReportsAFileItCannotOpenOrRead) {
   EXPECT_EQ(ics::store::cut_torn_tail(folder / "").error(), ics::Error::kUnreadable);
 }
 
+TEST(SegmentReader, ReadSegmentReportsAFileItCannotOpen) {
+  const TempDir folder;
+  EXPECT_EQ(ics::store::read_segment(folder / "missing.icspli", [](const Entry&) {}).error(), ics::Error::kUnreadable);
+}
+
 TEST(SegmentReader, ReportsAFileItCannotCut) {
   // /dev/null reads as a torn magic, opens for writing, and cannot be cut.
   EXPECT_EQ(ics::store::cut_torn_tail("/dev/null").error(), ics::Error::kUnwritable);

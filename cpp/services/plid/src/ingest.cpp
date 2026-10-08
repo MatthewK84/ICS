@@ -4,6 +4,8 @@
 #include <optional>
 #include <utility>
 
+#include "ics/common/check.hpp"
+
 namespace ics::plid {
 
 Ingest::Ingest(store::SegmentWriter writer, const IngestTiming timing, const UtcTime now)
@@ -48,6 +50,7 @@ Status Ingest::store(Pli& pli) {
     stored = stored.and_then([&] { return counted(writer_.append(event)); });
   }
   pli = {};
+  static_cast<void>(ics::check(pli.records.empty()));
   return stored;
 }
 

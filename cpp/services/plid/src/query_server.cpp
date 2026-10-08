@@ -14,6 +14,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 
+#include "ics/common/check.hpp"
 #include "ics/v1/pli_query.pb.h"
 
 namespace ics::plid {
@@ -77,6 +78,7 @@ void QueryServer::serve(const int client) {
   set_timeouts(client, client_timeout_);
   std::vector<char> bytes(kMaxRequestBytes);
   const ssize_t got = ::recv(client, bytes.data(), bytes.size(), 0);
+  static_cast<void>(ics::check(got <= static_cast<ssize_t>(bytes.size())));
   v1::QueryPliRequest request;
   const bool parsed = got >= 0 && request.ParseFromArray(bytes.data(), static_cast<int>(got));
   ++served_;

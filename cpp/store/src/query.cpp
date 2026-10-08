@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 #include <system_error>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -30,8 +31,9 @@ constexpr std::size_t kItemOverhead = 6;
 
 [[nodiscard]] std::int64_t time_of(const PliRecord& record) noexcept { return record.valid_utc_ns(); }
 [[nodiscard]] std::int64_t time_of(const PliEvent& event) noexcept { return event.time_utc_ns(); }
-[[nodiscard]] constexpr EntryKind kind_of(const PliRecord* /*unused*/) noexcept { return EntryKind::kRecord; }
-[[nodiscard]] constexpr EntryKind kind_of(const PliEvent* /*unused*/) noexcept { return EntryKind::kEvent; }
+// The kind of entry that holds a message of this type.
+template <typename Message>
+constexpr EntryKind kKindOf = std::is_same_v<Message, PliRecord> ? EntryKind::kRecord : EntryKind::kEvent;
 void add_to(QueryPliResponse& batch, PliRecord&& record) { *batch.add_records() = std::move(record); }
 void add_to(QueryPliResponse& batch, PliEvent&& event) { *batch.add_events() = std::move(event); }
 
@@ -46,6 +48,7 @@ void widen(TimeRange& range, const std::int64_t time) noexcept {
   range.first = range.count == 0 ? time : std::min(range.first, time);
   range.last = range.count == 0 ? time : std::max(range.last, time);
   ++range.count;
+  static_cast<void>(ics::check(range.first <= range.last));
 }
 
 [[nodiscard]] Result<SegmentSummary> summarize(const std::filesystem::path& path) {
@@ -133,6 +136,7 @@ class Earliest {
 
   // The matches kept, earliest first.
   [[nodiscard]] std::vector<Match<Message>> take_sorted() {
+    static_cast<void>(ics::check(heap_.size() <= limit_));
     std::ranges::sort_heap(heap_, earlier<Message>);
     return std::move(heap_);
   }
@@ -146,7 +150,7 @@ class Earliest {
 
 template <typename Message>
 void collect(const QueryPliRequest& request, const std::vector<CatalogEntry>& segments, Earliest<Message>& earliest) {
-  constexpr EntryKind kKind = kind_of(static_cast<const Message*>(nullptr));
+  constexpr EntryKind kKind = kKindOf<Message>;
   const auto visit = [&request, &earliest](const Entry& entry) {
     Message message;
     if (entry.kind != kKind || !message.ParseFromArray(entry.payload.data(), static_cast<int>(entry.payload.size()))) {
@@ -193,6 +197,7 @@ template <typename Message>
   }
   batch.set_done(true);
   batch.set_truncated(truncated);
+  static_cast<void>(ics::check(sent + items_in(batch) <= matches.size()));
   return sent + (send(batch) ? items_in(batch) : 0);
 }
 
@@ -232,6 +237,7 @@ std::vector<CatalogEntry> Catalog::segments() {
       out.push_back({.path = path, .summary = summary->second});
     }
   }
+  static_cast<void>(ics::check(out.size() <= paths.size()));
   return out;
 }
 

@@ -5,6 +5,7 @@
 #include <mutex>
 #include <utility>
 
+#include "ics/common/check.hpp"
 #include "ics/common/error.hpp"
 
 namespace ics::plid {
@@ -51,6 +52,7 @@ void Archiver::work() {
   while (!queue_.empty()) {
     const std::filesystem::path segment = std::move(queue_.front());
     queue_.pop_front();
+    static_cast<void>(ics::check(!busy_));
     busy_ = true;
     lock.unlock();
     archive(segment);

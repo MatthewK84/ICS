@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "ics/capture/datagram.hpp"
+#include "ics/common/check.hpp"
 #include "ics/cot/event.hpp"
 #include "ics/mavlink/frame.hpp"
 
@@ -24,6 +25,7 @@ Status Router::accept(const capture::Packet& packet) {
     ++counts_.not_udp;
     return {};
   }
+  static_cast<void>(ics::check(datagram->payload.size() <= packet.bytes.size()));
   if (cot_ && datagram->destination.port == cot_->port) {
     to_cot(datagram->payload, packet.time);
   } else {

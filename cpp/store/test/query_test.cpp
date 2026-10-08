@@ -141,6 +141,34 @@ TEST(Answer, KeepsTheEarliestUpToTheLimit) {
   EXPECT_EQ(times(ask(limited, catalog, {.max_items = 2})), (std::vector<std::int64_t>{0, 1}));
 }
 
+TEST(Answer, KeepsAnEarlierMatchFoundLate) {
+  const TempDir folder;
+  SegmentWriter writer = SegmentWriter::open(folder / "", kStart).value();
+  for (const int index : {5, 6, 1}) {
+    ASSERT_TRUE(writer.append(record(index)).has_value());
+    ASSERT_TRUE(writer.append(event(index)).has_value());
+  }
+  ASSERT_TRUE(writer.close().has_value());
+  Catalog catalog(folder / "");
+  for (const QueryPliRequest::Kind kind : {QueryPliRequest::KIND_RECORDS, QueryPliRequest::KIND_EVENTS}) {
+    QueryPliRequest two = request(kind, 0, 100);
+    two.set_limit_count(2);
+    const Answered answered = ask(two, catalog);
+    EXPECT_EQ(times(answered), (std::vector<std::int64_t>{1, 5})) << kind;
+    EXPECT_TRUE(answered.responses.back().truncated());
+  }
+}
+
+TEST(Answer, SendsEventsInBatchesToo) {
+  const TempDir folder;
+  write_store(folder / "");
+  Catalog catalog(folder / "");
+  const Answered answered = ask(request(QueryPliRequest::KIND_EVENTS, 0, 20), catalog,
+                                {.max_items = 100, .max_response_bytes = event(0).ByteSizeLong() + 7});
+  EXPECT_EQ(answered.responses.size(), 5U);
+  EXPECT_EQ(answered.sent, 5U);
+}
+
 TEST(Answer, KeepsStoreOrderAtTheSameTime) {
   const TempDir folder;
   SegmentWriter writer = SegmentWriter::open(folder / "", kStart).value();
