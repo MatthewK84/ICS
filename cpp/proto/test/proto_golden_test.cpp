@@ -8,6 +8,7 @@
 #include "ics/v1/kill_assessment.pb.h"
 #include "ics/v1/mount_sample.pb.h"
 #include "ics/v1/pli.pb.h"
+#include "ics/v1/pli_query.pb.h"
 #include "ics/v1/run_record.pb.h"
 #include "ics/v1/time_quality.pb.h"
 #include "ics/v1/track.pb.h"
@@ -55,6 +56,8 @@ TEST(ProtoGolden, KillAssessment) { expect_same_bytes<ics::v1::KillAssessment>("
 TEST(ProtoGolden, MountSample) { expect_same_bytes<ics::v1::MountSample>("mount_sample"); }
 TEST(ProtoGolden, PliEvent) { expect_same_bytes<ics::v1::PliEvent>("pli_event"); }
 TEST(ProtoGolden, PliRecord) { expect_same_bytes<ics::v1::PliRecord>("pli_record"); }
+TEST(ProtoGolden, QueryPliRequest) { expect_same_bytes<ics::v1::QueryPliRequest>("query_pli_request"); }
+TEST(ProtoGolden, QueryPliResponse) { expect_same_bytes<ics::v1::QueryPliResponse>("query_pli_response"); }
 TEST(ProtoGolden, RunRecord) { expect_same_bytes<ics::v1::RunRecord>("run_record"); }
 TEST(ProtoGolden, TimeQuality) { expect_same_bytes<ics::v1::TimeQuality>("time_quality"); }
 TEST(ProtoGolden, Track) { expect_same_bytes<ics::v1::Track>("track"); }
@@ -62,8 +65,9 @@ TEST(ProtoGolden, TriggerEvent) { expect_same_bytes<ics::v1::TriggerEvent>("trig
 
 TEST(ProtoGolden, HasATestForEveryGoldenFile) {
   const std::set<std::string> tested{
-      "camera_frame_meta", "footprint",  "fragment",     "kill_assessment", "mount_sample", "pli_event",
-      "pli_record",        "run_record", "time_quality", "track",           "trigger_event",
+      "camera_frame_meta", "footprint",          "fragment",   "kill_assessment", "mount_sample",
+      "pli_event",         "pli_record",         "query_pli_request", "query_pli_response", "run_record",
+      "time_quality",      "track",              "trigger_event",
   };
   std::set<std::string> found;
   for (const auto& entry : std::filesystem::directory_iterator{golden_dir()}) {

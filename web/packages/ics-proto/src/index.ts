@@ -11,6 +11,7 @@ export * from "./gen/ics/v1/fragment_pb.ts";
 export * from "./gen/ics/v1/kill_assessment_pb.ts";
 export * from "./gen/ics/v1/mount_sample_pb.ts";
 export * from "./gen/ics/v1/pli_pb.ts";
+export * from "./gen/ics/v1/pli_query_pb.ts";
 export * from "./gen/ics/v1/run_record_pb.ts";
 export * from "./gen/ics/v1/time_quality_pb.ts";
 export * from "./gen/ics/v1/track_pb.ts";
