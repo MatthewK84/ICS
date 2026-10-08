@@ -8,6 +8,9 @@
         Check the TAP capture carried every datagram the rig counted; exit 1 if not.
     python -m ics_sitl compare --truth FILE --replay FILE
         Check ics-mavlink-replay's output against a run's truth log (ICS-021); exit 1 if it falls short.
+    python -m ics_sitl store-check --replay FILE --store FILE
+        Check ics-pli-query's answer from ics-plid's store of a run against its replay (ICS-030);
+        exit 1 if they differ.
     python -m ics_sitl cut-log SOURCE TARGET --window START:END... --keep NAME...
         Cut windows of an onboard ULog or DataFlash log into a test fixture (ICS-025).
 
@@ -21,12 +24,14 @@ import json
 import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
+from types import MappingProxyType
 from typing import Final
 
 from ics_sitl.compare import CompareError, compare, load_replay, load_truth, summary_lines
 from ics_sitl.logcut import LogCutError, cut_log, parse_window
 from ics_sitl.profiles import Engagement, ProfileError, load_engagement
 from ics_sitl.rig import Address, Link, run
+from ics_sitl.store_check import summary
 
 EXIT_FAILED: Final = 1
 EXIT_USAGE: Final = 2
@@ -67,6 +72,9 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     check = commands.add_parser("compare", help="check a MAVLink replay against a truth log")
     check.add_argument("--truth", type=Path, required=True, help="the run's truth.jsonl")
     check.add_argument("--replay", type=Path, required=True, help="ics-mavlink-replay's output for the run's tap.pcap")
+    store = commands.add_parser("store-check", help="check ics-plid's store of a capture against its replay")
+    store.add_argument("--replay", type=Path, required=True, help="ics-mavlink-replay's output for the run's tap.pcap")
+    store.add_argument("--store", type=Path, required=True, help="ics-pli-query's records and events for it")
     cut = commands.add_parser("cut-log", help="cut windows of an onboard log into a test fixture")
     cut.add_argument("source", type=Path)
     cut.add_argument("target", type=Path)
@@ -141,6 +149,12 @@ def replay_check(arguments: argparse.Namespace) -> int:
     return EXIT_FAILED if report.problems else 0
 
 
+def store_check(arguments: argparse.Namespace) -> int:
+    lines, matched = summary(arguments.replay, arguments.store)
+    sys.stdout.writelines(f"{line}\n" for line in lines)
+    return 0 if matched else EXIT_FAILED
+
+
 def log_cut(arguments: argparse.Namespace) -> int:
     windows = [parse_window(text) for text in arguments.window]
     written = cut_log(arguments.source, arguments.target, arguments.keep, windows)
@@ -148,19 +162,28 @@ def log_cut(arguments: argparse.Namespace) -> int:
     return 0
 
 
+def env_command(arguments: argparse.Namespace) -> int:
+    sys.stdout.writelines(f"{line}\n" for line in env_lines(load_engagement(arguments.engagement)))
+    return 0
+
+
+# Each command's function.
+COMMANDS: Final = MappingProxyType(
+    {
+        "env": env_command,
+        "run": fly,
+        "tap-check": tap_check,
+        "compare": replay_check,
+        "store-check": store_check,
+        "cut-log": log_cut,
+    }
+)
+
+
 def main(argv: Sequence[str]) -> int:
     arguments = parse_args(argv)
     try:
-        if arguments.command == "env":
-            sys.stdout.writelines(f"{line}\n" for line in env_lines(load_engagement(arguments.engagement)))
-            return 0
-        if arguments.command == "run":
-            return fly(arguments)
-        if arguments.command == "compare":
-            return replay_check(arguments)
-        if arguments.command == "cut-log":
-            return log_cut(arguments)
-        return tap_check(arguments)
+        return COMMANDS[arguments.command](arguments)
     except (CompareError, LogCutError, ProfileError, UsageError) as error:
         sys.stderr.write(f"error: {error}\n")
         return EXIT_USAGE

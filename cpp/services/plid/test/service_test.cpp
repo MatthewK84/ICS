@@ -150,6 +150,7 @@ TEST(Service, StoresTheSitlCaptureAsTheMavlinkAdapterReadsIt) {
   EXPECT_TRUE(ics::store::is_archived(segment));
   EXPECT_TRUE(logged.has(R"("event":"segment_closed")"));
   EXPECT_TRUE(logged.has(R"("event":"archived")"));
+  EXPECT_TRUE(logged.has(R"("event":"replayed","stored":)" + std::to_string(expected.records.size() + expected.events.size())));
 }
 
 TEST(Service, RotatesAndArchivesAsItGoes) {

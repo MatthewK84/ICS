@@ -8,6 +8,7 @@ add_library(ics_plid STATIC
   src/import.cpp
   src/ingest.cpp
   src/lattice_feed.cpp
+  src/query_client.cpp
   src/query_server.cpp
   src/roles.cpp
   src/router.cpp
@@ -23,12 +24,17 @@ add_executable(ics-plid src/main.cpp)
 target_link_libraries(ics-plid PRIVATE ics::plid)
 add_executable(ics-pli-import src/import_main.cpp)
 target_link_libraries(ics-pli-import PRIVATE ics::plid)
+add_executable(ics-pli-query src/query_main.cpp)
+target_link_libraries(ics-pli-query PRIVATE ics::plid)
 
 # The executable itself, given an argument it does not take: it prints its
 # usage. This also covers main.cpp.
 add_test(NAME ics-plid_usage COMMAND ics-plid --help)
 set_tests_properties(ics-plid_usage PROPERTIES PASS_REGULAR_EXPRESSION
                      "^usage: ics-plid\nThe config file is /etc/ics/ics-plid.toml.\n$")
+add_test(NAME ics-pli-query_usage COMMAND ics-pli-query)
+set_tests_properties(ics-pli-query_usage PROPERTIES PASS_REGULAR_EXPRESSION
+                     "^usage: ics-pli-query records\\|events \\[START_UTC_NS END_UTC_NS \\[ENTITY\\]\\]\n$")
 add_test(NAME ics-pli-import_usage COMMAND ics-pli-import --help)
 set_tests_properties(ics-pli-import_usage PROPERTIES PASS_REGULAR_EXPRESSION
                      "^usage: ics-pli-import\nRun it in the folder of one sortie's files. The config file is /etc/ics/ics-pli-import.toml.\n$")
@@ -40,6 +46,7 @@ ics_add_gtest(plid_test
     test/import_test.cpp
     test/ingest_test.cpp
     test/lattice_feed_test.cpp
+    test/query_client_test.cpp
     test/query_server_test.cpp
     test/roles_test.cpp
     test/router_test.cpp

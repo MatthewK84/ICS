@@ -136,6 +136,10 @@ Status Service::step(const UtcTime now, const logging::Logger& logger) {
   if (!stepped) {
     logger.error("store_failed", {{"error", to_string(stepped.error())}});
   }
+  if (!replay_logged_ && !feeds_.live && replayed()) {
+    replay_logged_ = true;
+    logger.info("replayed", {{"stored", static_cast<std::int64_t>(ingest_.stored())}});
+  }
   return stepped;
 }
 

@@ -45,7 +45,9 @@ class Service {
   [[nodiscard]] std::vector<pollfd> descriptors() const;
 
   // Stores what the feeds have waiting, then syncs or rotates the log as due
-  // at now. On a failure to store, logs "store_failed" and returns it.
+  // at now. Logs "replayed" once every capture, all of them files, has been
+  // read to its end. On a failure to store, logs "store_failed" and returns
+  // it.
   [[nodiscard]] Status step(UtcTime now, const logging::Logger& logger);
 
   // Closes the current segment and waits until every closed segment is
@@ -70,6 +72,7 @@ class Service {
   std::unique_ptr<Archiver> archiver_;
   std::unique_ptr<QueryServer> query_;
   Pli pending_;
+  bool replay_logged_ = false;
 };
 
 }  // namespace ics::plid
