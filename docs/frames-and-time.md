@@ -99,6 +99,8 @@ A fit times a sortie's records only when the pairs lie on a straight line, withi
 
 An onboard log of a sortie is timed from the same `SYSTEM_TIME` pairs, so that it shares the live records' clock: by the fit when straight, otherwise from the latest pair at or before each record, as the live adapter does. The log's own GNSS times are not mixed in. ArduCopter's log pairs each GNSS fix's time with the boot time the fix was logged at; on the rig's `crossing` engagement that puts UTC 36.6 ms early, most likely the lag from a fix to its logging.
 
+The PLI store ([`cpp/services/plid`](../cpp/README.md#pli-store), ICS-030) keeps both timings. `ics-plid` stores each record as the live adapter timed it. After the sortie, `ics-pli-import` adds each capture position again, timed by its sortie's fit with `PLI_TIME_BASIS_VEHICLE_ALIGNED` when the fit is straight, and the onboard logs' records and events timed as above. A query returns both; `time_basis` tells them apart.
+
 ### Camera clocks
 
 A Phantom's clock follows its IRIG-B input when set to, and the camera stamps each frame with it. A cine file holds each frame's time as a TIME64: seconds since 1970-01-01T00:00:00Z in the high 32 bits, and a binary fraction of a second in the low 32 bits. The fraction's steps are 0.23 ns, so a time survives the round trip to the nanosecond, and the format runs out in 2106.
