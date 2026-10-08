@@ -15,8 +15,8 @@ constexpr std::size_t kTableSize = 256;
 constexpr int kBitsPerByte = 8;
 constexpr std::uint32_t kLowByte = 0xFFU;
 
-// The CRC of each byte value, one bit at a time.
-consteval std::array<std::uint32_t, kTableSize> make_table() {
+// The CRC of each byte value, one bit at a time, worked out while compiling.
+constexpr std::array<std::uint32_t, kTableSize> kTable = []() consteval {
   std::array<std::uint32_t, kTableSize> table{};
   for (std::size_t value = 0; value < kTableSize; ++value) {
     auto crc = static_cast<std::uint32_t>(value);
@@ -26,9 +26,7 @@ consteval std::array<std::uint32_t, kTableSize> make_table() {
     table.at(value) = crc;
   }
   return table;
-}
-
-constexpr std::array<std::uint32_t, kTableSize> kTable = make_table();
+}();
 
 }  // namespace
 

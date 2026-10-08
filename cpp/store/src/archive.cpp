@@ -36,9 +36,8 @@ class Rows {
   [[nodiscard]] static Result<Rows> start(std::filesystem::path path, const RowGroupLimits limits) {
     std::error_code ignored;
     std::filesystem::remove(partial_path(path), ignored);
-    return ParquetWriter::create(partial_path(path), *Message::descriptor()).map([&path, limits](ParquetWriter writer) {
-      return Rows(std::move(path), std::move(writer), limits);
-    });
+    return ParquetWriter::create(partial_path(path), *Message::descriptor())
+        .map([&path, limits](ParquetWriter&& writer) { return Rows(std::move(path), std::move(writer), limits); });
   }
 
   // Adds the message serialized in payload; writes a full row group.
@@ -66,7 +65,7 @@ class Rows {
   [[nodiscard]] std::uint64_t count() const noexcept { return writer_.rows(); }
 
  private:
-  Rows(std::filesystem::path path, ParquetWriter writer, const RowGroupLimits limits)
+  Rows(std::filesystem::path path, ParquetWriter&& writer, const RowGroupLimits limits)
       : path_(std::move(path)), writer_(std::move(writer)), limits_(limits) {}
 
   [[nodiscard]] Status flush() {
