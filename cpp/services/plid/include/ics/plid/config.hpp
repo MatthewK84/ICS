@@ -127,6 +127,9 @@ struct Config {
 inline constexpr std::size_t kMaxCaptures = 4;
 inline constexpr std::size_t kMaxRoles = 256;
 
+// Reads the [range] table under root: the range ENU frame's origin.
+[[nodiscard]] RangeOrigin read_range(config::Reader& root);
+
 // Reads the [log], [plid], [range] and [capture] tables under root, and the
 // table of each feed listed.
 [[nodiscard]] Config read_config(config::Reader& root);

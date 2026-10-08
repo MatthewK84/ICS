@@ -6,9 +6,11 @@
 #include "ics/frames/egm96.hpp"
 #include "ics/frames/enu.hpp"
 #include "ics/timealign/check.hpp"
-#include "sorties.hpp"
+#include "ics/retime/sorties.hpp"
 
 namespace ics::time_align {
+
+using retime::Vehicles;
 
 // Writes each sortie's fit, each vehicle's latency, and with records, every
 // record. A sortie whose clock pairs lie on a straight line has its records

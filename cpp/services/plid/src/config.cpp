@@ -75,13 +75,6 @@ constexpr std::size_t kMaxFeeds = kFeeds.size();
   return out;
 }
 
-[[nodiscard]] RangeOrigin read_range(config::Reader& root) {
-  config::Reader table = root.section("range");
-  return {.latitude = table.degrees("latitude_deg", Degrees(-kMaxLatitude), Degrees(kMaxLatitude)),
-          .longitude = table.degrees("longitude_deg", Degrees(-kMaxLongitude), Degrees(kMaxLongitude)),
-          .height = table.meters("height_m", Meters(kMinHeight), Meters(kMaxHeight))};
-}
-
 void read_capture(config::Reader& root, Config& out) {
   config::Reader table = root.section("capture");
   out.interfaces = table.texts("interfaces", 0, kMaxCaptures);
@@ -94,6 +87,13 @@ void read_capture(config::Reader& root, Config& out) {
 }
 
 }  // namespace
+
+RangeOrigin read_range(config::Reader& root) {
+  config::Reader table = root.section("range");
+  return {.latitude = table.degrees("latitude_deg", Degrees(-kMaxLatitude), Degrees(kMaxLatitude)),
+          .longitude = table.degrees("longitude_deg", Degrees(-kMaxLongitude), Degrees(kMaxLongitude)),
+          .height = table.meters("height_m", Meters(kMinHeight), Meters(kMaxHeight))};
+}
 
 Config read_config(config::Reader& root) {
   Config out;

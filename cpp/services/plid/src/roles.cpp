@@ -1,9 +1,12 @@
 #include "ics/plid/roles.hpp"
 
 #include <array>
+#include <charconv>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -16,6 +19,8 @@ struct RoleName {
   std::string_view name;
   v1::EntityRole role;
 };
+
+constexpr unsigned kMaxSystem = 255;
 
 constexpr std::array<RoleName, 4> kRoles{{
     {"target", v1::ENTITY_ROLE_TARGET},
@@ -49,6 +54,23 @@ Result<std::vector<NamedRole>> parse_roles(const std::vector<std::string>& texts
     out.push_back({.id = text.substr(0, equals), .role = *role});
   }
   return out;
+}
+
+Result<std::vector<mavlink::RoleAssignment>> mavlink_roles(const std::vector<std::string>& texts,
+                                                                       std::string& reason) {
+  return parse_roles(texts, reason).and_then([&reason](const std::vector<NamedRole>& roles) {
+    std::vector<mavlink::RoleAssignment> out;
+    for (const NamedRole& named : roles) {
+      unsigned system = 0;
+      const std::from_chars_result read = std::from_chars(named.id.data(), named.id.data() + named.id.size(), system);
+      if (read.ec != std::errc() || read.ptr != named.id.data() + named.id.size() || system > kMaxSystem) {
+        reason = "a MAVLink role's ID must be a system number from 0 to 255: " + named.id;
+        return Result<std::vector<mavlink::RoleAssignment>>(fail(Error::kInvalidArgument));
+      }
+      out.push_back({.system = static_cast<std::uint8_t>(system), .role = named.role});
+    }
+    return Result<std::vector<mavlink::RoleAssignment>>(std::move(out));
+  });
 }
 
 }  // namespace ics::plid

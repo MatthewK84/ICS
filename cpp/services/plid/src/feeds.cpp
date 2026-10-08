@@ -1,6 +1,5 @@
 #include "ics/plid/feeds.hpp"
 
-#include <charconv>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -14,25 +13,6 @@
 
 namespace ics::plid {
 namespace {
-
-constexpr unsigned kMaxSystem = 255;
-
-[[nodiscard]] Result<std::vector<mavlink::RoleAssignment>> mavlink_roles(const std::vector<std::string>& texts,
-                                                                       std::string& reason) {
-  return parse_roles(texts, reason).and_then([&reason](const std::vector<NamedRole>& roles) {
-    std::vector<mavlink::RoleAssignment> out;
-    for (const NamedRole& named : roles) {
-      unsigned system = 0;
-      const std::from_chars_result read = std::from_chars(named.id.data(), named.id.data() + named.id.size(), system);
-      if (read.ec != std::errc() || read.ptr != named.id.data() + named.id.size() || system > kMaxSystem) {
-        reason = "a MAVLink role's ID must be a system number from 0 to 255: " + named.id;
-        return Result<std::vector<mavlink::RoleAssignment>>(fail(Error::kInvalidArgument));
-      }
-      out.push_back({.system = static_cast<std::uint8_t>(system), .role = named.role});
-    }
-    return Result<std::vector<mavlink::RoleAssignment>>(std::move(out));
-  });
-}
 
 // The roles in the form each text-keyed adapter takes.
 template <typename Assignment>
