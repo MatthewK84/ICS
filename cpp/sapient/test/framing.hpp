@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
@@ -20,12 +21,13 @@ namespace ics::sapient::testing {
 inline std::vector<std::byte> frame(const Message& message) {
   const std::string body = message.SerializeAsString();
   const auto length = static_cast<std::uint32_t>(body.size());
-  std::vector<std::byte> out;
-  for (unsigned shift = 0; shift < 32U; shift += 8U) {
-    out.push_back(static_cast<std::byte>((length >> shift) & 0xFFU));
+  // Sized once and filled in place: GCC 13 at -O3 reads a push_back followed
+  // by a range insert as an overflow.
+  std::vector<std::byte> out(sizeof(length) + body.size());
+  for (std::size_t i = 0; i < sizeof(length); ++i) {
+    out[i] = static_cast<std::byte>((length >> (8U * i)) & 0xFFU);
   }
-  const std::span<const std::byte> bytes = std::as_bytes(std::span(body));
-  out.insert(out.end(), bytes.begin(), bytes.end());
+  std::ranges::copy(std::as_bytes(std::span(body)), std::span(out).subspan(sizeof(length)).begin());
   return out;
 }
 
