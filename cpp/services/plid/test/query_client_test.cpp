@@ -73,6 +73,14 @@ TEST(QueryClient, WritesEveryRecordThenDone) {
   EXPECT_NE(ran.out.find(R"({"kind":"done","count":3,"truncated":false})"), std::string::npos) << ran.out;
 }
 
+TEST(QueryClient, ReadsEveryBatch) {
+  // Batches of one record each.
+  const Store store({.max_items = 100, .max_response_bytes = 1});
+  const Ran ran = query({"ics-pli-query", "records"}, store.socket());
+  EXPECT_EQ(ran.status, ics::plid::kExitStopped);
+  EXPECT_NE(ran.out.find(R"({"kind":"done","count":3,"truncated":false})"), std::string::npos) << ran.out;
+}
+
 TEST(QueryClient, AsksForARangeAndAnEntity) {
   const Store store;
   const std::string start = std::to_string(kStartNs);
