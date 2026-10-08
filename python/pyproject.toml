@@ -15,6 +15,9 @@ dev = [
   # Validates run records against schemas/run-record.schema.json (ICS-013).
   "jsonschema==4.26.0",
   "mypy==2.3.1",
+  # Reads the Parquet files the C++ PLI store writes, to cross-check its
+  # writer (ICS-030).
+  "pyarrow==25.0.1",
   "pytest==9.1.1",
   "pytest-cov==7.1.0",
   "ruff==0.16.9",
@@ -66,6 +69,12 @@ explicit_package_bases = true
 [[tool.mypy.overrides]]
 module = ["ics.*"]
 ignore_errors = true
+
+# pyarrow ships no type information; only the Parquet cross-check test
+# (ICS-030) uses it.
+[[tool.mypy.overrides]]
+module = ["pyarrow", "pyarrow.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

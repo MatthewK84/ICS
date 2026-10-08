@@ -10,17 +10,13 @@
 #include <string_view>
 #include <utility>
 
-#include <fcntl.h>
-#include <unistd.h>
-
 #include "ics/common/check.hpp"
 #include "ics/store/segment_format.hpp"
-#include "ics/timing/unix_socket.hpp"
-#include "status.hpp"
+#include "files.hpp"
 
 namespace ics::store {
 
-using detail::status_of;
+using detail::sync_folder;
 
 namespace {
 
@@ -31,14 +27,6 @@ constexpr std::string_view kNamePattern = "pli-########T######.#########Z.icspli
 
 [[nodiscard]] bool matches(const char found, const char expected) noexcept {
   return expected == '#' ? found >= '0' && found <= '9' : found == expected;
-}
-
-// Syncs folder, so a segment created in it survives a crash.
-[[nodiscard]] Status sync_folder(const std::filesystem::path& folder) noexcept {
-  const timing::Fd fd(::open(folder.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC));
-  return status_of(fd.valid(), Error::kUnwritable).and_then([&fd] {
-    return status_of(::fsync(fd.get()) == 0, Error::kUnwritable);
-  });
 }
 
 }  // namespace
