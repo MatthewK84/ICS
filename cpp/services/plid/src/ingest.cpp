@@ -41,17 +41,17 @@ void Ingest::track_arming(const v1::PliEvent& event) {
 }
 
 Status Ingest::store(Pli& pli) {
-  Status stored;
+  Status appended;
   for (const v1::PliRecord& record : pli.records) {
-    stored = stored.and_then([&] { return counted(writer_.append(record)); });
+    appended = appended.and_then([&] { return counted(writer_.append(record)); });
   }
   for (const v1::PliEvent& event : pli.events) {
     track_arming(event);
-    stored = stored.and_then([&] { return counted(writer_.append(event)); });
+    appended = appended.and_then([&] { return counted(writer_.append(event)); });
   }
   pli = {};
   static_cast<void>(ics::check(pli.records.empty()));
-  return stored;
+  return appended;
 }
 
 Result<std::optional<std::filesystem::path>> Ingest::tick(const UtcTime now) {

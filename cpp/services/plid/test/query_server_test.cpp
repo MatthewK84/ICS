@@ -3,6 +3,7 @@
 #include <chrono>
 #include <filesystem>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <thread>
 #include <vector>
@@ -55,10 +56,9 @@ TEST(QueryServer, AnswersAQueryInBatches) {
     request.set_entity_id("uav-1");
     const std::vector<QueryPliResponse> responses = query(folder / "query", request);
     ASSERT_GT(responses.size(), 2U);
-    int records = 0;
-    for (const QueryPliResponse& response : responses) {
-      records += response.records_size();
-    }
+    const int records = std::accumulate(responses.begin(), responses.end(), 0, [](const int sum, const QueryPliResponse& r) {
+      return sum + r.records_size();
+    });
     EXPECT_EQ(records, 25);
     EXPECT_TRUE(responses.back().done());
     EXPECT_EQ(everything(folder / "query", QueryPliRequest::KIND_RECORDS).records_size(), 50);
@@ -84,6 +84,7 @@ TEST(QueryServer, RefusesARequestThatDoesNotParse) {
     ASSERT_TRUE(response.ParseFromArray(buffer.data(), static_cast<int>(got)));
     EXPECT_TRUE(response.done());
     EXPECT_EQ(response.error(), "the request is not a QueryPliRequest");
+    EXPECT_EQ(answering->served(), 1U);
   }
   EXPECT_TRUE(logged.has(R"("event":"query_refused","bytes":2)"));
 }

@@ -32,14 +32,10 @@ struct Ran {
 };
 
 Ran query(const std::vector<const char*>& args, const std::filesystem::path& socket) {
-  std::FILE* file = std::tmpfile();
-  Ran ran{.status = run_query_client(args, socket, file), .out = {}};
-  std::rewind(file);
-  for (int c = std::fgetc(file); c != EOF; c = std::fgetc(file)) {
-    ran.out.push_back(static_cast<char>(c));
-  }
-  std::fclose(file);
-  return ran;
+  ::testing::internal::CaptureStdout();
+  const int status = run_query_client(args, socket, stdout);
+  std::fflush(stdout);
+  return Ran{.status = status, .out = ::testing::internal::GetCapturedStdout()};
 }
 
 // A store of three records and an event, and a server answering for it.

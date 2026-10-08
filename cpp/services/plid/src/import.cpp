@@ -132,9 +132,9 @@ void add_aligned(const retime::Vehicles& vehicles, Pli& out) {
 
 [[nodiscard]] std::vector<flightlog::RoleAssignment> log_roles(const std::vector<mavlink::RoleAssignment>& roles) {
   std::vector<flightlog::RoleAssignment> out;
-  for (const mavlink::RoleAssignment& role : roles) {
-    out.push_back({.system = role.system, .role = role.role});
-  }
+  std::ranges::transform(roles, std::back_inserter(out), [](const mavlink::RoleAssignment& role) {
+    return flightlog::RoleAssignment{.system = role.system, .role = role.role};
+  });
   static_cast<void>(ics::check(out.size() == roles.size()));
   return out;
 }

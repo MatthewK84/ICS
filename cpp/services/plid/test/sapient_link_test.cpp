@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include <poll.h>
 #include <sys/socket.h>
 
 #include "framing.hpp"
@@ -65,20 +66,29 @@ void send_all(const int socket, const std::vector<std::byte>& bytes) {
   }
 }
 
-// Steps link until it has connected, at most 100 times.
+// Waits up to 10 ms for the link's socket to be ready, then steps it.
+void step(SapientLink& sapient, const ics::UtcTime now, std::vector<ics::v1::PliRecord>& out,
+          const ics::logging::Logger& logger) {
+  pollfd ready = sapient.descriptor();
+  static_cast<void>(::poll(&ready, 1, 10));
+  sapient.step(now, out, logger);
+}
+
+// Steps link until it has connected, at most 500 times.
 void connect(SapientLink& sapient, const ics::UtcTime now, const ics::logging::Logger& logger) {
   std::vector<ics::v1::PliRecord> ignored;
-  for (int step = 0; step < 100 && !sapient.connected(); ++step) {
-    sapient.step(now, ignored, logger);
+  for (int count = 0; count < 500 && !sapient.connected(); ++count) {
+    step(sapient, now, ignored, logger);
   }
   ASSERT_TRUE(sapient.connected());
 }
 
-// Steps link until it has read count records, at most 1000 times.
+// Steps link until it has read count records or disconnected, at most 500
+// times.
 std::vector<ics::v1::PliRecord> read(SapientLink& sapient, const std::size_t count, const ics::logging::Logger& logger) {
   std::vector<ics::v1::PliRecord> out;
-  for (int step = 0; step < 1000 && out.size() < count; ++step) {
-    sapient.step(kStart, out, logger);
+  for (int index = 0; index < 500 && out.size() < count && sapient.connected(); ++index) {
+    step(sapient, kStart, out, logger);
   }
   return out;
 }
@@ -129,11 +139,11 @@ TEST(SapientLink, DoublesItsPauseWhileNothingListens) {
   std::vector<ics::v1::PliRecord> none;
   ics::UtcTime now = kStart;
   for (const char* const pause : {"1000000000", "2000000000", "4000000000"}) {
-    for (int step = 0; step < 100 && sapient.descriptor().fd < 0; ++step) {
-      sapient.step(now, none, logged.logger);
+    for (int count = 0; count < 100 && sapient.descriptor().fd < 0; ++count) {
+      step(sapient, now, none, logged.logger);
     }
-    for (int step = 0; step < 100 && sapient.descriptor().fd >= 0; ++step) {
-      sapient.step(now, none, logged.logger);
+    for (int count = 0; count < 500 && sapient.descriptor().fd >= 0; ++count) {
+      step(sapient, now, none, logged.logger);
     }
     EXPECT_TRUE(logged.has(std::string(R"("reason":"connect failed","retry_in_ns":)") + pause)) << pause;
     now += seconds(4);
@@ -203,8 +213,8 @@ TEST(SapientLink, ReadsABoundedAmountPerStep) {
   const std::size_t count = bytes.size() / one.size();
   std::thread sender([&middleware, &bytes] { send_all(middleware.get(), bytes); });
   std::vector<ics::v1::PliRecord> first;
-  for (int step = 0; step < 1000 && first.empty(); ++step) {
-    sapient.step(kStart, first, logged.logger);
+  for (int attempt = 0; attempt < 500 && first.empty(); ++attempt) {
+    step(sapient, kStart, first, logged.logger);
   }
   EXPECT_LT(first.size(), count);
   const std::vector<ics::v1::PliRecord> rest = read(sapient, count - first.size(), logged.logger);
@@ -217,8 +227,8 @@ TEST(SapientLink, ReportsASocketItCannotMake) {
   const TcpListener listener;
   SapientLink sapient = link(listener.port());
   Logged logged;
-  std::vector<ics::v1::PliRecord> none;
   {
+    std::vector<ics::v1::PliRecord> none;
     const ics::timing::testing::DescriptorLimit limit;
     sapient.step(kStart, none, logged.logger);
   }

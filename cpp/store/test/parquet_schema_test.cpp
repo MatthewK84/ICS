@@ -1,5 +1,7 @@
 #include "ics/store/parquet_schema.hpp"
 
+#include <algorithm>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -20,10 +22,10 @@ using ics::store::PhysicalType;
 // A column's name, type and nullability, as text: "name type optional".
 std::vector<std::string> describe(const std::vector<Column>& columns) {
   std::vector<std::string> out;
-  for (const Column& column : columns) {
-    out.push_back(column.name + " " + std::to_string(static_cast<int>(column.type)) + " " +
-                  (column.optional ? "optional" : "required"));
-  }
+  std::ranges::transform(columns, std::back_inserter(out), [](const Column& column) {
+    return column.name + " " + std::to_string(static_cast<int>(column.type)) + " " +
+           (column.optional ? "optional" : "required");
+  });
   return out;
 }
 

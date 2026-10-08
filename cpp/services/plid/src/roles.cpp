@@ -1,5 +1,6 @@
 #include "ics/plid/roles.hpp"
 
+#include <algorithm>
 #include <array>
 #include <charconv>
 #include <cstdint>
@@ -32,12 +33,8 @@ constexpr std::array<RoleName, 4> kRoles{{
 }  // namespace
 
 std::optional<v1::EntityRole> role_named(const std::string_view name) noexcept {
-  for (const RoleName& known : kRoles) {
-    if (known.name == name) {
-      return known.role;
-    }
-  }
-  return std::nullopt;
+  const auto found = std::ranges::find_if(kRoles, [name](const RoleName& known) { return known.name == name; });
+  return found == kRoles.end() ? std::nullopt : std::optional(found->role);
 }
 
 Result<std::vector<NamedRole>> parse_roles(const std::vector<std::string>& texts, std::string& reason) {
@@ -62,8 +59,9 @@ Result<std::vector<mavlink::RoleAssignment>> mavlink_roles(const std::vector<std
     std::vector<mavlink::RoleAssignment> out;
     for (const NamedRole& named : roles) {
       unsigned system = 0;
-      const std::from_chars_result read = std::from_chars(named.id.data(), named.id.data() + named.id.size(), system);
-      if (read.ec != std::errc() || read.ptr != named.id.data() + named.id.size() || system > kMaxSystem) {
+      const std::string_view id = named.id;
+      const std::from_chars_result read = std::from_chars(id.begin(), id.end(), system);
+      if (read.ec != std::errc() || read.ptr != id.end() || system > kMaxSystem) {
         reason = "a MAVLink role's ID must be a system number from 0 to 255: " + named.id;
         return Result<std::vector<mavlink::RoleAssignment>>(fail(Error::kInvalidArgument));
       }

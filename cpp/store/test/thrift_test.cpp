@@ -1,8 +1,10 @@
 #include "ics/store/thrift.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <initializer_list>
+#include <iterator>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -14,9 +16,7 @@ using ics::store::ThriftWriter;
 
 std::vector<std::byte> bytes(const std::initializer_list<int> values) {
   std::vector<std::byte> out;
-  for (const int value : values) {
-    out.push_back(static_cast<std::byte>(value));
-  }
+  std::ranges::transform(values, std::back_inserter(out), [](const int value) { return static_cast<std::byte>(value); });
   return out;
 }
 

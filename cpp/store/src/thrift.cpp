@@ -21,7 +21,9 @@ constexpr std::uint8_t kLongListSize = 0xF0U;
 constexpr unsigned kNibble = 4;
 
 [[nodiscard]] std::uint64_t zigzag(const std::int64_t value) noexcept {
-  return (static_cast<std::uint64_t>(value) << 1U) ^ static_cast<std::uint64_t>(value >> 63);
+  // All ones for a negative value, else zero.
+  const std::uint64_t sign = -static_cast<std::uint64_t>(value < 0);
+  return (static_cast<std::uint64_t>(value) << 1U) ^ sign;
 }
 
 }  // namespace

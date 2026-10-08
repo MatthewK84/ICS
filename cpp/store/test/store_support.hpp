@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <initializer_list>
 #include <iterator>
 #include <string>
 #include <vector>
@@ -45,6 +46,36 @@ inline v1::PliEvent event(const int index) {
   out.set_time_basis(v1::PLI_TIME_BASIS_VEHICLE_GNSS);
   out.set_kind(v1::PliEvent::KIND_STATUS_TEXT);
   out.set_detail("status " + std::to_string(index));
+  return out;
+}
+
+// CRC-32C bit by bit: an oracle independent of ics::store::crc32c.
+inline std::uint32_t bitwise_crc32c(const std::vector<std::byte>& bytes) {
+  constexpr std::uint32_t kPolynomial = 0x82F63B78U;
+  constexpr int kBitsPerByte = 8;
+  std::uint32_t crc = ~std::uint32_t{0};
+  for (const std::byte byte : bytes) {
+    crc ^= std::to_integer<std::uint32_t>(byte);
+    for (int bit = 0; bit < kBitsPerByte; ++bit) {
+      crc = (crc & 1U) != 0U ? (crc >> 1U) ^ kPolynomial : crc >> 1U;
+    }
+  }
+  return ~crc;
+}
+
+// An entry of kind holding payload, framed as the segment format says, with
+// a CRC that passes.
+inline std::vector<std::byte> raw_entry(const std::uint8_t kind, const std::vector<std::byte>& payload) {
+  std::vector<std::byte> body{std::byte{kind}};
+  body.insert(body.end(), payload.begin(), payload.end());
+  const std::uint32_t crc = bitwise_crc32c(body);
+  std::vector<std::byte> out;
+  for (const std::uint32_t value : {static_cast<std::uint32_t>(payload.size()), crc}) {
+    for (unsigned shift = 0; shift < 32U; shift += 8U) {
+      out.push_back(static_cast<std::byte>(value >> shift));
+    }
+  }
+  out.insert(out.end(), body.begin(), body.end());
   return out;
 }
 

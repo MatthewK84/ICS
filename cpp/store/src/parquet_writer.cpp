@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <optional>
 #include <string>
@@ -47,9 +48,7 @@ void put_little_endian(const std::uint64_t value, const std::size_t bytes, std::
 }
 
 void put_text(const std::string_view text, std::vector<std::byte>& out) {
-  for (const char c : text) {
-    out.push_back(static_cast<std::byte>(c));
-  }
+  std::ranges::transform(text, std::back_inserter(out), [](const char c) { return static_cast<std::byte>(c); });
 }
 
 // A PLAIN byte array: its length, then its bytes.
@@ -249,15 +248,15 @@ ParquetWriter::ParquetWriter(capture::OutputFile file, const google::protobuf::D
 
 Result<ParquetWriter> ParquetWriter::create(const std::filesystem::path& path,
                                             const google::protobuf::Descriptor& message) {
-  Result<std::vector<Column>> columns = columns_of(message);
-  if (!columns) {
-    return fail(columns.error());
+  Result<std::vector<Column>> schema = columns_of(message);
+  if (!schema) {
+    return fail(schema.error());
   }
   Result<capture::OutputFile> file = capture::OutputFile::create(path);
   if (!file) {
     return fail(file.error());
   }
-  ParquetWriter writer(std::move(*file), message, std::move(*columns));
+  ParquetWriter writer(std::move(*file), message, std::move(*schema));
   put_text(kMagic, writer.buffer_);
   return writer.write_buffer().map([&writer] { return std::move(writer); });
 }

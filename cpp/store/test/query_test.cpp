@@ -1,17 +1,18 @@
 #include "ics/store/query.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 
 #include "ics/common/units.hpp"
-#include "ics/store/crc32c.hpp"
 #include "ics/store/segment_format.hpp"
 #include "ics/store/segment_writer.hpp"
 #include "store_support.hpp"
@@ -60,12 +61,12 @@ QueryPliRequest request(const QueryPliRequest::Kind kind, const std::int64_t sta
 std::vector<std::int64_t> times(const Answered& answered) {
   std::vector<std::int64_t> out;
   for (const QueryPliResponse& response : answered.responses) {
-    for (const ics::v1::PliRecord& record : response.records()) {
-      out.push_back((record.valid_utc_ns() - kStartNs) / kMs);
-    }
-    for (const ics::v1::PliEvent& event : response.events()) {
-      out.push_back((event.time_utc_ns() - kStartNs) / kMs);
-    }
+    std::ranges::transform(response.records(), std::back_inserter(out), [](const ics::v1::PliRecord& record) {
+      return (record.valid_utc_ns() - kStartNs) / kMs;
+    });
+    std::ranges::transform(response.events(), std::back_inserter(out), [](const ics::v1::PliEvent& event) {
+      return (event.time_utc_ns() - kStartNs) / kMs;
+    });
   }
   return out;
 }
@@ -275,14 +276,9 @@ TEST(Answer, SkipsEntriesThatDoNotHoldTheirMessage) {
   ASSERT_TRUE(writer.close().has_value());
   // Append a sound entry of each kind whose payload ends inside a tag.
   std::vector<std::byte> bytes = ics::store::testing::file_bytes(writer.path());
-  for (const std::byte kind : {std::byte{1}, std::byte{2}}) {
-    const std::vector<std::byte> body{kind, std::byte{0xFF}};
-    const std::uint32_t crc = ics::store::crc32c(body);
-    const std::vector<std::byte> header{std::byte{1}, std::byte{0}, std::byte{0}, std::byte{0},
-                                        static_cast<std::byte>(crc), static_cast<std::byte>(crc >> 8U),
-                                        static_cast<std::byte>(crc >> 16U), static_cast<std::byte>(crc >> 24U)};
-    bytes.insert(bytes.end(), header.begin(), header.end());
-    bytes.insert(bytes.end(), body.begin(), body.end());
+  for (const std::uint8_t kind : {std::uint8_t{1}, std::uint8_t{2}}) {
+    const std::vector<std::byte> entry = ics::store::testing::raw_entry(kind, {std::byte{0xFF}});
+    bytes.insert(bytes.end(), entry.begin(), entry.end());
   }
   ics::store::testing::write_file(writer.path(), bytes);
   Catalog catalog(folder / "");

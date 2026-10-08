@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <optional>
 #include <string>
 #include <vector>
@@ -94,18 +95,14 @@ template <typename Message, typename Time>
 std::vector<std::string> by_time(std::vector<Message> messages, const Time time) {
   std::ranges::stable_sort(messages, [time](const Message& a, const Message& b) { return time(a) < time(b); });
   std::vector<std::string> out;
-  for (const Message& message : messages) {
-    out.push_back(message.SerializeAsString());
-  }
+  std::ranges::transform(messages, std::back_inserter(out), [](const Message& m) { return m.SerializeAsString(); });
   return out;
 }
 
 template <typename Message>
 std::vector<std::string> serialized(const google::protobuf::RepeatedPtrField<Message>& messages) {
   std::vector<std::string> out;
-  for (const Message& message : messages) {
-    out.push_back(message.SerializeAsString());
-  }
+  std::ranges::transform(messages, std::back_inserter(out), [](const Message& m) { return m.SerializeAsString(); });
   return out;
 }
 

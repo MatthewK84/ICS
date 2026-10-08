@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <iterator>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -12,7 +13,6 @@
 
 #include "golden_pli.hpp"
 #include "ics/common/units.hpp"
-#include "ics/store/crc32c.hpp"
 #include "ics/store/segment_format.hpp"
 #include "ics/store/segment_writer.hpp"
 #include "store_support.hpp"
@@ -35,22 +35,6 @@ using ics::store::testing::write_file;
 using ics::timing::testing::TempDir;
 
 const ics::UtcTime kStart = ics::utc_from_ns(kStartNs);
-
-// An entry of kind holding payload, framed as the segment format says.
-std::vector<std::byte> raw_entry(const ics::store::EntryKind kind, const std::vector<std::byte>& payload) {
-  std::vector<std::byte> body{static_cast<std::byte>(kind)};
-  body.insert(body.end(), payload.begin(), payload.end());
-  std::vector<std::byte> out;
-  const auto put = [&out](const std::uint32_t value) {
-    for (unsigned shift = 0; shift < 32U; shift += 8U) {
-      out.push_back(static_cast<std::byte>(value >> shift));
-    }
-  };
-  put(static_cast<std::uint32_t>(payload.size()));
-  put(ics::store::crc32c(body));
-  out.insert(out.end(), body.begin(), body.end());
-  return out;
-}
 
 // The golden PLI, records and events in turn, as one closed segment.
 std::filesystem::path golden_segment(const std::filesystem::path& folder) {
@@ -82,11 +66,7 @@ TEST(ArchiveSegment, WritesBothFilesAndNothingElse) {
   EXPECT_EQ(counts.records, golden_records().size());
   EXPECT_EQ(counts.events, golden_events().size());
   EXPECT_TRUE(is_archived(segment));
-  std::size_t files = 0;
-  for ([[maybe_unused]] const auto& entry : std::filesystem::directory_iterator(folder / "")) {
-    ++files;
-  }
-  EXPECT_EQ(files, 3U);
+  EXPECT_EQ(std::distance(std::filesystem::directory_iterator(folder / ""), std::filesystem::directory_iterator{}), 3);
 }
 
 TEST(ArchiveSegment, MatchesTheGoldenFiles) {
@@ -158,7 +138,8 @@ TEST(ArchiveSegment, ReportsAnEntryThatDoesNotHoldItsMessage) {
   for (const ics::store::EntryKind kind : {ics::store::EntryKind::kRecord, ics::store::EntryKind::kEvent}) {
     // A sound entry whose payload ends inside a field's tag.
     std::vector<std::byte> bytes(ics::store::kSegmentMagic.begin(), ics::store::kSegmentMagic.end());
-    const std::vector<std::byte> entry = raw_entry(kind, {std::byte{0xFF}});
+    const std::vector<std::byte> entry =
+        ics::store::testing::raw_entry(static_cast<std::uint8_t>(kind), {std::byte{0xFF}});
     bytes.insert(bytes.end(), entry.begin(), entry.end());
     write_file(segment, bytes);
     EXPECT_EQ(archive_segment(segment).error(), ics::Error::kMalformed);
