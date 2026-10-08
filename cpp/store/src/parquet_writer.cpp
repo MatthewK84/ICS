@@ -62,6 +62,7 @@ void put_byte_array(const std::string_view text, std::vector<std::byte>& out) {
 // on the way is unset.
 [[nodiscard]] std::optional<std::reference_wrapper<const Message>> holder_of(const Message& row,
                                                                             const Column& column) {
+  static_cast<void>(ics::check(!column.path.empty()));
   std::reference_wrapper<const Message> at = row;
   for (std::size_t index = 0; index + 1 < column.path.size(); ++index) {
     const Reflection& reflection = *at.get().GetReflection();
@@ -75,6 +76,19 @@ void put_byte_array(const std::string_view text, std::vector<std::byte>& out) {
 
 [[nodiscard]] bool holds_value(const Message& holder, const FieldDescriptor& field) {
   return !field.has_presence() || holder.GetReflection()->HasField(holder, &field);
+}
+
+void put_string(const Message& holder, const FieldDescriptor& field, std::vector<std::byte>& out) {
+  std::string scratch;
+  put_byte_array(holder.GetReflection()->GetStringReference(holder, &field, &scratch), out);
+}
+
+// An enum value's name, or its number in decimal when the enum names none.
+void put_enum(const Message& holder, const FieldDescriptor& field, std::vector<std::byte>& out) {
+  static_cast<void>(ics::check(field.cpp_type() == FieldDescriptor::CPPTYPE_ENUM));
+  const int number = holder.GetReflection()->GetEnumValue(holder, &field);
+  const google::protobuf::EnumValueDescriptor* named = field.enum_type()->FindValueByNumber(number);
+  put_byte_array(named != nullptr ? std::string(named->name()) : std::to_string(number), out);
 }
 
 // Appends the PLAIN encoding of the field's value; columns_of allows no other
@@ -91,17 +105,12 @@ void put_value(const Message& holder, const FieldDescriptor& field, std::vector<
     case FieldDescriptor::CPPTYPE_DOUBLE:
       put_little_endian(std::bit_cast<std::uint64_t>(reflection.GetDouble(holder, &field)), kLongBytes, out);
       return;
-    case FieldDescriptor::CPPTYPE_STRING: {
-      std::string scratch;
-      put_byte_array(reflection.GetStringReference(holder, &field, &scratch), out);
+    case FieldDescriptor::CPPTYPE_STRING:
+      put_string(holder, field, out);
       return;
-    }
-    default: {
-      const int number = reflection.GetEnumValue(holder, &field);
-      const google::protobuf::EnumValueDescriptor* named = field.enum_type()->FindValueByNumber(number);
-      put_byte_array(named != nullptr ? std::string(named->name()) : std::to_string(number), out);
+    default:
+      put_enum(holder, field, out);
       return;
-    }
   }
 }
 
@@ -135,6 +144,7 @@ void put_page_header(const std::size_t values, const std::size_t bytes, std::vec
 void put_chunk(const Column& column, const std::size_t count, const ParquetWriter::RowAt& row_at,
                std::vector<std::byte>& out) {
   std::vector<std::byte> bits((count + kBitsPerByte - 1) / kBitsPerByte);
+  static_cast<void>(ics::check(bits.size() * kBitsPerByte >= count));
   std::vector<std::byte> values;
   for (std::size_t index = 0; index < count; ++index) {
     const std::optional<std::reference_wrapper<const Message>> holder = holder_of(row_at(index), column);
@@ -154,6 +164,7 @@ void put_chunk(const Column& column, const std::size_t count, const ParquetWrite
 }
 
 void put_schema(ThriftWriter& thrift, const std::vector<Column>& columns) {
+  static_cast<void>(ics::check(columns.size() <= kMaxSchemaFields));
   thrift.begin_list_field(2, ThriftType::kStruct, columns.size() + 1);
   thrift.begin_struct();
   thrift.field_binary(4, "schema");
@@ -176,6 +187,8 @@ void put_schema(ThriftWriter& thrift, const std::vector<Column>& columns) {
 }
 
 void put_chunk_meta(ThriftWriter& thrift, const Column& column, const ChunkPlace& chunk, const std::uint64_t rows) {
+  // Every chunk holds at least its page header.
+  static_cast<void>(ics::check(chunk.bytes > 0));
   thrift.begin_struct();
   thrift.field_i64(2, static_cast<std::int64_t>(chunk.offset + chunk.bytes));
   thrift.begin_struct_field(3);

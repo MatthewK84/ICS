@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "files.hpp"
+#include "ics/common/check.hpp"
 #include "ics/store/parquet_writer.hpp"
 #include "ics/store/segment_format.hpp"
 #include "ics/store/segment_reader.hpp"
@@ -48,6 +49,8 @@ class Rows {
     }
     bytes_ += payload.size();
     rows_.push_back(std::move(message));
+    // A full row group is written at once, so none grows past its limit.
+    static_cast<void>(ics::check(rows_.size() <= limits_.rows));
     return rows_.size() < limits_.rows && bytes_ < limits_.bytes ? Status{} : flush();
   }
 

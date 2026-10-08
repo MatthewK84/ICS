@@ -8,6 +8,8 @@
 
 #include <google/protobuf/descriptor.h>
 
+#include "ics/common/check.hpp"
+
 namespace ics::store {
 
 namespace {
@@ -64,6 +66,8 @@ Result<std::vector<Column>> columns_of(const Descriptor& message) {
   for (std::size_t visited = 0; !pending.empty(); ++visited) {
     const Pending next = std::move(pending.back());
     pending.pop_back();
+    // push_fields queues only paths that end in a field.
+    static_cast<void>(ics::check(!next.path.empty()));
     const FieldDescriptor& field = *next.path.back();
     if (visited == kMaxSchemaFields || field.is_repeated()) {
       return fail(Error::kInvalidArgument);

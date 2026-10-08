@@ -83,6 +83,7 @@ void ThriftWriter::field_binary(const std::int16_t id, const std::string_view va
 }
 
 void ThriftWriter::begin_list_field(const std::int16_t id, const ThriftType element, const std::size_t size) {
+  static_cast<void>(ics::check(element != ThriftType::kList));
   field_header(id, ThriftType::kList);
   if (size < kShortLimit) {
     byte(static_cast<std::uint8_t>((size << kNibble) | static_cast<unsigned>(element)));

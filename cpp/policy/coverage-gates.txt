@@ -26,4 +26,4 @@ cpp/flightlog 0.09
 cpp/timealign 0.40
 cpp/camera 0.14
 cpp/strobe 0.14
-cpp/store 0.33
+cpp/store 0.32

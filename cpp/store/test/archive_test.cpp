@@ -76,6 +76,8 @@ TEST(ArchiveSegment, WritesBothFilesAndNothingElse) {
   const TempDir folder;
   const std::filesystem::path segment = golden_segment(folder / "");
   EXPECT_FALSE(is_archived(segment));
+  std::ofstream(archive_paths(segment).records) << "records only";
+  EXPECT_FALSE(is_archived(segment));
   const ArchiveCounts counts = archive_segment(segment, {.rows = 3, .bytes = 1U << 20U}).value();
   EXPECT_EQ(counts.records, golden_records().size());
   EXPECT_EQ(counts.events, golden_events().size());
