@@ -85,11 +85,15 @@ Status SegmentWriter::append(const v1::PliEvent& event) {
   return append_entry(event, buffer_).and_then([this] { return flush_if_full(); });
 }
 
-Status SegmentWriter::sync() {
+Status SegmentWriter::flush() {
   if (!file_) {
     return fail(Error::kInvalidArgument);
   }
-  return file_->write(buffer_).map([this] { buffer_.clear(); }).and_then([this] { return file_->sync(); });
+  return file_->write(buffer_).map([this] { buffer_.clear(); });
+}
+
+Status SegmentWriter::sync() {
+  return flush().and_then([this] { return file_->sync(); });
 }
 
 bool SegmentWriter::due(const UtcTime now, const Duration max_age) const noexcept {

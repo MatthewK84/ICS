@@ -64,6 +64,17 @@ TEST(SegmentWriter, BuffersEntriesUntilSync) {
   EXPECT_GT(reader.sound_bytes(), ics::store::kSegmentMagic.size());
 }
 
+TEST(SegmentWriter, FlushesEntriesForReadersToSee) {
+  const TempDir folder;
+  SegmentWriter writer = SegmentWriter::open(folder / "", kStart).value();
+  ASSERT_TRUE(writer.append(record(0)).has_value());
+  ASSERT_TRUE(writer.flush().has_value());
+  ics::store::SegmentReader reader = ics::store::SegmentReader::open(writer.path()).value();
+  EXPECT_TRUE(reader.next().value().has_value());
+  ASSERT_TRUE(writer.close().has_value());
+  EXPECT_EQ(writer.flush().error(), ics::Error::kInvalidArgument);
+}
+
 TEST(SegmentWriter, WritesItsBufferWhenFull) {
   const TempDir folder;
   SegmentWriter writer = SegmentWriter::open(folder / "", kStart).value();
