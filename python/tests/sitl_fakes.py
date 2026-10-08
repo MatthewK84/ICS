@@ -139,11 +139,14 @@ class FakeAutopilot:
         if not self.flying or self.position is None:
             return messages
         path = self.path()
+        reached: list[Message] = []
         if self.path_index is not None and self.path_index < len(path):
             self.position = path[self.path_index]
             self.path_index += 1
-            messages.append(MissionItemReached(self.position.seq))
-        return messages + self.reports(self.position)
+            reached.append(MissionItemReached(self.position.seq))
+        # The position goes before the reached message, as a real autopilot sends them, so a rig that
+        # stops on the last waypoint's MISSION_ITEM_REACHED has already read the position there.
+        return messages + self.reports(self.position) + reached
 
     def reports(self, at: MissionItemInt) -> list[Message]:
         height_mm = round(at.z * 1000.0)

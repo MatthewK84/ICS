@@ -42,6 +42,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <filesystem>
 #include <optional>
 #include <span>
 #include <string>
@@ -54,10 +55,10 @@
 #include "ics/frames/egm96.hpp"
 #include "ics/frames/enu.hpp"
 #include "ics/frames/geodetic.hpp"
+#include "ics/retime/sorties.hpp"
 #include "ics/timealign/check.hpp"
 #include "ics/timealign/clock_fit.hpp"
 #include "output.hpp"
-#include "sorties.hpp"
 
 namespace {
 
@@ -156,7 +157,9 @@ int align(const Plan& plan) {
   }
   const ics::frames::EnuFrame range(plan.origin);
   std::string reason;
-  const ics::Result<Vehicles> vehicles = ics::time_align::collect(plan.capture, *geoid, range, reason);
+  const std::filesystem::path capture = plan.capture;
+  const ics::Result<Vehicles> vehicles =
+      ics::retime::collect(std::span(&capture, 1), {}, *geoid, range, reason);
   if (!vehicles) {
     std::fprintf(stderr, "%s\n", reason.c_str());
     return 1;

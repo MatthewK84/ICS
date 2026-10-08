@@ -1,0 +1,36 @@
+# ics-plid (ICS-030): an example config, read from /etc/ics/ics-plid.toml.
+# See include/ics/plid/config.hpp for every setting and its range.
+
+[log]
+level = "info"
+service = "ics-plid"
+
+[plid]
+store_folder = "/var/lib/ics/pli"
+query_socket = "/run/ics-plid/query"
+rotate_interval_ns = 3_600_000_000_000
+sync_interval_ns = 1_000_000_000
+# SAPIENT and Lattice are added here, each with its own table, when a range
+# has them.
+feeds = ["mavlink", "cot"]
+
+[range]
+latitude_deg = 32.9
+longitude_deg = -106.4
+height_m = 1200.0
+
+[capture]
+interfaces = ["ics-tap0"]
+files = []
+
+[mavlink]
+roles = ["1=target", "2=interceptor"]
+link_timeout_ns = 3_000_000_000
+max_age_ns = 1_000_000_000
+
+[cot]
+port = 6969
+roles = []
+ce_probability = 0.9
+le_probability = 0.9
+max_skew_ns = 30_000_000_000

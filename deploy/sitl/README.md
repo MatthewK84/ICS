@@ -50,6 +50,7 @@ The containers share one bridge network, `ics-range`, which exists only on the m
 | [`compose.yaml`](compose.yaml) | The two autopilot containers and their network |
 | [`tap.sh`](tap.sh) | The emulated TAP, and the capture on it |
 | [`run-engagements.sh`](run-engagements.sh) | Flies each engagement: containers, TAP, capture, the rig, then the TAP check |
+| [`plid-check.sh`](plid-check.sh) | Stores one engagement's capture with `ics-plid` and queries it back, in the `ics-cpp` image |
 | [`apt-packages.txt`](apt-packages.txt) | What the host needs: `iproute2`, `nftables` and `tcpdump` |
 
 ## Run it locally
@@ -81,7 +82,7 @@ Each engagement leaves a folder in the output directory:
 
 ## MAVLink replay
 
-The nightly run then checks the MAVLink adapter ([ICS-021](https://github.com/MatthewK84/ICS/issues/21), [`cpp/mavlink`](../../cpp/README.md#mavlink)) against each engagement. `ics-mavlink-replay` runs the engagement's `tap.pcap` through the adapter, as `ics-plid` will run a TAP port, and `python -m ics_sitl compare` checks what came out against `truth.jsonl`. It passes when:
+The nightly run then checks the MAVLink adapter ([ICS-021](https://github.com/MatthewK84/ICS/issues/21), [`cpp/mavlink`](../../cpp/README.md#mavlink)) against each engagement. `ics-mavlink-replay` runs the engagement's `tap.pcap` through the adapter, as `ics-plid` runs a TAP port, and `python -m ics_sitl compare` checks what came out against `truth.jsonl`. It passes when:
 
 - every position the rig logged has a record from the same MAVLink system (PX4 is 1, ArduCopter 2) with the same `time_boot_ms`, latitude and longitude to 1e-9 degrees, and height above mean sea level to 1 mm, with the record's height above the ellipsoid no further from it than the geoid ever is;
 - every status text and every refused command the rig logged is an event from that system, at least as often.
@@ -93,6 +94,16 @@ out=/tmp/sitl-records/crossing
 docker run --rm -v "$PWD:/work/ics" -w /work/ics -v /tmp/sitl-records:/tmp/sitl-records ics-cpp:ci \
   cpp/build/gcc-release/testing/mavlink_replay/ics-mavlink-replay "$out/tap.pcap" 40 -100 700 > "$out/replay.jsonl"
 PYTHONPATH=python python3 -m ics_sitl compare --truth "$out/truth.jsonl" --replay "$out/replay.jsonl"
+```
+
+## PLI store
+
+The nightly run then stores each engagement with `ics-plid` ([ICS-030](https://github.com/MatthewK84/ICS/issues/30), [`cpp/services/plid`](../../cpp/README.md#pli-store)). [`plid-check.sh`](plid-check.sh) runs in the `ics-cpp` image: it writes `/etc/ics/ics-plid.toml` for a store in `$out/pli` fed by `$out/tap.pcap`, with the replay's range origin and no roles, starts `ics-plid`, waits for its `replayed` log line, and asks for every record and every event with `ics-pli-query` into `$out/plid-store.jsonl`. It then stops `ics-plid`, which archives the store as Parquet. `python -m ics_sitl store-check` passes when that answer holds exactly the records and events of `replay.jsonl`, each as often, and neither query was truncated.
+
+```sh
+docker run --rm -v "$PWD:/work/ics" -w /work/ics -v /tmp/sitl-records:/tmp/sitl-records ics-cpp:ci \
+  deploy/sitl/plid-check.sh "$out/" cpp/build/gcc-release
+PYTHONPATH=python python3 -m ics_sitl store-check --replay "$out/replay.jsonl" --store "$out/plid-store.jsonl"
 ```
 
 ## Time alignment

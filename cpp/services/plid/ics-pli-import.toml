@@ -1,0 +1,16 @@
+# ics-pli-import (ICS-030): an example config, read from
+# /etc/ics/ics-pli-import.toml. Run ics-pli-import in the folder of one
+# sortie's TAP captures and onboard logs.
+
+[log]
+level = "info"
+service = "ics-pli-import"
+
+[import]
+store_folder = "/var/lib/ics/pli"
+roles = ["1=target", "2=interceptor"]
+
+[range]
+latitude_deg = 32.9
+longitude_deg = -106.4
+height_m = 1200.0

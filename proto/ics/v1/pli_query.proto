@@ -1,0 +1,60 @@
+// Queries for the PLI that ics-plid stores (ICS-030). Until gRPC joins the
+// toolchain, ics-plid serves PliQueryService on a local SOCK_SEQPACKET
+// socket: a client connects, sends one serialized QueryPliRequest, and reads
+// one serialized QueryPliResponse per read until one has done set, the shape
+// of a gRPC server stream.
+syntax = "proto3";
+
+package ics.v1;
+
+import "ics/v1/pli.proto";
+
+// The PLI store's queries.
+service PliQueryService {
+  // The records or events in a time range, earliest first, in batches.
+  rpc QueryPli(QueryPliRequest) returns (stream QueryPliResponse);
+}
+
+// Which records or events to return.
+message QueryPliRequest {
+  // What the query returns.
+  enum Kind {
+    // Not set: the query fails.
+    KIND_UNSPECIFIED = 0;
+    // PliRecord, selected by valid_utc_ns.
+    KIND_RECORDS = 1;
+    // PliEvent, selected by time_utc_ns.
+    KIND_EVENTS = 2;
+  }
+
+  // What the query returns.
+  Kind kind = 1;
+  // The start of the time range, inclusive, UTC, in nanoseconds since the
+  // Unix epoch.
+  int64 start_utc_ns = 2;
+  // The end of the time range, exclusive, UTC, in nanoseconds since the Unix
+  // epoch. Must be after start_utc_ns.
+  int64 end_utc_ns = 3;
+  // Only this vehicle, as in PliRecord.entity_id; empty for every vehicle.
+  string entity_id = 4;
+  // The most records or events to return, a count; 0 for the server's limit,
+  // which also caps larger values.
+  uint32 limit_count = 5;
+}
+
+// One batch of a query's results. Each batch is earlier than the next, and
+// the last has done set.
+message QueryPliResponse {
+  // The records in this batch, earliest first, for a KIND_RECORDS query.
+  repeated PliRecord records = 1;
+  // The events in this batch, earliest first, for a KIND_EVENTS query.
+  repeated PliEvent events = 2;
+  // This is the query's last batch.
+  bool done = 3;
+  // More records or events matched than the limit: the batches hold the
+  // earliest. Set on the last batch.
+  bool truncated = 4;
+  // Why the query failed, on its last batch; empty when it succeeded. A gRPC
+  // server reports this as the stream's status instead.
+  string error = 5;
+}

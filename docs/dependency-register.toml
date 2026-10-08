@@ -207,6 +207,23 @@ prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
 [[project]]
+name = "Apache Arrow (pyarrow)"
+ecosystem = "pypi"
+packages = ["pyarrow"]
+used_for = "Reads the Parquet files the C++ PLI store writes, in the Python tests, as an independent check of ICS's Parquet writer (ICS-030)"
+ships = false
+license = "Apache-2.0"
+source = "https://github.com/apache/arrow"
+governance = "Apache Software Foundation project: a Project Management Committee of contributors from many companies votes on each release under the ASF's process."
+sustainment = "Very active: a major release about every three months; 25.0.1 was released in August 2026. Pinned in python/uv.lock, with no dependencies of its own. fastparquet could replace it as the cross-check."
+foreign_influence = "Steward: the Apache Software Foundation, a US nonprofit. Committers work for many organizations; code and releases are public on GitHub and PyPI."
+single_maintainer = false
+maintainers = "The Apache Arrow PMC and committers"
+reviewed = 2026-10-08
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
 name = "mypy"
 ecosystem = "pypi"
 packages = ["mypy"]

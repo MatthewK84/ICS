@@ -10,7 +10,10 @@ name: SITL rig
 # Each capture is then replayed through the MAVLink adapter (ICS-021,
 # cpp/mavlink), built in the ics-cpp image, and the run fails unless every
 # position, status text and refused command in the engagement's truth log
-# comes out of it (python -m ics_sitl compare). Then ics-time-align (ICS-026,
+# comes out of it (python -m ics_sitl compare). ics-plid (ICS-030) then stores
+# each capture, and the run fails unless the records and events it serves back
+# are the replay's, each as often (python -m ics_sitl store-check). Then
+# ics-time-align (ICS-026,
 # cpp/timealign) puts 100 ppm of drift either way on each vehicle's boot clock,
 # withholds the middle 60 % of its clock pairs and fits it again; the run fails
 # unless every sortie whose clock has no drift of its own aligns within 1 ms.
@@ -131,7 +134,7 @@ jobs:
         run: >-
           ${RUN} bash -c 'deploy/toolchain/conan-install.sh gcc-release
           && cd cpp && cmake --preset gcc-release >/dev/null
-          && cmake --build build/gcc-release --target ics-mavlink-replay ics-time-align'
+          && cmake --build build/gcc-release --target ics-mavlink-replay ics-time-align ics-plid ics-pli-query'
 
       - name: Fly the engagements
         run: deploy/sitl/run-engagements.sh "${RECORDS}"
@@ -146,6 +149,21 @@ jobs:
             ${RUN} "${REPLAY}" "${out}tap.pcap" 40 -100 700 >"${out}replay.jsonl" || status=1
             PYTHONPATH=python python3 -m ics_sitl compare --truth "${out}truth.jsonl" --replay "${out}replay.jsonl" \
               || status=1
+          done
+          exit "${status}"
+
+      # ICS-030's "Done when": a SITL feed yields canonical PLI end to end.
+      # ics-plid replays each capture into a fresh store (deploy/sitl/
+      # plid-check.sh), and the records and events ics-pli-query then gets
+      # from it must be the replay's, each as often.
+      - name: Store the captures with ics-plid and query them back
+        run: |
+          status=0
+          for out in "${RECORDS}"/*/; do
+            echo "${out}"
+            ${RUN} deploy/sitl/plid-check.sh "${out}" cpp/build/gcc-release || status=1
+            PYTHONPATH=python python3 -m ics_sitl store-check --replay "${out}replay.jsonl" \
+              --store "${out}plid-store.jsonl" || status=1
           done
           exit "${status}"
 

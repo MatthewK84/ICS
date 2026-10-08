@@ -1,4 +1,4 @@
-#include "sorties.hpp"
+#include "ics/retime/sorties.hpp"
 
 #include <charconv>
 #include <cstddef>
@@ -8,21 +8,14 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <system_error>
 #include <utility>
 
 #include "ics/capture/capture.hpp"
 #include "ics/capture/datagram.hpp"
-#include "ics/common/error.hpp"
-#include "ics/common/units.hpp"
-#include "ics/frames/egm96.hpp"
-#include "ics/frames/enu.hpp"
-#include "ics/mavlink/adapter.hpp"
+#include "ics/common/check.hpp"
 #include "ics/mavlink/frame.hpp"
-#include "ics/timealign/clock_fit.hpp"
-#include "ics/v1/pli.pb.h"
 
-namespace ics::time_align {
+namespace ics::retime {
 namespace {
 
 constexpr int kBatch = 4096;
@@ -34,8 +27,8 @@ constexpr std::int64_t kNsPerUs = 1'000;
 std::uint8_t system_of(const v1::PliRecord& record) {
   unsigned system = 0;
   const std::string_view id = record.entity_id();
-  const std::from_chars_result read = std::from_chars(id.begin(), id.end(), system);
-  return read.ec == std::errc() ? static_cast<std::uint8_t>(system) : std::uint8_t{0};
+  static_cast<void>(std::from_chars(id.begin(), id.end(), system));
+  return static_cast<std::uint8_t>(system);
 }
 
 // The sortie a boot time belongs to, made if it is the first of its sortie.
@@ -44,6 +37,7 @@ Sortie& sortie_of(Vehicle& vehicle, const std::int64_t boot_us) {
   if (vehicle.sorties.size() <= index) {
     vehicle.sorties.resize(index + 1);
   }
+  static_cast<void>(ics::check(index < vehicle.sorties.size()));
   return vehicle.sorties[index];
 }
 
@@ -85,10 +79,8 @@ class Collector final : public capture::PacketSink {
   mavlink::Output out_;
 };
 
-}  // namespace
-
-Result<Vehicles> collect(const std::filesystem::path& path, const frames::Egm96& geoid, const frames::EnuFrame& range,
-                         std::string& reason) {
+// Replays one capture into collector.
+[[nodiscard]] Status replay(const std::filesystem::path& path, Collector& collector, std::string& reason) {
   Result<capture::Capture> capture = capture::Capture::open_file(path, reason);
   if (!capture) {
     return fail(capture.error());
@@ -97,16 +89,30 @@ Result<Vehicles> collect(const std::filesystem::path& path, const frames::Egm96&
     reason = path.string() + " does not hold Ethernet frames";
     return fail(Error::kMalformed);
   }
-  mavlink::Adapter adapter({}, geoid, range);
-  Vehicles vehicles;
-  Collector collector(adapter, vehicles);
-  for (Result<std::size_t> count = std::size_t{1}; count; count = capture->dispatch(collector, kBatch)) {
-    if (*count == 0) {
-      return vehicles;
-    }
+  Result<std::size_t> count = std::size_t{1};
+  while (count.value_or(0) > 0) {
+    count = capture->dispatch(collector, kBatch);
   }
-  reason = path.string() + ": the replay failed partway";
-  return fail(Error::kUnreadable);
+  if (!count) {
+    reason = path.string() + ": the replay failed partway";
+    return fail(Error::kUnreadable);
+  }
+  return {};
 }
 
-}  // namespace ics::time_align
+}  // namespace
+
+Result<Vehicles> collect(const std::span<const std::filesystem::path> captures,
+                         const mavlink::AdapterSettings& settings, const frames::Egm96& geoid,
+                         const frames::EnuFrame& range, std::string& reason) {
+  mavlink::Adapter adapter(settings, geoid, range);
+  Vehicles vehicles;
+  Collector collector(adapter, vehicles);
+  Status replayed;
+  for (const std::filesystem::path& path : captures) {
+    replayed = replayed.and_then([&] { return replay(path, collector, reason); });
+  }
+  return replayed.map([&vehicles] { return std::move(vehicles); });
+}
+
+}  // namespace ics::retime
