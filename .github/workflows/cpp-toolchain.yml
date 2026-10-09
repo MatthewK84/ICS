@@ -13,11 +13,12 @@ name: C++ toolchain
 # listed in cpp/policy/coverage-gates.txt must keep full line and branch
 # coverage and its assertion-density floor (ICS-015).
 #
-# The stages run side by side, one job each, so a change with the Conan cache
-# warm finishes in under ten minutes. "deps" makes sure the cache holds every
-# preset's dependencies; "image-checks" checks the image itself; each "checks"
-# job builds the image and runs one stage; and "publish" builds, signs and
-# pushes the image from main once every stage has passed. The image is built
+# The stages run side by side, one job each, so a change with the Conan caches
+# warm finishes in under ten minutes. "deps" makes sure each dependency
+# configuration has its Conan cache; "image-checks" checks the image itself;
+# each "checks" job builds the image and runs one stage with its
+# configuration's cache; and "publish" builds, signs and pushes the image from
+# main once every stage has passed. The image is built
 # from an Ubuntu snapshot and pinned packages, so every job's copy has the
 # same contents.
 
@@ -61,17 +62,38 @@ env:
   RUN: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home ics-cpp:ci
 
 jobs:
-  # The Conan package cache, keyed by everything that decides its contents.
-  # When it holds this key, the job only looks it up; when it does not, it
-  # builds what is missing from the nearest older cache and saves the result,
-  # so the checks never race to save part of it. A run that must build every
-  # dependency from source takes about 90 minutes.
+  # One Conan package cache per dependency configuration: a compiler, a build
+  # type and, for ASan and TSan, a sanitizer, as conan-install.sh names its
+  # output folders. Each is keyed by everything that decides its contents.
+  # When a cache holds its key, its job only looks it up; when it does not,
+  # the job builds what is missing from that configuration's nearest older
+  # cache and saves the result, so the checks never race to save part of one.
+  # The eight configurations build side by side, so a dependency that is slow
+  # to build from source costs one configuration's time, not eight.
   deps:
-    name: Conan package cache
+    name: Conan package cache (${{ matrix.conan }})
     runs-on: ubuntu-24.04
     timeout-minutes: 120
-    outputs:
-      key: ${{ steps.key.outputs.key }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - conan: gcc13-Release
+            preset: gcc-release
+          - conan: clang17-Release
+            preset: clang-release
+          - conan: gcc13-Debug
+            preset: gcc-debug
+          - conan: clang17-Debug
+            preset: clang-debug
+          - conan: gcc13-Debug-asan
+            preset: gcc-asan
+          - conan: clang17-Debug-asan
+            preset: clang-asan
+          - conan: gcc13-Debug-tsan
+            preset: gcc-tsan
+          - conan: clang17-Debug-tsan
+            preset: clang-tsan
     steps:
       - name: Check out the repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -81,8 +103,9 @@ jobs:
       - name: Name the Conan package cache
         id: key
         env:
+          CONAN: ${{ matrix.conan }}
           INPUTS: ${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
-        run: echo "key=conan-cpp-toolchain-${INPUTS}" >> "${GITHUB_OUTPUT}"
+        run: echo "key=conan-cpp-toolchain-${CONAN}-${INPUTS}" >> "${GITHUB_OUTPUT}"
 
       - name: Look up the Conan package cache
         id: lookup
@@ -110,7 +133,7 @@ jobs:
         with:
           path: /tmp/conan-home
           key: ${{ steps.key.outputs.key }}
-          restore-keys: conan-cpp-toolchain-
+          restore-keys: conan-cpp-toolchain-${{ matrix.conan }}-
 
       # A cache that matched but did not arrive fails here, rather than as a
       # silent rebuild of every dependency.
@@ -125,13 +148,12 @@ jobs:
           fi
           echo "Restored ${MATCHED_KEY}: $(du -sh /tmp/conan-home | cut -f1)"
 
-      # Every Conan binary the checks need: plain, and with ASan and TSan for
-      # the sanitizer and fuzz presets.
-      - name: Install the Conan dependencies of every preset
+      # The configuration's Conan binaries, through one preset that uses it.
+      - name: Install the Conan dependencies of ${{ matrix.preset }}
         if: steps.lookup.outputs.cache-hit != 'true'
-        run: >-
-          ${RUN} deploy/toolchain/conan-install.sh gcc-release clang-release
-          gcc-debug clang-debug gcc-asan clang-asan gcc-tsan clang-tsan
+        env:
+          PRESET: ${{ matrix.preset }}
+        run: ${RUN} deploy/toolchain/conan-install.sh "${PRESET}"
 
       - name: Trim the Conan package cache before it is saved
         if: steps.lookup.outputs.cache-hit != 'true'
@@ -166,8 +188,8 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: /tmp/conan-home
-          key: conan-cpp-toolchain-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
-          restore-keys: conan-cpp-toolchain-
+          key: conan-cpp-toolchain-gcc13-Release-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
+          restore-keys: conan-cpp-toolchain-gcc13-Release-
 
       # GeographicLib in the image must reproduce golden/frames exactly (ICS-014).
       - name: Golden frame vectors are current
@@ -206,7 +228,9 @@ jobs:
         run: deploy/evidence/image-sbom.sh ics-cpp:ci "${IMAGE}" "${RUNNER_TEMP}/ics-cpp.cdx.json"
 
   # One stage per job, each in its own copy of the image, with the Conan
-  # packages deps saved.
+  # packages deps saved for its configuration: UBSan, coverage and the
+  # policy checks use the plain Debug dependencies, and fuzzing the Clang
+  # ASan ones.
   checks:
     name: ${{ matrix.name }}
     needs: deps
@@ -217,28 +241,40 @@ jobs:
       matrix:
         include:
           - name: Reproducible build with GCC 13
+            conan: gcc13-Release
             check: deploy/toolchain/check-reproducible.sh gcc
           - name: Reproducible build with Clang 17
+            conan: clang17-Release
             check: deploy/toolchain/check-reproducible.sh clang
           - name: AddressSanitizer with GCC 13
+            conan: gcc13-Debug-asan
             check: cpp/policy/check-dynamic.sh sanitizers gcc-asan
           - name: UndefinedBehaviorSanitizer with GCC 13
+            conan: gcc13-Debug
             check: cpp/policy/check-dynamic.sh sanitizers gcc-ubsan
           - name: ThreadSanitizer with GCC 13
+            conan: gcc13-Debug-tsan
             check: cpp/policy/check-dynamic.sh sanitizers gcc-tsan
           - name: AddressSanitizer with Clang 17
+            conan: clang17-Debug-asan
             check: cpp/policy/check-dynamic.sh sanitizers clang-asan
           - name: UndefinedBehaviorSanitizer with Clang 17
+            conan: clang17-Debug
             check: cpp/policy/check-dynamic.sh sanitizers clang-ubsan
           - name: ThreadSanitizer with Clang 17
+            conan: clang17-Debug-tsan
             check: cpp/policy/check-dynamic.sh sanitizers clang-tsan
           - name: Fuzzing (one minute per target)
+            conan: clang17-Debug-asan
             check: cpp/policy/check-dynamic.sh fuzz 60
           - name: Coverage and assertion density
+            conan: clang17-Debug
             check: cpp/policy/check-dynamic.sh coverage
           - name: Power-of-Ten policy with GCC 13 (warnings)
+            conan: gcc13-Debug
             check: cpp/policy/check-policy.sh gcc
           - name: Power-of-Ten policy with Clang 17 (warnings, clang-tidy, cppcheck)
+            conan: clang17-Debug
             check: cpp/policy/check-policy.sh clang
     steps:
       - name: Check out the repository
@@ -256,7 +292,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: /tmp/conan-home
-          key: ${{ needs.deps.outputs.key }}
+          key: conan-cpp-toolchain-${{ matrix.conan }}-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
           fail-on-cache-miss: true
 
       - name: ${{ matrix.name }}
