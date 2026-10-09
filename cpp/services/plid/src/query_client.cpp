@@ -1,25 +1,25 @@
 #include "ics/plid/query_client.hpp"
 
 #include <charconv>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <span>
 #include <string>
 #include <string_view>
 #include <system_error>
-#include <vector>
 
 #include <google/protobuf/util/json_util.h>
-#include <sys/socket.h>
+#include <grpcpp/grpcpp.h>
 
 #include "ics/common/check.hpp"
 #include "ics/plid/run.hpp"
-#include "ics/timing/unix_socket.hpp"
-#include "ics/v1/pli_query.pb.h"
+#include "ics/v1/pli_query.grpc.pb.h"
 
 namespace ics::plid {
 namespace {
@@ -27,8 +27,15 @@ namespace {
 constexpr std::size_t kKindAt = 1;
 constexpr std::size_t kRangeArguments = 4;
 constexpr std::size_t kMaxArguments = 5;
-// Larger than any response the server sends.
-constexpr std::size_t kResponseBytes = std::size_t{1} << 22U;
+// How long one query may take, all its batches read, before it is given up.
+constexpr std::chrono::seconds kQueryTimeout{60};
+
+// What the stream of a query brought.
+struct Outcome {
+  std::uint64_t count = 0;
+  bool done = false;
+  bool truncated = false;
+};
 
 [[nodiscard]] std::optional<std::int64_t> number(const std::string_view text) noexcept {
   std::int64_t out = 0;
@@ -55,15 +62,6 @@ constexpr std::size_t kResponseBytes = std::size_t{1} << 22U;
   return out;
 }
 
-// A connected client socket; invalid when nothing answers at path.
-[[nodiscard]] timing::Fd connect(const std::filesystem::path& path) {
-  timing::Fd socket(::socket(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0));
-  const Result<sockaddr_un> address = timing::unix_address(path);
-  const bool connected =
-      address && ::connect(socket.get(), reinterpret_cast<const sockaddr*>(&*address), sizeof(sockaddr_un)) == 0;
-  return connected ? std::move(socket) : timing::Fd();
-}
-
 [[nodiscard]] std::string json(const google::protobuf::Message& message) {
   google::protobuf::util::JsonPrintOptions options;
   options.preserve_proto_field_names = true;
@@ -84,19 +82,22 @@ std::uint64_t print(const v1::QueryPliResponse& response, std::FILE* out) {
   return static_cast<std::uint64_t>(response.records_size()) + static_cast<std::uint64_t>(response.events_size());
 }
 
-// Reads responses until the last; nothing when the connection ends first.
-[[nodiscard]] std::optional<v1::QueryPliResponse> read_all(const int socket, std::FILE* out, std::uint64_t& count) {
-  std::vector<char> buffer(kResponseBytes);
-  for (bool open = true; open;) {
-    const ssize_t got = ::recv(socket, buffer.data(), buffer.size(), 0);
-    v1::QueryPliResponse response;
-    open = got > 0 && response.ParseFromArray(buffer.data(), static_cast<int>(got));
-    count += open ? print(response, out) : 0;
-    if (open && response.done()) {
-      return response;
-    }
+// Asks the server at socket and writes each batch's records and events as it
+// comes; returns the status the stream ended with.
+[[nodiscard]] grpc::Status read_all(const std::filesystem::path& socket, const v1::QueryPliRequest& request,
+                                    std::FILE* out, Outcome& outcome) {
+  const std::unique_ptr<v1::PliQueryService::Stub> stub =
+      v1::PliQueryService::NewStub(grpc::CreateChannel("unix:" + socket.native(), grpc::InsecureChannelCredentials()));
+  grpc::ClientContext context;
+  context.set_deadline(std::chrono::system_clock::now() + kQueryTimeout);
+  const std::unique_ptr<grpc::ClientReader<v1::QueryPliResponse>> reader = stub->QueryPli(&context, request);
+  v1::QueryPliResponse response;
+  while (reader->Read(&response)) {
+    outcome.count += print(response, out);
+    outcome.done = response.done();
+    outcome.truncated = response.truncated();
   }
-  return std::nullopt;
+  return reader->Finish();
 }
 
 }  // namespace
@@ -107,22 +108,21 @@ int run_query_client(const std::span<const char* const> args, const std::filesys
     std::fputs("usage: ics-pli-query records|events [START_UTC_NS END_UTC_NS [ENTITY]]\n", stderr);
     return kExitUsage;
   }
-  const timing::Fd client = connect(socket);
-  const std::string bytes = request->SerializeAsString();
-  const bool sent = ::send(client.get(), bytes.data(), bytes.size(), MSG_NOSIGNAL) == static_cast<ssize_t>(bytes.size());
-  std::uint64_t count = 0;
-  const std::optional<v1::QueryPliResponse> last = sent ? read_all(client.get(), out, count) : std::nullopt;
-  if (!last) {
-    std::fprintf(stderr, "no answer from %s\n", socket.c_str());
+  Outcome outcome;
+  const grpc::Status status = read_all(socket, *request, out, outcome);
+  if (status.error_code() == grpc::StatusCode::INVALID_ARGUMENT) {
+    std::fprintf(stderr, "the query failed: %s\n", status.error_message().c_str());
     return kExitFailed;
   }
-  static_cast<void>(ics::check(last->done()));
-  std::fprintf(out, R"({"kind":"done","count":%llu,"truncated":%s})" "\n", static_cast<unsigned long long>(count),
-               last->truncated() ? "true" : "false");
-  if (!last->error().empty()) {
-    std::fprintf(stderr, "the query failed: %s\n", last->error().c_str());
+  if (!status.ok()) {
+    std::fprintf(stderr, "no answer from %s: %s\n", socket.c_str(), status.error_message().c_str());
+    return kExitFailed;
   }
-  return last->error().empty() && !last->truncated() ? kExitStopped : kExitFailed;
+  // The server ends every query it answers with a batch that has done set.
+  static_cast<void>(ics::check(outcome.done));
+  std::fprintf(out, R"({"kind":"done","count":%llu,"truncated":%s})" "\n",
+               static_cast<unsigned long long>(outcome.count), outcome.truncated ? "true" : "false");
+  return outcome.truncated ? kExitFailed : kExitStopped;
 }
 
 }  // namespace ics::plid

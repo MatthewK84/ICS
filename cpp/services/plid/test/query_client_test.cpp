@@ -4,12 +4,9 @@
 #include <filesystem>
 #include <memory>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <poll.h>
-#include <sys/socket.h>
 
 #include "ics/plid/query_server.hpp"
 #include "ics/plid/run.hpp"
@@ -29,13 +26,16 @@ using ics::timing::testing::TempDir;
 struct Ran {
   int status = 0;
   std::string out;
+  std::string err;
 };
 
 Ran query(const std::vector<const char*>& args, const std::filesystem::path& socket) {
   ::testing::internal::CaptureStdout();
+  ::testing::internal::CaptureStderr();
   const int status = run_query_client(args, socket, stdout);
   std::fflush(stdout);
-  return Ran{.status = status, .out = ::testing::internal::GetCapturedStdout()};
+  std::string out = ::testing::internal::GetCapturedStdout();
+  return Ran{.status = status, .out = std::move(out), .err = ::testing::internal::GetCapturedStderr()};
 }
 
 // A store of three records and an event, and a server answering for it.
@@ -98,9 +98,11 @@ TEST(QueryClient, FailsATruncatedOrFailedQuery) {
   const Ran truncated = query({"ics-pli-query", "records"}, limited.socket());
   EXPECT_EQ(truncated.status, ics::plid::kExitFailed);
   EXPECT_NE(truncated.out.find(R"({"kind":"done","count":1,"truncated":true})"), std::string::npos);
+  // The server refuses the query with its status, so no batch comes.
   const Ran backwards = query({"ics-pli-query", "records", "10", "5"}, limited.socket());
   EXPECT_EQ(backwards.status, ics::plid::kExitFailed);
-  EXPECT_NE(backwards.out.find(R"("count":0,)"), std::string::npos);
+  EXPECT_EQ(backwards.out, "");
+  EXPECT_EQ(backwards.err, "the query failed: end_utc_ns must be after start_utc_ns\n");
 }
 
 TEST(QueryClient, RefusesBadArguments) {
@@ -116,27 +118,11 @@ TEST(QueryClient, RefusesBadArguments) {
 
 TEST(QueryClient, FailsWhenNothingAnswers) {
   const TempDir folder;
-  EXPECT_EQ(query({"ics-pli-query", "events"}, folder / "missing").status, ics::plid::kExitFailed);
+  const Ran missing = query({"ics-pli-query", "events"}, folder / "missing");
+  EXPECT_EQ(missing.status, ics::plid::kExitFailed);
+  EXPECT_EQ(missing.out, "");
+  EXPECT_EQ(missing.err.find("no answer from " + (folder / "missing").native() + ": "), 0U) << missing.err;
   EXPECT_EQ(query({"ics-pli-query", "events"}, std::string(200, 'x')).status, ics::plid::kExitFailed);
-  // A server that hangs up at once, and one that answers with bytes that do
-  // not parse.
-  for (const bool garbage : {false, true}) {
-    const ics::timing::Fd listener =
-        ics::timing::bound_socket(folder / "query", ics::timing::SocketRole::kListener).value();
-    std::thread server([&listener, garbage] {
-      pollfd waiting{listener.get(), POLLIN, 0};
-      ASSERT_EQ(::poll(&waiting, 1, 5'000), 1);
-      const ics::timing::Fd client(::accept4(listener.get(), nullptr, nullptr, SOCK_CLOEXEC));
-      std::vector<char> request(1024);
-      static_cast<void>(::recv(client.get(), request.data(), request.size(), 0));
-      if (garbage) {
-        const char bytes[] = {'\xFF', '\xFF'};
-        static_cast<void>(::send(client.get(), bytes, sizeof(bytes), MSG_NOSIGNAL));
-      }
-    });
-    EXPECT_EQ(query({"ics-pli-query", "events"}, folder / "query").status, ics::plid::kExitFailed) << garbage;
-    server.join();
-  }
 }
 
 }  // namespace

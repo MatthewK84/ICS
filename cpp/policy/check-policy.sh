@@ -120,7 +120,7 @@ check_static_analysis() {
   quietly run-clang-tidy-17 -quiet -p "${WORK}/clang" '^(?!.*/(policy/seeded|proto/gen/))' \
     || fail "clang-tidy found violations in the ICS code"
   quietly cppcheck "${CPPCHECK_ARGS[@]}" --project="${WORK}/clang/compile_commands.json" \
-    -i "${CPP}/policy/seeded" -i "${CPP}/policy/seeded-runtime" -i "${CPP}/proto/gen" \
+    -i "${CPP}/policy/seeded" -i "${CPP}/policy/seeded-runtime" -i "${CPP}/proto/gen" -i "${WORK}/clang/proto/gen" \
     || fail "cppcheck found defects in the ICS code"
   echo "Clean code: ok (clang-tidy, cppcheck)"
 }

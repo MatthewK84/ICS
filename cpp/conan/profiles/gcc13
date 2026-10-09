@@ -10,3 +10,9 @@ compiler.cppstd=20
 [conf]
 tools.build:compiler_executables={"c": "gcc-13", "cpp": "g++-13"}
 tools.cmake.cmaketoolchain:generator=Ninja
+
+# Conan Center's grpc recipe asks for protobuf below 7, but gRPC 1.84.0 itself
+# is built against protobuf 35.1 (#146). Every protobuf in the graph, the
+# build tools' included, is the 7.35.0 cpp/conanfile.py requires.
+[replace_requires]
+protobuf/*: protobuf/7.35.0

@@ -125,11 +125,12 @@ jobs:
           output: ${{ runner.temp }}/sarif
           upload: never
 
-      # paths-ignore does not filter C++ results, so the results in the protobuf
-      # code generated into cpp/proto/gen (ICS-011), which is not ICS-authored,
-      # are dropped before the rest are checked and uploaded.
+      # paths-ignore does not filter C++ results, so the results in code that is
+      # not ICS-authored are dropped before the rest are checked and uploaded:
+      # the protobuf code generated into cpp/proto/gen (ICS-011), and the gRPC
+      # code generated at build time into the build folder (#146).
       - name: Fail on any finding in ICS code
-        run: python3 .github/scripts/sarif_check.py "${RUNNER_TEMP}/sarif" --drop cpp/proto/gen/
+        run: python3 .github/scripts/sarif_check.py "${RUNNER_TEMP}/sarif" --drop cpp/proto/gen/ cpp/build/
 
       - name: Upload the results
         if: ${{ !cancelled() }}

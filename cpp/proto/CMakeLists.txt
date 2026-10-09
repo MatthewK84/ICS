@@ -12,3 +12,34 @@ add_library(ics_proto STATIC ${ICS_PROTO_SOURCES})
 add_library(ics::proto ALIAS ics_proto)
 target_include_directories(ics_proto SYSTEM PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/gen")
 target_link_libraries(ics_proto PUBLIC protobuf::libprotobuf)
+
+# The gRPC service code (#146), as the ics::proto_grpc library. It is
+# generated at build time by the protoc and grpc_cpp_plugin of the Conan
+# packages the libraries come from (cpp/conanfile.py's tool requirements),
+# so the code and the gRPC library cannot drift apart. It lands in this
+# build folder's gen/, which, like the committed gen/, the policy scans skip.
+find_package(gRPC CONFIG REQUIRED)
+find_program(ICS_PROTOC protoc REQUIRED)
+find_program(ICS_GRPC_CPP_PLUGIN grpc_cpp_plugin REQUIRED)
+execute_process(COMMAND "${ICS_PROTOC}" --version OUTPUT_VARIABLE ICS_PROTOC_VERSION
+                OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+if(NOT ICS_PROTOC_VERSION STREQUAL "libprotoc 35.0")
+  message(FATAL_ERROR "${ICS_PROTOC} is ${ICS_PROTOC_VERSION}; the gRPC code needs libprotoc 35.0, "
+                      "the protoc proto/tools.txt pins")
+endif()
+
+set(ICS_PROTO_ROOT "${PROJECT_SOURCE_DIR}/../proto")
+set(ICS_GRPC_GEN "${CMAKE_CURRENT_BINARY_DIR}/gen")
+set(ICS_GRPC_SOURCES "${ICS_GRPC_GEN}/ics/v1/pli_query.grpc.pb.cc")
+add_custom_command(
+  OUTPUT ${ICS_GRPC_SOURCES} "${ICS_GRPC_GEN}/ics/v1/pli_query.grpc.pb.h"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${ICS_GRPC_GEN}"
+  COMMAND "${ICS_PROTOC}" -I "${ICS_PROTO_ROOT}" "--grpc_out=${ICS_GRPC_GEN}"
+          "--plugin=protoc-gen-grpc=${ICS_GRPC_CPP_PLUGIN}" ics/v1/pli_query.proto
+  DEPENDS "${ICS_PROTO_ROOT}/ics/v1/pli_query.proto" "${ICS_PROTOC}" "${ICS_GRPC_CPP_PLUGIN}"
+  COMMENT "Generating the gRPC service code for ics/v1/pli_query.proto"
+  VERBATIM)
+add_library(ics_proto_grpc STATIC ${ICS_GRPC_SOURCES})
+add_library(ics::proto_grpc ALIAS ics_proto_grpc)
+target_include_directories(ics_proto_grpc SYSTEM PUBLIC "${ICS_GRPC_GEN}")
+target_link_libraries(ics_proto_grpc PUBLIC ics::proto gRPC::grpc++)
