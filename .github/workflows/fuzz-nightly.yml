@@ -29,7 +29,10 @@ jobs:
           persist-credentials: false
 
       - name: Build the ics-cpp image
-        run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
+        uses: ./.github/actions/toolchain-image
+        with:
+          name: ics-cpp
+          dockerfile: deploy/toolchain/Dockerfile.cpp
 
       - name: Restore the Conan package cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

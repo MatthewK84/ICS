@@ -37,6 +37,7 @@ on:
       - cpp/testing/capture_bench/**
       - deploy/capture-bench/**
       - .github/workflows/capture-bench.yml
+      - .github/actions/toolchain-image/**
 
 permissions:
   contents: read
@@ -86,7 +87,10 @@ jobs:
         run: mkdir -p /tmp/conan-home
 
       - name: Build the ics-cpp image
-        run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
+        uses: ./.github/actions/toolchain-image
+        with:
+          name: ics-cpp
+          dockerfile: deploy/toolchain/Dockerfile.cpp
 
       # Restored only: the C++ toolchain workflow owns the cache and saves it.
       - name: Restore the Conan package cache
