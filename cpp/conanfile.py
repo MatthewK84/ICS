@@ -21,12 +21,21 @@ class IcsConan(ConanFile):
         "spdlog/*:no_exceptions": True,
         "tomlplusplus/*:exceptions": False,
         "pugixml/*:no_exceptions": True,
+        # Only the C++ code generator: ICS generates no other language's
+        # gRPC code from these packages (#146).
+        "grpc/*:csharp_plugin": False,
+        "grpc/*:node_plugin": False,
+        "grpc/*:objective_c_plugin": False,
+        "grpc/*:php_plugin": False,
+        "grpc/*:python_plugin": False,
+        "grpc/*:ruby_plugin": False,
     }
 
     def requirements(self) -> None:
         self.requires("gtest/1.15.0")
         # The runtime for the generated messages in cpp/proto (ICS-011); its
-        # version must match the protoc in proto/tools.txt (35.0).
+        # version must match the protoc in proto/tools.txt (35.0). The profiles
+        # in conan/profiles make grpc use it too (#146).
         self.requires("protobuf/7.35.0")
         # Result types for ics::common (ICS-015). 1.2.0 makes tl::expected
         # [[nodiscard]], so an ignored result does not compile.
@@ -48,6 +57,14 @@ class IcsConan(ConanFile):
         # Streams Lattice's entities over HTTPS for ics::lattice (ICS-023),
         # through OpenSSL, with the server's certificate verified.
         self.requires("libcurl/8.22.0")
+        # Serves ics-plid's PliQueryService (#146).
+        self.requires("grpc/1.84.0")
+
+    def build_requirements(self) -> None:
+        # protoc and grpc_cpp_plugin generate the gRPC service code at build
+        # time, from the same versions as the libraries (cpp/proto).
+        self.tool_requires("protobuf/<host_version>")
+        self.tool_requires("grpc/<host_version>")
 
     def generate(self) -> None:
         CMakeDeps(self).generate()

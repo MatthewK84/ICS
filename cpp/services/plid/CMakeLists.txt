@@ -18,7 +18,8 @@ add_library(ics_plid STATIC
 add_library(ics::plid ALIAS ics_plid)
 target_include_directories(ics_plid PUBLIC include)
 target_link_libraries(ics_plid PUBLIC ics::capture ics::config ics::cot ics::flightlog ics::frames ics::lattice
-                                      ics::logging ics::mavlink ics::retime ics::sapient ics::store ics::timing)
+                                      ics::logging ics::mavlink ics::proto_grpc ics::retime ics::sapient ics::store
+                                      ics::timing)
 
 add_executable(ics-plid src/main.cpp)
 target_link_libraries(ics-plid PRIVATE ics::plid)

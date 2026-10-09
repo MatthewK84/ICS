@@ -23,7 +23,7 @@ Protobuf contracts, the single source of truth for every message that crosses a 
 | [`footprint.proto`](ics/v1/footprint.proto) | `Footprint` | Ground-impact probability regions as WGS84 polygons | Footprint Monte Carlo (ICS-051, ICS-077) |
 | [`run_record.proto`](ics/v1/run_record.proto) | `RunRecord` | One run's headline results, C4 measurements, flags, and a SHA-256 manifest of its parameters, models and artifacts | Run records (ICS-079) |
 
-The contracts define messages. Each service defines its own gRPC service when it is built, as ics-plid's `PliQueryService` does; until gRPC joins the toolchain, ics-plid serves it on a local socket, one serialized message per read ([`cpp/README.md`](../cpp/README.md#pli-store)).
+The contracts define messages. Each service defines its own gRPC service when it is built, as ics-plid's `PliQueryService` does. ics-plid serves it over gRPC on a local Unix-domain socket; its C++ service code is generated at build time by the `grpc_cpp_plugin` of the Conan gRPC package the library comes from, not committed ([`cpp/README.md`](../cpp/README.md#pli-store)).
 
 [`third_party/`](third_party/README.md) holds protobuf files copied unchanged from other projects, which ICS reads but does not own: SAPIENT's BSI Flex 335 v2.0 messages, for the SAPIENT adapter ([ICS-024](https://github.com/MatthewK84/ICS/issues/24)). The conventions below are for ICS's own contracts and do not apply to them.
 

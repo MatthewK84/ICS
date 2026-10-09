@@ -170,6 +170,23 @@ reviewed = 2026-10-04
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
+[[project]]
+name = "gRPC (C++)"
+ecosystem = "conan"
+packages = ["grpc"]
+used_for = "Serves ics-plid's PliQueryService on a local Unix-domain socket and is ics-pli-query's client (cpp/services/plid, #146); its grpc_cpp_plugin generates the service code at build time (cpp/proto). Pulls in re2 (BSD-3-Clause) and c-ares (MIT), and uses the abseil, zlib and OpenSSL ICS already pins."
+ships = true
+license = "Apache-2.0"
+source = "https://github.com/grpc/grpc"
+governance = "A Cloud Native Computing Foundation project, developed mostly by Google engineers who review and merge changes on GitHub; a published security policy and coordinated releases. The Conan recipe comes from Conan Center; ICS builds only its C++ code generator."
+sustainment = "Very active, with a release about every six weeks. Pinned in cpp/conan.lock at 1.84.0. Conan Center's recipe still asks for protobuf below 7, but gRPC 1.84.0 itself is built against protobuf 35.1, so cpp/conan/profiles replaces protobuf with the 7.35.0 ICS pins; built that way, a server and client generated from pli_query.proto were checked end to end before adoption (#146)."
+foreign_influence = "Steward: Google LLC (US); hosted by the Cloud Native Computing Foundation (Linux Foundation, US)."
+single_maintainer = false
+maintainers = "The gRPC team at Google and CNCF contributors"
+reviewed = 2026-10-09
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
 # --- Python (PyPI) -----------------------------------------------------------
 
 [[project]]

@@ -6,11 +6,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include <grpcpp/grpcpp.h>
 #include <gtest/gtest.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -22,7 +24,7 @@
 #include "ics/logging/logger.hpp"
 #include "ics/plid/config.hpp"
 #include "ics/timing/unix_socket.hpp"
-#include "ics/v1/pli_query.pb.h"
+#include "ics/v1/pli_query.grpc.pb.h"
 
 namespace ics::plid::testing {
 
@@ -73,28 +75,41 @@ inline Config replay_config(const std::filesystem::path& folder) {
   return config;
 }
 
-// Every response the query socket at path sends for request.
-inline std::vector<v1::QueryPliResponse> query(const std::filesystem::path& path,
-                                               const v1::QueryPliRequest& request) {
-  const timing::Fd socket(::socket(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0));
-  const sockaddr_un address = timing::unix_address(path).value();
-  EXPECT_EQ(::connect(socket.get(), reinterpret_cast<const sockaddr*>(&address), sizeof(address)), 0);
-  const std::string bytes = request.SerializeAsString();
-  EXPECT_EQ(::send(socket.get(), bytes.data(), bytes.size(), MSG_NOSIGNAL), static_cast<ssize_t>(bytes.size()));
-  std::vector<v1::QueryPliResponse> out;
-  std::vector<char> buffer(std::size_t{1} << 20U);
-  for (bool done = false; !done;) {
-    const ssize_t got = ::recv(socket.get(), buffer.data(), buffer.size(), 0);
-    v1::QueryPliResponse response;
-    done = got <= 0 || !response.ParseFromArray(buffer.data(), static_cast<int>(got)) || response.done();
-    if (got > 0) {
-      out.push_back(response);
-    }
+// A stub for the PliQueryService at the Unix socket path.
+inline std::unique_ptr<v1::PliQueryService::Stub> stub(const std::filesystem::path& path) {
+  return v1::PliQueryService::NewStub(grpc::CreateChannel("unix:" + path.native(), grpc::InsecureChannelCredentials()));
+}
+
+// What one query brought: its batches, and the status its stream ended with.
+struct Queried {
+  std::vector<v1::QueryPliResponse> responses;
+  grpc::Status status;
+};
+
+inline Queried ask(const std::filesystem::path& path, const v1::QueryPliRequest& request) {
+  const std::unique_ptr<v1::PliQueryService::Stub> service = stub(path);
+  grpc::ClientContext context;
+  context.set_deadline(std::chrono::system_clock::now() + std::chrono::seconds(30));
+  const std::unique_ptr<grpc::ClientReader<v1::QueryPliResponse>> reader = service->QueryPli(&context, request);
+  Queried out;
+  v1::QueryPliResponse response;
+  while (reader->Read(&response)) {
+    out.responses.push_back(response);
   }
+  out.status = reader->Finish();
   return out;
 }
 
-// Every record or event the query socket returns over all time.
+// Every response the PliQueryService at path sends for request, which must
+// succeed.
+inline std::vector<v1::QueryPliResponse> query(const std::filesystem::path& path,
+                                               const v1::QueryPliRequest& request) {
+  Queried queried = ask(path, request);
+  EXPECT_TRUE(queried.status.ok()) << queried.status.error_message();
+  return std::move(queried.responses);
+}
+
+// Every record or event the PliQueryService at path returns over all time.
 inline v1::QueryPliResponse everything(const std::filesystem::path& path, const v1::QueryPliRequest::Kind kind) {
   v1::QueryPliRequest request;
   request.set_kind(kind);
