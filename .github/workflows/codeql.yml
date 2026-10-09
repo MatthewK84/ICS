@@ -3,9 +3,10 @@ name: CodeQL
 # Static security and quality analysis of the C++, Python and TypeScript code
 # with CodeQL's security-and-quality queries (ICS-008). Findings go to the
 # repository's Security tab, and the job fails on any finding. The seeded jobs
-# analyze the defects in .github/codeql/seeded without uploading them and
-# require each language's expected query to fire, so an analysis that silently
-# stops finding things fails too. The weekly run picks up new queries.
+# analyze the defects in .github/codeql/seeded without uploading their results
+# or databases and require each language's expected query to fire, so an
+# analysis that silently stops finding things fails too. The weekly run picks
+# up new queries.
 #
 # Python and TypeScript are analyzed without a build. C++ is analyzed from a
 # traced build inside the published ics-cpp image, so CodeQL sees the real
@@ -167,6 +168,7 @@ jobs:
           category: /seeded/language:c-cpp
           output: ${{ runner.temp }}/sarif
           upload: never
+          upload-database: false
 
       - name: Require the seeded defect
         run: python3 .github/scripts/sarif_check.py "${RUNNER_TEMP}/sarif" --expect cpp/wrong-type-format-argument
@@ -204,6 +206,7 @@ jobs:
           category: /seeded/language:${{ matrix.language }}
           output: ${{ runner.temp }}/sarif
           upload: never
+          upload-database: false
 
       - name: Require the seeded defect
         env:
