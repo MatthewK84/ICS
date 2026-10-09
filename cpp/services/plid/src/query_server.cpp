@@ -55,6 +55,8 @@ grpc::Status QueryService::QueryPli(grpc::ServerContext* /*context*/, const v1::
         return refused.empty() && writer->Write(response);
       });
   give_back(std::move(catalog));
+  // The store never answers with more than the server's limit.
+  static_cast<void>(ics::check(sent <= limits_.max_items));
   if (refused.empty()) {
     logger_.debug("query_answered", {{"kind", static_cast<std::int64_t>(request->kind())},
                                      {"sent", static_cast<std::int64_t>(sent)}});
