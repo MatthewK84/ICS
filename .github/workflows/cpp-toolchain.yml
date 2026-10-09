@@ -20,7 +20,9 @@ name: C++ toolchain
 # configuration's cache; and "publish" builds, signs and pushes the image from
 # main once every stage has passed. The image is built
 # from an Ubuntu snapshot and pinned packages, so every job's copy has the
-# same contents.
+# same contents. Each job builds it through .github/actions/toolchain-image,
+# which keeps its layers in GitHub's Actions cache: with its inputs unchanged
+# a job restores the image in about a minute instead of rebuilding it.
 
 on:
   pull_request:
@@ -33,6 +35,7 @@ on:
       - .github/scripts/evidence.py
       - .github/scripts/cpp_coverage.py
       - .github/workflows/cpp-toolchain.yml
+      - .github/actions/toolchain-image/**
   push:
     branches: [main]
     paths:
@@ -44,6 +47,7 @@ on:
       - .github/scripts/evidence.py
       - .github/scripts/cpp_coverage.py
       - .github/workflows/cpp-toolchain.yml
+      - .github/actions/toolchain-image/**
   workflow_dispatch:
 
 permissions:
@@ -124,7 +128,10 @@ jobs:
 
       - name: Build the ics-cpp image
         if: steps.lookup.outputs.cache-hit != 'true'
-        run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
+        uses: ./.github/actions/toolchain-image
+        with:
+          name: ics-cpp
+          dockerfile: deploy/toolchain/Dockerfile.cpp
 
       - name: Restore the nearest Conan package cache
         id: conan-cache
@@ -182,7 +189,10 @@ jobs:
         run: mkdir -p /tmp/conan-home
 
       - name: Build the ics-cpp image
-        run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
+        uses: ./.github/actions/toolchain-image
+        with:
+          name: ics-cpp
+          dockerfile: deploy/toolchain/Dockerfile.cpp
 
       - name: Restore the nearest Conan package cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -286,7 +296,10 @@ jobs:
         run: mkdir -p /tmp/conan-home
 
       - name: Build the ics-cpp image
-        run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
+        uses: ./.github/actions/toolchain-image
+        with:
+          name: ics-cpp
+          dockerfile: deploy/toolchain/Dockerfile.cpp
 
       - name: Restore the Conan package cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -320,7 +333,10 @@ jobs:
           persist-credentials: false
 
       - name: Build the ics-cpp image
-        run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
+        uses: ./.github/actions/toolchain-image
+        with:
+          name: ics-cpp
+          dockerfile: deploy/toolchain/Dockerfile.cpp
 
       - name: Install Syft and cosign
         run: |

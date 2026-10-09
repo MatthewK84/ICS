@@ -807,6 +807,23 @@ reviewed = 2026-09-27
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
+[[project]]
+name = "Docker Buildx actions"
+ecosystem = "github-action"
+packages = ["docker/setup-buildx-action", "docker/build-push-action"]
+used_for = "Build the ics-cpp toolchain image in CI with Buildx and keep its layers in GitHub's Actions cache, so a job whose image inputs are unchanged restores the image instead of rebuilding it (.github/actions/toolchain-image)"
+ships = false
+license = "Apache-2.0"
+source = "https://github.com/docker/build-push-action"
+governance = "Maintained by Docker, Inc. on GitHub; Docker's maintainers review and merge changes, with a published security policy."
+sustainment = "Very active, with frequent releases. Pinned by commit SHA in .github/actions/toolchain-image/action.yml: setup-buildx-action v4.4.1 and build-push-action v7.4.0, both released in September 2026."
+foreign_influence = "Steward: Docker, Inc. (US)."
+single_maintainer = false
+maintainers = "Docker's GitHub Actions maintainers"
+reviewed = 2026-10-09
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
 # --- Container images --------------------------------------------------------
 
 [[project]]

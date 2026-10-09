@@ -59,7 +59,10 @@ jobs:
 
       - name: Build the ics-cpp image
         if: steps.secrets.outputs.ready == 'true'
-        run: docker build -f deploy/toolchain/Dockerfile.cpp -t ics-cpp:ci .
+        uses: ./.github/actions/toolchain-image
+        with:
+          name: ics-cpp
+          dockerfile: deploy/toolchain/Dockerfile.cpp
 
       - name: Restore the nearest Conan package cache
         if: steps.secrets.outputs.ready == 'true'

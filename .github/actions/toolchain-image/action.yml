@@ -1,0 +1,37 @@
+name: Toolchain image
+description: >-
+  Builds a toolchain image from its Dockerfile and loads it into Docker under
+  NAME:ci, with its layers kept in GitHub's Actions cache. The image is one
+  install layer on a pinned base, so when the Dockerfile and the files it
+  copies are unchanged the job restores that layer in about a minute instead
+  of rebuilding it; any change rebuilds it, as before.
+
+inputs:
+  name:
+    description: The image's name, such as ics-cpp; it is loaded as NAME:ci, and names its cache.
+    required: true
+  dockerfile:
+    description: The Dockerfile, relative to the repository root, which is the build context.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+    # Every job that builds the image writes the cache too; a layer already
+    # there is not uploaded again, and a failed write only costs the next job
+    # a rebuild. The provenance and SBOM the published image carries come
+    # from deploy/evidence, not from this build.
+    - name: Build the ${{ inputs.name }} image, reusing cached layers
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      with:
+        context: .
+        file: ${{ inputs.dockerfile }}
+        tags: ${{ inputs.name }}:ci
+        load: true
+        provenance: false
+        sbom: false
+        cache-from: type=gha,scope=${{ inputs.name }}
+        cache-to: type=gha,scope=${{ inputs.name }},mode=max,ignore-error=true
