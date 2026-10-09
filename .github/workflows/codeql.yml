@@ -79,7 +79,10 @@ jobs:
   analyze-cpp:
     name: CodeQL (c-cpp)
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    # About 15 minutes with the Conan cache warm. After a lockfile change it
+    # also builds the new dependencies from source first; gRPC alone (#146)
+    # takes up to 45 minutes.
+    timeout-minutes: 90
     permissions:
       contents: read
       security-events: write
