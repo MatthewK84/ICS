@@ -55,14 +55,16 @@ grpc::Status QueryService::QueryPli(grpc::ServerContext* /*context*/, const v1::
         return refused.empty() && writer->Write(response);
       });
   give_back(std::move(catalog));
-  ++served_;
-  if (!refused.empty()) {
+  if (refused.empty()) {
+    logger_.debug("query_answered", {{"kind", static_cast<std::int64_t>(request->kind())},
+                                     {"sent", static_cast<std::int64_t>(sent)}});
+  } else {
     logger_.warn("query_refused", {{"error", refused}});
-    return {grpc::StatusCode::INVALID_ARGUMENT, refused};
   }
-  logger_.debug("query_answered", {{"kind", static_cast<std::int64_t>(request->kind())},
-                                   {"sent", static_cast<std::int64_t>(sent)}});
-  return grpc::Status::OK;
+  // Counted only once its line is logged, so whoever sees the count sees the
+  // line.
+  ++served_;
+  return refused.empty() ? grpc::Status::OK : grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, refused);
 }
 
 store::Catalog QueryService::borrow() {
