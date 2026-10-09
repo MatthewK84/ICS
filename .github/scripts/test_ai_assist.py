@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import tempfile
 import unittest
+from collections.abc import Iterator
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -27,6 +30,19 @@ def body(no_ai: str = " ", ai_box: str = " ", tool: str = "", model: str = "", s
 
 def pull(text: str, labels: frozenset[str] = frozenset(), from_fork: bool = False) -> ai.PullRequest:
     return ai.PullRequest(7, text, labels, from_fork)
+
+
+@contextmanager
+def captured() -> Iterator[tuple[io.StringIO, io.StringIO]]:
+    """The script's stdout and stderr, kept out of the job log.
+
+    GitHub reads every ::error:: and ::warning:: line a step prints as an
+    annotation, so the tests' expected messages would mark a passing run.
+    """
+    out: io.StringIO = io.StringIO()
+    err: io.StringIO = io.StringIO()
+    with redirect_stdout(out), redirect_stderr(err):
+        yield out, err
 
 
 def event(text: object, head: str = "owner/repo") -> gh.JsonObject:
@@ -102,21 +118,25 @@ class LabelTests(unittest.TestCase):
         self.assertIs(ai.label_action(unanswered, labelled), ai.LabelAction.NONE)
 
     def test_sync_label_skips_forks_and_none(self) -> None:
-        with patch.object(gh, "api_request") as request:
+        with patch.object(gh, "api_request") as request, captured() as (out, _):
             ai.sync_label(CONFIG, pull("", from_fork=True), ai.LabelAction.ADD)
             ai.sync_label(CONFIG, pull(""), ai.LabelAction.NONE)
         request.assert_not_called()
+        fork: str = "::warning::Pull request is from a fork; cannot add the 'ai-assisted' label.\n"
+        self.assertEqual(out.getvalue(), fork)
 
     def test_sync_label_adds_and_removes(self) -> None:
-        with patch.object(gh, "api_request") as request:
+        with patch.object(gh, "api_request") as request, captured() as (out, _):
             ai.sync_label(CONFIG, pull(""), ai.LabelAction.ADD)
             ai.sync_label(CONFIG, pull(""), ai.LabelAction.REMOVE)
         self.assertEqual(request.call_args_list[0].args[1:3], ("POST", "/repos/owner/repo/issues/7/labels"))
         self.assertEqual(request.call_args_list[1].args[1:3], ("DELETE", "/repos/owner/repo/issues/7/labels/ai-assisted"))
+        self.assertEqual(out.getvalue(), "Label 'ai-assisted': add\nLabel 'ai-assisted': remove\n")
 
     def test_sync_label_failure_is_a_warning(self) -> None:
-        with patch.object(gh, "api_request", side_effect=gh.ScriptError("403")):
+        with patch.object(gh, "api_request", side_effect=gh.ScriptError("403")), captured() as (out, _):
             ai.sync_label(CONFIG, pull(""), ai.LabelAction.ADD)
+        self.assertEqual(out.getvalue(), "::warning::Could not add the 'ai-assisted' label: 403\n")
 
 
 class EventTests(unittest.TestCase):
@@ -139,7 +159,8 @@ class EventTests(unittest.TestCase):
 
 
 class MainTests(unittest.TestCase):
-    def run_main(self, text: str) -> int:
+    def run_main(self, text: str) -> tuple[int, str]:
+        """The declaration check's exit code and what it wrote to stderr."""
         with tempfile.TemporaryDirectory() as folder:
             event_path: Path = Path(folder) / "event.json"
             event_path.write_text(json.dumps(event(text)), encoding="utf-8")
@@ -148,20 +169,25 @@ class MainTests(unittest.TestCase):
                 "GITHUB_TOKEN": "token",
                 "GITHUB_REPOSITORY": "owner/repo",
             }
-            with patch.dict(os.environ, env), patch.object(gh, "api_request"):
-                return ai.main(["declaration"])
+            with patch.dict(os.environ, env), patch.object(gh, "api_request"), captured() as (_, err):
+                code: int = ai.main(["declaration"])
+        return code, err.getvalue()
 
     def test_declaration_passes_when_answered(self) -> None:
-        self.assertEqual(self.run_main(body(no_ai="x")), 0)
-        self.assertEqual(self.run_main(body(ai_box="x", tool="T", scope="S")), 0)
+        self.assertEqual(self.run_main(body(no_ai="x")), (0, ""))
+        self.assertEqual(self.run_main(body(ai_box="x", tool="T", scope="S")), (0, ""))
 
     def test_declaration_fails_when_unanswered(self) -> None:
-        self.assertEqual(self.run_main(body()), 1)
-        self.assertEqual(self.run_main(body(ai_box="x", model="M 1")), 1)
+        unanswered: str = "::error::Answer the AI assistance question: tick 'No AI assistance' or 'AI-assisted'.\n"
+        self.assertEqual(self.run_main(body()), (1, unanswered))
+        missing: str = "::error::AI-assisted: fill in 'Tool'.\n::error::AI-assisted: fill in 'Scope'.\n"
+        self.assertEqual(self.run_main(body(ai_box="x", model="M 1")), (1, missing))
 
     def test_bad_usage_fails(self) -> None:
-        self.assertEqual(ai.main(["bogus"]), 1)
-        self.assertEqual(ai.main(["review"]), 1)
+        for argv in (["bogus"], ["review"]):
+            with captured() as (_, err):
+                self.assertEqual(ai.main(argv), 1)
+            self.assertEqual(err.getvalue(), "::error::usage: ai_assist.py declaration\n")
 
 
 if __name__ == "__main__":
