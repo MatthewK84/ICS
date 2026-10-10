@@ -89,11 +89,11 @@ jobs:
   analyze-cpp:
     name: CodeQL (c-cpp)
     runs-on: ubuntu-24.04
-    # About 15 minutes with the dependency packages built. When a lockfile
-    # change has not been through the dependency workflow yet, it also builds
-    # the new dependencies from source first; gRPC alone (#146) takes up to 45
-    # minutes.
-    timeout-minutes: 90
+    # About 15 minutes with the dependency packages built. When the dependency
+    # workflow has not built them for the key yet, and main has no artifact to
+    # start from, every dependency builds from source first: 78 minutes with
+    # gRPC (#146).
+    timeout-minutes: 150
     permissions:
       contents: read
       packages: read
