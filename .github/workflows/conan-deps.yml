@@ -10,10 +10,11 @@ name: Conan dependencies
 # When a configuration's artifact for the key is missing, its job restores the
 # last one built on main, builds only the packages that are missing, checks
 # that the archive installs on its own, and publishes it, signed keyless by
-# this workflow. Runs on main publish CONFIG-KEY and move CONFIG-main to it;
-# runs for a pull request from this repository publish CONFIG-KEY-prN, which
-# only that pull request trusts. Other runs publish nothing, and their jobs
-# build what they need themselves.
+# this workflow. Runs on main publish CONFIG-KEY and point CONFIG-main at the
+# key's artifact, whether they published it or found it; runs for a pull
+# request from this repository publish CONFIG-KEY-prN, which only that pull
+# request trusts. Other runs publish nothing, and their jobs build what they
+# need themselves.
 #
 # Called by the C++ toolchain workflow, which lists the configurations.
 
@@ -79,6 +80,13 @@ jobs:
           CONFIG: ${{ matrix.config }}
           KEY: ${{ steps.deps.outputs.key }}
         run: deploy/evidence/dependency-artifact.sh publish "${CONFIG}" "${KEY}" "${ARCHIVE}"
+
+      - name: Point ${{ matrix.config }}-main at the current packages
+        if: github.ref == 'refs/heads/main'
+        env:
+          CONFIG: ${{ matrix.config }}
+          KEY: ${{ steps.deps.outputs.key }}
+        run: deploy/evidence/dependency-artifact.sh point "${CONFIG}" "${KEY}"
 
       - name: Leave the ${{ matrix.config }} packages to the jobs that use them
         if: steps.deps.outputs.match != 'current' && env.PUBLISH != 'true'
