@@ -1137,10 +1137,27 @@ prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
 [[project]]
+name = "ORAS"
+ecosystem = "tool"
+packages = ["oras"]
+used_for = "Push and pull the Conan packages of each dependency configuration as an OCI artifact in GHCR, from the runner and from jobs that run inside the ics-cpp image alike (deploy/evidence/dependency-artifact.sh)"
+ships = false
+license = "Apache-2.0"
+source = "https://github.com/oras-project/oras"
+governance = "CNCF project (OCI Registry As Storage), with maintainers from several companies and a public governance document."
+sustainment = "Active, with regular releases. Pinned by version and sha256 in deploy/evidence/tools.txt: v1.3.4, released in August 2026."
+foreign_influence = "Governed under the CNCF (US non-profit, part of the Linux Foundation)."
+single_maintainer = false
+maintainers = "ORAS maintainers from several companies"
+reviewed = 2026-10-10
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
 name = "cosign"
 ecosystem = "tool"
 packages = ["cosign"]
-used_for = "Signs and verifies the SBOM, provenance and images (ICS-009)"
+used_for = "Signs and verifies the SBOM, provenance and images (ICS-009), and the Conan dependency artifacts in GHCR (deploy/evidence/dependency-artifact.sh)"
 ships = false
 license = "Apache-2.0"
 source = "https://github.com/sigstore/cosign"

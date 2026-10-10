@@ -22,6 +22,11 @@ on:
       - .github/scripts/**
       - .github/codeql/**
       - .github/workflows/codeql.yml
+      - .github/actions/conan-deps/**
+      - deploy/toolchain/conan-*.sh
+      - deploy/evidence/dependency-artifact.sh
+      - deploy/evidence/install-tools.sh
+      - deploy/evidence/tools.txt
   push:
     branches: [main]
     paths:
@@ -31,6 +36,11 @@ on:
       - .github/scripts/**
       - .github/codeql/**
       - .github/workflows/codeql.yml
+      - .github/actions/conan-deps/**
+      - deploy/toolchain/conan-*.sh
+      - deploy/evidence/dependency-artifact.sh
+      - deploy/evidence/install-tools.sh
+      - deploy/evidence/tools.txt
   schedule:
     - cron: "41 4 * * 1"
   workflow_dispatch:
@@ -79,12 +89,14 @@ jobs:
   analyze-cpp:
     name: CodeQL (c-cpp)
     runs-on: ubuntu-24.04
-    # About 15 minutes with the Conan cache warm. After a lockfile change it
-    # also builds the new dependencies from source first; gRPC alone (#146)
-    # takes up to 45 minutes.
+    # About 15 minutes with the dependency packages built. When a lockfile
+    # change has not been through the dependency workflow yet, it also builds
+    # the new dependencies from source first; gRPC alone (#146) takes up to 45
+    # minutes.
     timeout-minutes: 90
     permissions:
       contents: read
+      packages: read
       security-events: write
     container:
       image: ghcr.io/matthewk84/ics-cpp:main
@@ -94,19 +106,17 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Restore the Conan package cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # The job runs in the image, so the packages restore straight into its
+      # Conan home.
+      - name: Restore the gcc13-Debug Conan packages
+        uses: ./.github/actions/conan-deps
         with:
-          path: /opt/conan-home
-          key: conan-codeql-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
-          restore-keys: conan-codeql-
+          config: gcc13-Debug
 
       # Before CodeQL starts tracing, so dependencies Conan builds from source
       # (protobuf, abseil) are not analyzed as ICS code.
       - name: Install the Conan dependencies
-        run: |
-          deploy/toolchain/conan-install.sh gcc-debug
-          conan cache clean "*" --source --build --download --temp
+        run: deploy/toolchain/conan-install.sh gcc-debug
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2

@@ -35,10 +35,27 @@ with zipfile.ZipFile(archive) as bundle:
 EOF
 }
 
+# Download URL $1 to $2: with curl, or with Python in an image without curl,
+# such as ics-cpp, which CodeQL runs in. The sha256 check follows either way.
+fetch_url() {
+  if command -v curl >/dev/null; then
+    curl --fail --silent --show-error --location --retry 3 --output "$2" "$1"
+    return
+  fi
+  python3 - "$1" "$2" <<'EOF'
+import shutil
+import sys
+import urllib.request
+
+with urllib.request.urlopen(sys.argv[1], timeout=120) as source, open(sys.argv[2], "wb") as target:
+    shutil.copyfileobj(source, target)
+EOF
+}
+
 install_tool() {
   local name="$1" version="$2" sha256="$3" url="$4"
   local download="${WORK}/${url##*/}"
-  curl --fail --silent --show-error --location --retry 3 --output "${download}" "${url}"
+  fetch_url "${url}" "${download}"
   echo "${sha256}  ${download}" | sha256sum --check --quiet
   if [[ "${download}" == *.tar.gz ]]; then
     tar -xzf "${download}" -C "${WORK}" "${name}"

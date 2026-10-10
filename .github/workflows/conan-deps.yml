@@ -1,0 +1,85 @@
+name: Conan dependencies
+
+# Builds the Conan packages of each dependency configuration once for each
+# key, and keeps them in GHCR as a signed artifact
+# (deploy/evidence/dependency-artifact.sh) that every C++ job restores through
+# .github/actions/conan-deps. The key covers everything that decides the
+# packages' contents (deploy/toolchain/conan-deps.sh key), so a configuration
+# is rebuilt only when one of those changes, never because a cache expired.
+#
+# When a configuration's artifact for the key is missing, its job restores the
+# last one built on main, builds only the packages that are missing, checks
+# that the archive installs on its own, and publishes it, signed keyless by
+# this workflow. Runs on main publish CONFIG-KEY and move CONFIG-main to it;
+# runs for a pull request from this repository publish CONFIG-KEY-prN, which
+# only that pull request trusts. Other runs publish nothing, and their jobs
+# build what they need themselves.
+#
+# Called by the C++ toolchain workflow, which lists the configurations.
+
+on:
+  workflow_call:
+    inputs:
+      configs:
+        description: The dependency configurations, as a JSON list such as ["gcc13-Release"].
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  packages:
+    name: Conan packages (${{ matrix.config }})
+    runs-on: ubuntu-24.04
+    # gRPC alone takes up to two hours with sanitizers (#146). A key change
+    # usually builds a package or two on top of main's last artifact.
+    timeout-minutes: 300
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        config: ${{ fromJSON(inputs.configs) }}
+    env:
+      RUN: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home ics-cpp:ci
+      ARCHIVE: cpp/build/conan-deps/${{ matrix.config }}/conan-packages.tgz
+      PUBLISH: ${{ github.ref == 'refs/heads/main' || github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Build the ics-cpp image
+        uses: ./.github/actions/toolchain-image
+        with:
+          name: ics-cpp
+          dockerfile: deploy/toolchain/Dockerfile.cpp
+
+      - name: Look up the ${{ matrix.config }} packages
+        id: deps
+        uses: ./.github/actions/conan-deps
+        with:
+          config: ${{ matrix.config }}
+          toolchain: ${{ env.RUN }}
+          for-build: 'true'
+
+      - name: Build the missing ${{ matrix.config }} packages and save them
+        if: steps.deps.outputs.match != 'current' && env.PUBLISH == 'true'
+        env:
+          CONFIG: ${{ matrix.config }}
+        run: ${RUN} deploy/toolchain/conan-deps.sh build "${CONFIG}" "${ARCHIVE}"
+
+      - name: Publish and sign the ${{ matrix.config }} packages
+        if: steps.deps.outputs.match != 'current' && env.PUBLISH == 'true'
+        env:
+          CONFIG: ${{ matrix.config }}
+          KEY: ${{ steps.deps.outputs.key }}
+        run: deploy/evidence/dependency-artifact.sh publish "${CONFIG}" "${KEY}" "${ARCHIVE}"
+
+      - name: Leave the ${{ matrix.config }} packages to the jobs that use them
+        if: steps.deps.outputs.match != 'current' && env.PUBLISH != 'true'
+        run: echo "::notice::this run cannot publish dependency artifacts; each job builds the packages it is missing"

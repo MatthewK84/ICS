@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: fuzz-nightly
@@ -34,12 +35,11 @@ jobs:
           name: ics-cpp
           dockerfile: deploy/toolchain/Dockerfile.cpp
 
-      - name: Restore the Conan package cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Restore the clang17-Debug-asan Conan packages
+        uses: ./.github/actions/conan-deps
         with:
-          path: /tmp/conan-home
-          key: conan-fuzz-nightly-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
-          restore-keys: conan-fuzz-nightly-
+          config: clang17-Debug-asan
+          toolchain: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home ics-cpp:ci
 
       - name: Fuzz
         run: |

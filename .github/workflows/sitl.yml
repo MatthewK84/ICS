@@ -36,9 +36,11 @@ on:
       - python/ics_sitl/**
       - .github/workflows/sitl.yml
       - .github/actions/toolchain-image/**
+      - .github/actions/conan-deps/**
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: sitl-${{ github.ref }}
@@ -49,14 +51,14 @@ jobs:
     name: Fly the scripted engagements
     runs-on: ubuntu-24.04
     # Compiling both autopilots takes about 15 minutes; building the MAVLink
-    # replay about 10 with the Conan cache and 50 without; each engagement
-    # about 3.
+    # replay about 10 with the Conan packages restored and 50 without; each
+    # engagement about 3.
     timeout-minutes: 100
     env:
       IMAGES: /tmp/sitl-images
       RECORDS: /tmp/sitl-records
-      # The ics-cpp image, with the Conan package cache the C++ toolchain
-      # workflow saves and the engagement records mounted as they lie.
+      # The ics-cpp image, with the Conan packages the C++ toolchain workflow
+      # publishes and the engagement records mounted as they lie.
       RUN: >-
         docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home
         -v /tmp/sitl-records:/tmp/sitl-records ics-cpp:ci
@@ -116,23 +118,18 @@ jobs:
               "${RECORDS}/ics-sitl-${autopilot}.cdx.json" deb
           done
 
-      # Before any docker run, so the runner user owns it (see cpp-toolchain.yml).
-      - name: Create the Conan cache folder
-        run: mkdir -p /tmp/conan-home "${RECORDS}"
-
       - name: Build the ics-cpp image
         uses: ./.github/actions/toolchain-image
         with:
           name: ics-cpp
           dockerfile: deploy/toolchain/Dockerfile.cpp
 
-      # Restored only: the C++ toolchain workflow owns the cache and saves it.
-      - name: Restore the Conan package cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Restored only: the C++ toolchain workflow builds and publishes them.
+      - name: Restore the gcc13-Release Conan packages
+        uses: ./.github/actions/conan-deps
         with:
-          path: /tmp/conan-home
-          key: conan-cpp-toolchain-gcc13-Release-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
-          restore-keys: conan-cpp-toolchain-gcc13-Release-
+          config: gcc13-Release
+          toolchain: ${{ env.RUN }}
 
       - name: Build the MAVLink replay and time alignment
         run: >-

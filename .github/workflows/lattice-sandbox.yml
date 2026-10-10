@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: lattice-sandbox
@@ -29,7 +30,8 @@ jobs:
   sandbox:
     name: Lattice adapter against the vendor sandbox
     runs-on: ubuntu-24.04
-    # Building libcurl from source for an empty Conan cache takes the longest.
+    # Building libcurl from source, when no dependency artifact has it yet,
+    # takes the longest.
     timeout-minutes: 90
     steps:
       - name: Look for the sandbox secrets
@@ -52,11 +54,6 @@ jobs:
         with:
           persist-credentials: false
 
-      # Before any docker run, so actions/cache can extract into it.
-      - name: Create the Conan cache folder
-        if: steps.secrets.outputs.ready == 'true'
-        run: mkdir -p /tmp/conan-home
-
       - name: Build the ics-cpp image
         if: steps.secrets.outputs.ready == 'true'
         uses: ./.github/actions/toolchain-image
@@ -64,13 +61,12 @@ jobs:
           name: ics-cpp
           dockerfile: deploy/toolchain/Dockerfile.cpp
 
-      - name: Restore the nearest Conan package cache
+      - name: Restore the gcc13-Release Conan packages
         if: steps.secrets.outputs.ready == 'true'
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: ./.github/actions/conan-deps
         with:
-          path: /tmp/conan-home
-          key: conan-cpp-toolchain-gcc13-Release-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
-          restore-keys: conan-cpp-toolchain-gcc13-Release-
+          config: gcc13-Release
+          toolchain: ${{ env.RUN }}
 
       - name: Build ics-lattice-probe
         if: steps.secrets.outputs.ready == 'true'
