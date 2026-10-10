@@ -13,12 +13,13 @@ name: C++ toolchain
 # listed in cpp/policy/coverage-gates.txt must keep full line and branch
 # coverage and its assertion-density floor (ICS-015).
 #
-# The stages run side by side, one job each, so a change with the Conan caches
-# warm finishes in under ten minutes. "deps" makes sure each dependency
-# configuration has its Conan cache; "image-checks" checks the image itself;
+# The stages run side by side, one job each, so a change whose dependencies are
+# already built finishes in under ten minutes. "deps" makes sure each
+# dependency configuration has its signed artifact of Conan packages in GHCR
+# (.github/workflows/conan-deps.yml); "image-checks" checks the image itself;
 # each "checks" job builds the image and runs one stage with its
-# configuration's cache; and "publish" builds, signs and pushes the image from
-# main once every stage has passed. The image is built
+# configuration's packages; and "publish" builds, signs and pushes the image
+# from main once every stage has passed. The image is built
 # from an Ubuntu snapshot and pinned packages, so every job's copy has the
 # same contents. Each job builds it through .github/actions/toolchain-image,
 # which keeps its layers in GitHub's Actions cache: with its inputs unchanged
@@ -36,6 +37,8 @@ on:
       - .github/scripts/cpp_coverage.py
       - .github/workflows/cpp-toolchain.yml
       - .github/actions/toolchain-image/**
+      - .github/actions/conan-deps/**
+      - .github/workflows/conan-deps.yml
   push:
     branches: [main]
     paths:
@@ -48,6 +51,8 @@ on:
       - .github/scripts/cpp_coverage.py
       - .github/workflows/cpp-toolchain.yml
       - .github/actions/toolchain-image/**
+      - .github/actions/conan-deps/**
+      - .github/workflows/conan-deps.yml
   workflow_dispatch:
 
 permissions:
@@ -60,118 +65,29 @@ concurrency:
 
 env:
   IMAGE: ghcr.io/matthewk84/ics-cpp
-  # Conan's package cache lives on the runner at /tmp/conan-home, so it can be
-  # cached between runs: protobuf and abseil build from source for each
-  # compiler, build type and sanitizer (ICS-011).
+  # Conan's home is /tmp/conan-home on the runner, and the conan-deps action
+  # restores each job's dependency packages into it: protobuf, abseil and gRPC
+  # build from source for each compiler, build type and sanitizer (ICS-011).
   RUN: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home ics-cpp:ci
 
 jobs:
-  # One Conan package cache per dependency configuration: a compiler, a build
+  # The Conan packages of each dependency configuration: a compiler, a build
   # type and, for ASan and TSan, a sanitizer, as conan-install.sh names its
-  # output folders. Each is keyed by everything that decides its contents.
-  # When a cache holds its key, its job only looks it up; when it does not,
-  # the job builds what is missing from that configuration's nearest older
-  # cache and saves the result, so the checks never race to save part of one.
-  # The eight configurations build side by side, so a dependency that is slow
-  # to build from source costs one configuration's time, not eight.
+  # output folders. Each is built once for each key and kept as a signed
+  # artifact in GHCR; when a configuration's artifact is current, its job only
+  # verifies it. The configurations build side by side, so a dependency that is
+  # slow to build from source costs one configuration's time, not eight.
   deps:
-    name: Conan package cache (${{ matrix.conan }})
-    runs-on: ubuntu-24.04
-    timeout-minutes: 120
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - conan: gcc13-Release
-            preset: gcc-release
-          - conan: clang17-Release
-            preset: clang-release
-          - conan: gcc13-Debug
-            preset: gcc-debug
-          - conan: clang17-Debug
-            preset: clang-debug
-          - conan: gcc13-Debug-asan
-            preset: gcc-asan
-          - conan: clang17-Debug-asan
-            preset: clang-asan
-          - conan: gcc13-Debug-tsan
-            preset: gcc-tsan
-          - conan: clang17-Debug-tsan
-            preset: clang-tsan
-    steps:
-      - name: Check out the repository
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-        with:
-          persist-credentials: false
-
-      - name: Name the Conan package cache
-        id: key
-        env:
-          CONAN: ${{ matrix.conan }}
-          INPUTS: ${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
-        run: echo "key=conan-cpp-toolchain-${CONAN}-${INPUTS}" >> "${GITHUB_OUTPUT}"
-
-      - name: Look up the Conan package cache
-        id: lookup
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: /tmp/conan-home
-          key: ${{ steps.key.outputs.key }}
-          lookup-only: true
-
-      # Before any docker run: Docker creates a missing bind-mount source as
-      # root, and actions/cache, which runs as the runner user, then cannot
-      # extract into it. It only warns, so every dependency was rebuilt.
-      - name: Create the Conan cache folder
-        if: steps.lookup.outputs.cache-hit != 'true'
-        run: mkdir -p /tmp/conan-home
-
-      - name: Build the ics-cpp image
-        if: steps.lookup.outputs.cache-hit != 'true'
-        uses: ./.github/actions/toolchain-image
-        with:
-          name: ics-cpp
-          dockerfile: deploy/toolchain/Dockerfile.cpp
-
-      - name: Restore the nearest Conan package cache
-        id: conan-cache
-        if: steps.lookup.outputs.cache-hit != 'true'
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: /tmp/conan-home
-          key: ${{ steps.key.outputs.key }}
-          restore-keys: conan-cpp-toolchain-${{ matrix.conan }}-
-
-      # A cache that matched but did not arrive fails here, rather than as a
-      # silent rebuild of every dependency.
-      - name: Check the restored Conan cache
-        if: steps.lookup.outputs.cache-hit != 'true' && steps.conan-cache.outputs.cache-matched-key != ''
-        env:
-          MATCHED_KEY: ${{ steps.conan-cache.outputs.cache-matched-key }}
-        run: |
-          if [ -z "$(ls -A /tmp/conan-home/p 2>/dev/null)" ]; then
-            echo "::error::Conan cache ${MATCHED_KEY} matched, but nothing was restored into /tmp/conan-home"
-            exit 1
-          fi
-          echo "Restored ${MATCHED_KEY}: $(du -sh /tmp/conan-home | cut -f1)"
-
-      # The configuration's Conan binaries, through one preset that uses it.
-      - name: Install the Conan dependencies of ${{ matrix.preset }}
-        if: steps.lookup.outputs.cache-hit != 'true'
-        env:
-          PRESET: ${{ matrix.preset }}
-        run: ${RUN} deploy/toolchain/conan-install.sh "${PRESET}"
-
-      - name: Trim the Conan package cache before it is saved
-        if: steps.lookup.outputs.cache-hit != 'true'
-        run: ${RUN} conan cache clean "*" --source --build --download --temp
-
-      - name: Save the Conan package cache
-        if: steps.lookup.outputs.cache-hit != 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: /tmp/conan-home
-          key: ${{ steps.key.outputs.key }}
+    name: Dependencies
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: ./.github/workflows/conan-deps.yml
+    with:
+      configs: >-
+        ["gcc13-Release", "clang17-Release", "gcc13-Debug", "clang17-Debug",
+        "gcc13-Debug-asan", "clang17-Debug-asan", "gcc13-Debug-tsan", "clang17-Debug-tsan"]
 
   # The image's own checks. It does not wait for deps, so a stale lockfile
   # prints the lockfile to commit even when deps cannot install it.
@@ -185,21 +101,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Create the Conan cache folder
-        run: mkdir -p /tmp/conan-home
-
       - name: Build the ics-cpp image
         uses: ./.github/actions/toolchain-image
         with:
           name: ics-cpp
           dockerfile: deploy/toolchain/Dockerfile.cpp
-
-      - name: Restore the nearest Conan package cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: /tmp/conan-home
-          key: conan-cpp-toolchain-gcc13-Release-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
-          restore-keys: conan-cpp-toolchain-gcc13-Release-
 
       # GeographicLib in the image must reproduce golden/frames exactly (ICS-014).
       - name: Golden frame vectors are current
@@ -238,7 +144,7 @@ jobs:
         run: deploy/evidence/image-sbom.sh ics-cpp:ci "${IMAGE}" "${RUNNER_TEMP}/ics-cpp.cdx.json"
 
   # One stage per job, each in its own copy of the image, with the Conan
-  # packages deps saved for its configuration: UBSan, coverage and the
+  # packages deps published for its configuration: UBSan, coverage and the
   # policy checks use the plain Debug dependencies, and fuzzing the Clang
   # ASan ones.
   checks:
@@ -246,6 +152,9 @@ jobs:
     needs: deps
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: read
     strategy:
       fail-fast: false
       matrix:
@@ -292,21 +201,17 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Create the Conan cache folder
-        run: mkdir -p /tmp/conan-home
-
       - name: Build the ics-cpp image
         uses: ./.github/actions/toolchain-image
         with:
           name: ics-cpp
           dockerfile: deploy/toolchain/Dockerfile.cpp
 
-      - name: Restore the Conan package cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Restore the ${{ matrix.conan }} Conan packages
+        uses: ./.github/actions/conan-deps
         with:
-          path: /tmp/conan-home
-          key: conan-cpp-toolchain-${{ matrix.conan }}-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
-          fail-on-cache-miss: true
+          config: ${{ matrix.conan }}
+          toolchain: ${{ env.RUN }}
 
       - name: ${{ matrix.name }}
         env:

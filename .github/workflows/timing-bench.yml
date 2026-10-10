@@ -20,16 +20,18 @@ on:
       - deploy/timing-bench/**
       - .github/workflows/timing-bench.yml
       - .github/actions/toolchain-image/**
+      - .github/actions/conan-deps/**
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: timing-bench-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # The Conan package cache the C++ toolchain workflow saves, as it mounts it.
+  # The Conan home that the conan-deps action restores the packages into.
   RUN: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home ics-cpp:ci
   RECORDS: /tmp/timing-bench
 
@@ -37,8 +39,9 @@ jobs:
   bench:
     name: Flag holdover within 1 s of GNSS loss
     runs-on: ubuntu-24.04
-    # With the Conan cache, building takes about 10 minutes; without it,
-    # protobuf and abseil build from source, about 40. The bench takes 1.
+    # With the Conan packages restored, building takes about 10 minutes;
+    # without them, protobuf and abseil build from source, about 40. The
+    # bench takes 1.
     timeout-minutes: 90
     steps:
       - name: Check out the repository
@@ -46,23 +49,18 @@ jobs:
         with:
           persist-credentials: false
 
-      # Before any docker run, so the runner user owns it (see cpp-toolchain.yml).
-      - name: Create the Conan cache folder
-        run: mkdir -p /tmp/conan-home
-
       - name: Build the ics-cpp image
         uses: ./.github/actions/toolchain-image
         with:
           name: ics-cpp
           dockerfile: deploy/toolchain/Dockerfile.cpp
 
-      # Restored only: the C++ toolchain workflow owns the cache and saves it.
-      - name: Restore the Conan package cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Restored only: the C++ toolchain workflow builds and publishes them.
+      - name: Restore the gcc13-Release Conan packages
+        uses: ./.github/actions/conan-deps
         with:
-          path: /tmp/conan-home
-          key: conan-cpp-toolchain-gcc13-Release-${{ hashFiles('cpp/conan.lock', 'cpp/conan/profiles/*', 'deploy/toolchain/Dockerfile.cpp', 'deploy/toolchain/apt-packages.txt', 'deploy/toolchain/requirements-conan.txt') }}
-          restore-keys: conan-cpp-toolchain-gcc13-Release-
+          config: gcc13-Release
+          toolchain: ${{ env.RUN }}
 
       - name: Build ics-timingd
         run: >-

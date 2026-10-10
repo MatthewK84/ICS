@@ -44,6 +44,8 @@ UNGATED_FOLDERS: frozenset[str] = frozenset({"test", "fuzz"})
 GATE_FIELDS: int = 2
 REGION_FIELDS: int = 6
 FILE_ID: int = 5
+# A branch record starts line, column, end line, end column, true count, false count.
+BRANCH_FIELDS: int = 6
 
 
 class CoverageError(Exception):
@@ -84,6 +86,7 @@ class FileCoverage:
     lines: int
     branches_covered: int
     branches: int
+    missed: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, order=True)
@@ -200,8 +203,32 @@ def file_coverage(data: JsonObject, paths: PathMap) -> list[FileCoverage]:
             continue
         lines = (number(entry, "summary", "lines", "covered"), number(entry, "summary", "lines", "count"))
         branches = (number(entry, "summary", "branches", "covered"), number(entry, "summary", "branches", "count"))
-        found.append(FileCoverage(path, *lines, *branches))
+        found.append(FileCoverage(path, *lines, *branches, missed_branches(entry)))
     return found
+
+
+def missed_branches(entry: JsonObject) -> tuple[str, ...]:
+    """Each branch outcome the tests never took, as LINE:COLUMN true or false.
+
+    A branch compiled into several binaries has a record in each; their
+    counts add up.
+    """
+    taken: dict[tuple[int, int], tuple[int, int]] = {}
+    for branch in objects_or_lists(entry.get("branches")):
+        fields = [value for value in branch[:BRANCH_FIELDS] if isinstance(value, int)]
+        if len(fields) != BRANCH_FIELDS:
+            continue
+        line, column, _, _, true_count, false_count = fields
+        before = taken.get((line, column), (0, 0))
+        taken[(line, column)] = (before[0] + true_count, before[1] + false_count)
+    missed: list[str] = []
+    for (line, column), (true_count, false_count) in sorted(taken.items()):
+        missed.extend(
+            f"{line}:{column} {outcome}"
+            for outcome, count in (("true", true_count), ("false", false_count))
+            if not count
+        )
+    return tuple(missed)
 
 
 def function_extent(entry: JsonObject, paths: PathMap) -> Function | None:
@@ -288,6 +315,7 @@ def coverage_report(gate: Gate, files: Sequence[FileCoverage], root: Path) -> Re
     errors = [
         f"{entry.path}: lines {entry.lines_covered} of {entry.lines} covered, "
         f"branches {entry.branches_covered} of {entry.branches} covered"
+        + (f"; never taken: {', '.join(entry.missed)}" if entry.missed else "")
         for entry in gated
         if entry.lines_covered < entry.lines or entry.branches_covered < entry.branches
     ]

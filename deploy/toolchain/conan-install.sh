@@ -7,6 +7,10 @@
 # cpp/build/conan/<profile>-<build type>[-<sanitizer>]/, where the preset's
 # toolchain file points. The asan, tsan and fuzz presets build the dependencies
 # with the matching sanitizer, from cpp/conan/profiles/asan or tsan (ICS-011).
+#
+# Two optional settings serve conan-deps.sh: CONAN_GRAPH_JSON names a file to
+# write the install graph to, and CONAN_OFFLINE=1 installs from the Conan cache
+# alone, building and downloading nothing.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -49,13 +53,21 @@ install_preset() {
     exit 2
   fi
   sanitizer="$(sanitizer_for "${preset}")"
+  local fetch=(--build=missing)
+  if [[ "${CONAN_OFFLINE:-0}" == 1 ]]; then
+    fetch=(--no-remote --build=never)
+  fi
+  local graph=()
+  if [[ -n "${CONAN_GRAPH_JSON:-}" ]]; then
+    graph=(--format json --out-file "${CONAN_GRAPH_JSON}")
+  fi
   conan install "${ROOT}/cpp" \
     --profile:all "${ROOT}/cpp/conan/profiles/${profile}" \
     ${sanitizer:+--profile:host "${ROOT}/cpp/conan/profiles/${sanitizer}"} \
     --settings:all "build_type=${build_type}" \
     --lockfile "${ROOT}/cpp/conan.lock" \
     --output-folder "${ROOT}/cpp/build/conan/${profile}-${build_type}${sanitizer:+-${sanitizer}}" \
-    --build=missing
+    "${fetch[@]}" "${graph[@]}"
 }
 
 main() {

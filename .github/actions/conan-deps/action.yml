@@ -1,0 +1,80 @@
+name: Conan dependencies
+description: >-
+  Restores the Conan packages of one dependency configuration from its signed
+  artifact in GHCR (deploy/evidence/dependency-artifact.sh): the artifact for
+  the current key when there is one, else the last one built on main, from
+  which Conan then builds only what is missing. Each artifact's signature is
+  verified before it is used. A job that runs the toolchain with docker run
+  builds the ics-cpp image first.
+
+inputs:
+  config:
+    description: The dependency configuration, such as gcc13-Release or clang17-Debug-asan.
+    required: true
+  toolchain:
+    description: >-
+      The prefix that runs a command in the ics-cpp toolchain with the Conan
+      home mounted, the job's docker run; empty in a job that runs in the image.
+    required: false
+    default: ''
+  for-build:
+    description: >-
+      'true' in the dependency workflow: when the current artifact exists it is
+      only verified, since there is nothing to build.
+    required: false
+    default: 'false'
+  token:
+    description: A token that can read the repository's packages.
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  key:
+    description: The key of the configuration's packages (conan-deps.sh key).
+    value: ${{ steps.key.outputs.key }}
+  match:
+    description: current (the key's artifact), older (main's last) or none.
+    value: ${{ steps.fetch.outputs.match }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install ORAS and cosign
+      shell: bash
+      run: |
+        deploy/evidence/install-tools.sh "${RUNNER_TEMP}/conan-deps-bin"
+        echo "${RUNNER_TEMP}/conan-deps-bin" >> "${GITHUB_PATH}"
+
+    - name: Key the ${{ inputs.config }} packages
+      id: key
+      shell: bash
+      env:
+        TOOLCHAIN: ${{ inputs.toolchain }}
+      run: |
+        key="$(${TOOLCHAIN} deploy/toolchain/conan-deps.sh key)"
+        echo "key=${key}" >> "${GITHUB_OUTPUT}"
+        echo "Conan packages key: ${key}"
+
+    - name: Fetch and verify the ${{ inputs.config }} packages
+      id: fetch
+      shell: bash
+      env:
+        CONFIG: ${{ inputs.config }}
+        KEY: ${{ steps.key.outputs.key }}
+        FOR_BUILD: ${{ inputs.for-build == 'true' && 'for-build' || '' }}
+        TOKEN: ${{ inputs.token }}
+        ACTOR: ${{ github.actor }}
+      run: |
+        echo "${TOKEN}" | oras login ghcr.io -u "${ACTOR}" --password-stdin
+        deploy/evidence/dependency-artifact.sh fetch "${CONFIG}" "${KEY}" "cpp/build/conan-deps/${CONFIG}" \
+          ${FOR_BUILD} >> "${GITHUB_OUTPUT}"
+
+    - name: Restore the ${{ inputs.config }} packages
+      if: steps.fetch.outputs.pulled == 'true'
+      shell: bash
+      env:
+        TOOLCHAIN: ${{ inputs.toolchain }}
+        CONFIG: ${{ inputs.config }}
+      run: |
+        ${TOOLCHAIN} deploy/toolchain/conan-deps.sh restore "cpp/build/conan-deps/${CONFIG}/conan-packages.tgz"
+        rm -f "cpp/build/conan-deps/${CONFIG}/conan-packages.tgz"

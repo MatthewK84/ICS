@@ -46,7 +46,9 @@ def file_entry(filename: str, lines: tuple[int, int], branches: tuple[int, int])
         "lines": {"covered": lines[0], "count": lines[1]},
         "branches": {"covered": branches[0], "count": branches[1]},
     }
-    return {"filename": filename, "summary": summary}
+    # One branch at 4:9, its false outcome taken only when every branch is.
+    records = [[4, 9, 4, 20, 3, 1 if branches[0] == branches[1] else 0, 0, 0, 4]] if branches[1] else []
+    return {"filename": filename, "summary": summary, "branches": records}
 
 
 def library_export(branches_covered: int = 2) -> cc.JsonObject:
@@ -120,7 +122,23 @@ class ExportTests(unittest.TestCase):
 
     def test_reads_file_coverage_inside_the_repository(self) -> None:
         data = cc.export_data(library_export(branches_covered=1))
-        self.assertEqual(cc.file_coverage(data, PATHS), [cc.FileCoverage("cpp/lib/f.cpp", 12, 12, 1, 2)])
+        self.assertEqual(
+            cc.file_coverage(data, PATHS), [cc.FileCoverage("cpp/lib/f.cpp", 12, 12, 1, 2, ("4:9 false",))]
+        )
+
+    def test_adds_up_each_branch_across_binaries_and_skips_malformed_records(self) -> None:
+        records = [
+            [7, 3, 7, 9, 0, 2, 0, 0, 4],
+            [7, 3, 7, 9, 0, 1, 0, 0, 4],
+            [5, 1, 5, 4, 1, 1, 0, 0, 4],
+            [5, 1, 5, 4, 2, 0, 0, 0, 4],
+            [9, 2, 9, 5, 0, 0, 0, 0, 4],
+            [6, 1, 6, "x", 0, 0],
+            [6, 2],
+            "not a record",
+        ]
+        self.assertEqual(cc.missed_branches({"branches": records}), ("7:3 true", "9:2 true", "9:2 false"))
+        self.assertEqual(cc.missed_branches({}), ())
 
     def test_reads_each_function_once(self) -> None:
         # A second instantiation of a template has the same extent as the first.
@@ -183,12 +201,12 @@ class CoverageTests(unittest.TestCase):
             (root / "cpp" / "lib" / "test" / "f_test.cpp").write_text("\n", encoding="utf-8")
             (root / "cpp" / "lib" / "fuzz").mkdir()
             (root / "cpp" / "lib" / "fuzz" / "f_fuzz.cpp").write_text("\n", encoding="utf-8")
-            files = [cc.FileCoverage("cpp/lib/f.cpp", 12, 12, 1, 2)]
+            files = [cc.FileCoverage("cpp/lib/f.cpp", 12, 12, 1, 2, ("4:9 false",))]
             report = cc.coverage_report(cc.Gate("cpp/lib", 0), files, root)
         self.assertEqual(
             report.errors,
             [
-                "cpp/lib/f.cpp: lines 12 of 12 covered, branches 1 of 2 covered",
+                "cpp/lib/f.cpp: lines 12 of 12 covered, branches 1 of 2 covered; never taken: 4:9 false",
                 "cpp/lib/unlinked.cpp: not linked into any test, so none of it is covered",
             ],
         )
@@ -218,7 +236,9 @@ class MainTests(unittest.TestCase):
     def test_fails_uncovered_code(self) -> None:
         code, out = self.run_check(library_export(branches_covered=1), "cpp/lib 0.50\n")
         self.assertEqual(code, EXIT_FAILED)
-        self.assertIn("::error::cpp/lib/f.cpp: lines 12 of 12 covered, branches 1 of 2 covered", out)
+        self.assertIn(
+            "::error::cpp/lib/f.cpp: lines 12 of 12 covered, branches 1 of 2 covered; never taken: 4:9 false", out
+        )
 
     def test_takes_gates_on_the_command_line(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
