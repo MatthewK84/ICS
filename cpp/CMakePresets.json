@@ -179,7 +179,7 @@
       "toolchainFile": "${sourceDir}/build/conan/clang17-Debug/conan_toolchain.cmake",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_FLAGS": "-fprofile-instr-generate -fcoverage-mapping",
+        "CMAKE_CXX_FLAGS": "-fprofile-instr-generate -fcoverage-mapping -fprofile-update=atomic",
         "CMAKE_EXE_LINKER_FLAGS": "-fprofile-instr-generate"
       }
     }
