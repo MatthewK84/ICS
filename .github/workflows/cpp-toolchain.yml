@@ -35,6 +35,8 @@ on:
       - deploy/evidence/**
       - .github/scripts/evidence.py
       - .github/scripts/cpp_coverage.py
+      - .github/scripts/clang_tidy_cache.py
+      - .github/ccache.conf
       - .github/workflows/cpp-toolchain.yml
       - .github/actions/toolchain-image/**
       - .github/actions/conan-deps/**
@@ -49,6 +51,8 @@ on:
       - deploy/evidence/**
       - .github/scripts/evidence.py
       - .github/scripts/cpp_coverage.py
+      - .github/scripts/clang_tidy_cache.py
+      - .github/ccache.conf
       - .github/workflows/cpp-toolchain.yml
       - .github/actions/toolchain-image/**
       - .github/actions/conan-deps/**
@@ -155,6 +159,23 @@ jobs:
     permissions:
       contents: read
       packages: read
+    # Each check but the reproducible builds keeps its compiles (ccache, with
+    # .github/ccache.conf) and the files clang-tidy passed
+    # (.github/scripts/clang_tidy_cache.py, mounted over clang-tidy-17) in
+    # /tmp/ci-cache, so a change recompiles and re-checks only what it
+    # affects. The reproducible builds must compile everything, or their
+    # second build would come from the cache. Only main saves the caches;
+    # a pull request starts from main's. A missing cache only costs time.
+    env:
+      CACHED: ${{ !startsWith(matrix.name, 'Reproducible') }}
+      CMAKE_C_COMPILER_LAUNCHER: ${{ !startsWith(matrix.name, 'Reproducible') && 'ccache' || '' }}
+      CMAKE_CXX_COMPILER_LAUNCHER: ${{ !startsWith(matrix.name, 'Reproducible') && 'ccache' || '' }}
+      RUN: >-
+        docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home
+        -v /tmp/ci-cache:/opt/ci-cache -e CCACHE_DIR=/opt/ci-cache/ccache
+        -e CCACHE_CONFIGPATH=/work/ics/.github/ccache.conf -e CMAKE_C_COMPILER_LAUNCHER -e CMAKE_CXX_COMPILER_LAUNCHER
+        -e TIDY_CACHE_DIR=/opt/ci-cache/tidy
+        -v ${{ github.workspace }}/.github/scripts/clang_tidy_cache.py:/usr/local/bin/clang-tidy-17:ro ics-cpp:ci
     strategy:
       fail-fast: false
       matrix:
@@ -201,6 +222,19 @@ jobs:
         with:
           persist-credentials: false
 
+      # Before any docker run, so the runner owns the folder; Docker would
+      # create it for root.
+      - name: Create the cache folder
+        run: mkdir -p /tmp/ci-cache
+
+      - name: Restore the compile and clang-tidy caches
+        if: env.CACHED == 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/ci-cache
+          key: ci-cache|${{ matrix.check }}|${{ github.sha }}
+          restore-keys: ci-cache|${{ matrix.check }}|
+
       - name: Build the ics-cpp image
         uses: ./.github/actions/toolchain-image
         with:
@@ -219,6 +253,17 @@ jobs:
         run: |
           read -ra check <<<"${CHECK}"
           ${RUN} "${check[@]}"
+
+      - name: Compile cache statistics
+        if: ${{ !cancelled() && env.CACHED == 'true' }}
+        run: ${RUN} ccache --show-stats
+
+      - name: Save the compile and clang-tidy caches
+        if: ${{ !cancelled() && env.CACHED == 'true' && github.ref == 'refs/heads/main' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/ci-cache
+          key: ci-cache|${{ matrix.check }}|${{ github.sha }}
 
   # Only from main, and only once every check has passed.
   publish:

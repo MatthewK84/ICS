@@ -982,6 +982,23 @@ prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
 [[project]]
+name = "ccache"
+ecosystem = "apt"
+packages = ["ccache"]
+used_for = "Caches the compiles of the C++ toolchain workflow's checks between runs, so a change recompiles only the files it affects (.github/ccache.conf). Not used by the reproducible builds or CodeQL, which must compile everything."
+ships = false
+license = "GPL-3.0-or-later"
+source = "https://github.com/ccache/ccache"
+governance = "Maintained on GitHub by Joel Rosdahl, its lead since 2010, with regular contributors and a published security policy."
+sustainment = "Active for over 20 years, with several releases a year. Pinned through the Ubuntu snapshot date (4.9.1). A cache miss only means a normal compile, so CI keeps working without it."
+foreign_influence = "Founder-led by Joel Rosdahl (Sweden); no corporate steward."
+single_maintainer = true
+maintainers = "Joel Rosdahl leads and releases, with a group of regular contributors"
+reviewed = 2026-10-10
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
 name = "Python 3 (Ubuntu)"
 ecosystem = "apt"
 packages = ["python3", "python3-venv"]
