@@ -6,11 +6,12 @@
 #
 # Usage: dependency-artifact.sh fetch CONFIG KEY FOLDER [for-build]
 #        dependency-artifact.sh publish CONFIG KEY FILE
+#        dependency-artifact.sh point CONFIG KEY
 #
 # The artifacts are tags of ghcr.io/<owner>/ics-conan:
 #   CONFIG-KEY        built on main for KEY (conan-deps.sh key)
 #   CONFIG-KEY-prN    built for pull request N when main had none for KEY
-#   CONFIG-main       the last one built on main, whatever its key
+#   CONFIG-main       the one main used last, whatever its key
 # The dependency workflow (.github/workflows/conan-deps.yml) signs each one
 # keyless, and an artifact counts only with that workflow's signature from
 # main, or, in pull request N, from pull request N. Main never uses packages
@@ -24,8 +25,11 @@
 # match=current|older|none and pulled=true|false.
 #
 # publish pushes FILE (named conan-packages.tgz) as KEY's artifact for this
-# ref, signs it by digest and verifies the signature. On main it then points
-# CONFIG-main at it.
+# ref, signs it by digest and verifies the signature, giving the registry a
+# few seconds to list a signature it has just taken.
+#
+# point, on main only, verifies main's artifact for KEY and points CONFIG-main
+# at it, whether this run published it or found it.
 set -euo pipefail
 
 readonly ISSUER="https://token.actions.githubusercontent.com"
@@ -39,7 +43,7 @@ readonly WORKFLOW="${GITHUB_SERVER_URL:?}/${GITHUB_REPOSITORY:?}/.github/workflo
 readonly REF="${GITHUB_REF:?}"
 
 usage() {
-  echo "usage: dependency-artifact.sh fetch CONFIG KEY FOLDER [for-build] | publish CONFIG KEY FILE" >&2
+  echo "usage: dependency-artifact.sh fetch CONFIG KEY FOLDER [for-build] | publish CONFIG KEY FILE | point CONFIG KEY" >&2
   exit 2
 }
 
@@ -66,16 +70,35 @@ digest_of() {
   return 2
 }
 
+# Whether the dependency workflow signed REFERENCE on REF_NAME; when it did
+# not, prints cosign's reason, which names the identity that did sign it.
+cosign_verify() {
+  { cosign verify --certificate-identity "${WORKFLOW}@$2" --certificate-oidc-issuer "${ISSUER}" "$1" >/dev/null; } 2>&1
+}
+
 # Verifies that the dependency workflow signed REFERENCE on REF_NAME, or ends
-# the run with cosign's reason, which names the identity that did sign it.
+# the run with cosign's reason.
 verify() {
-  local reference="$1" ref_name="$2" out
-  if out="$(cosign verify --certificate-identity "${WORKFLOW}@${ref_name}" --certificate-oidc-issuer "${ISSUER}" \
-    "${reference}" 2>&1 >/dev/null)"; then
+  local out
+  if out="$(cosign_verify "$1" "$2")"; then
     return 0
   fi
-  echo "::error::${reference} is not signed by ${WORKFLOW}@${ref_name}: $(echo "${out}" | tail -n 1)" >&2
+  echo "::error::$1 is not signed by ${WORKFLOW}@$2: $(echo "${out}" | tail -n 1)" >&2
   exit 1
+}
+
+# Verifies a signature just pushed. GHCR can take a few seconds to list it:
+# one of main's first eight found no signature at once, and did ten minutes on.
+verify_pushed() {
+  local wait
+  for wait in 2 4 8 16; do
+    if cosign_verify "$1" "$2" >/dev/null; then
+      return 0
+    fi
+    echo "no signature listed for $1 yet; checking again in ${wait} s" >&2
+    sleep "${wait}"
+  done
+  verify "$1" "$2"
 }
 
 # "match tag ref" lines: the tags to look for, in order, each with the ref
@@ -143,11 +166,24 @@ publish() {
   digest="sha256:$(sha256sum "${manifest}" | cut -d ' ' -f 1)"
   rm -f "${manifest}"
   cosign sign --yes "${REPOSITORY}@${digest}"
-  verify "${REPOSITORY}@${digest}" "${REF}"
-  if [[ "${REF}" == "${MAIN_REF}" ]]; then
-    oras tag "${REPOSITORY}@${digest}" "${config}-main"
-  fi
+  verify_pushed "${REPOSITORY}@${digest}" "${REF}"
   echo "published ${REPOSITORY}:${tag} (${digest})"
+}
+
+point() {
+  local config="$1" key="$2" digest status=0
+  if [[ "${REF}" != "${MAIN_REF}" ]]; then
+    echo "error: only main points ${config}-main, not ${REF}" >&2
+    exit 1
+  fi
+  digest="$(digest_of "${config}-${key}")" || status=$?
+  if ((status != 0)); then
+    echo "error: main has no ${config} artifact for key ${key} to point ${config}-main at" >&2
+    exit 1
+  fi
+  verify "${REPOSITORY}@${digest}" "${MAIN_REF}"
+  oras tag "${REPOSITORY}@${digest}" "${config}-main"
+  echo "${config}-main is ${REPOSITORY}:${config}-${key} (${digest})"
 }
 
 main() {
@@ -159,6 +195,10 @@ main() {
     publish)
       (($# == 4)) || usage
       publish "$2" "$3" "$4"
+      ;;
+    point)
+      (($# == 3)) || usage
+      point "$2" "$3"
       ;;
     *) usage ;;
   esac
