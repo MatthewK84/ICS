@@ -12,7 +12,6 @@
 #include <gtest/gtest.h>
 #include <pthread.h>
 #include <signal.h>
-#include <unistd.h>
 
 #include "ics/logging/json_line.hpp"
 #include "ics/logging/logger.hpp"
@@ -26,7 +25,10 @@ using ics::timing::testing::TempDir;
 using ics::timingd::Config;
 
 // Blocks SIGTERM in this thread, and in threads it starts, while it lives;
-// then discards a SIGTERM left pending and restores the signal mask.
+// then discards a SIGTERM left pending and restores the signal mask. The
+// tests send SIGTERM to the serving thread, not to the process: the gRPC
+// threads earlier tests left running do not block it, and one of them could
+// take a signal sent to the process, which would end the test run.
 class BlockedSigterm {
  public:
   BlockedSigterm() {
