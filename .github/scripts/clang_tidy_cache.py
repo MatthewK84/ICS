@@ -11,7 +11,8 @@ It hashes everything that decides clang-tidy's verdict on the file:
   header it includes;
 - the file's compile command;
 - every .clang-tidy in the file's folder and above it;
-- clang-tidy's arguments and version.
+- clang-tidy's arguments and version, and its binary's size and time, which
+  a package update changes even when the version string stays the same.
 
 When a file with that hash passed before, the script exits 0 without
 running clang-tidy. Otherwise it runs the real clang-tidy and, when it passes,
@@ -132,14 +133,20 @@ def without_build(data: bytes, build: str) -> bytes:
     return data
 
 
+def tool_identity() -> bytes:
+    """The real clang-tidy's version, and its binary's size and modification time."""
+    version = subprocess.run([REAL_CLANG_TIDY, "--version"], capture_output=True, check=True).stdout
+    binary = Path(REAL_CLANG_TIDY).resolve().stat()
+    return version + f"{binary.st_size}:{binary.st_mtime_ns}".encode()
+
+
 def cache_key(args: Sequence[str]) -> str:
     """The hash of everything that decides clang-tidy's verdict on the file."""
     build = build_path(args)
     entry = compile_entry(build, args[-1])
-    version = subprocess.run([REAL_CLANG_TIDY, "--version"], capture_output=True, check=True).stdout
     parts = [
         CACHE_VERSION,
-        version,
+        tool_identity(),
         without_build("\0".join(args).encode(), build),
         without_build("\0".join(compile_arguments(entry)).encode(), build),
         *tidy_configs(args[-1]),

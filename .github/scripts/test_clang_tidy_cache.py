@@ -40,8 +40,9 @@ EXIT_FAILED = 1
 
 
 def write_tool(path: Path, text: str) -> str:
-    path.write_text(text, encoding="utf-8")
-    path.chmod(0o755)
+    if not path.exists():
+        path.write_text(text, encoding="utf-8")
+        path.chmod(0o755)
     return str(path)
 
 
@@ -132,6 +133,13 @@ class CacheTests(unittest.TestCase):
         (self.tree.build / "compile_commands.json").write_text(json.dumps(commands), encoding="utf-8")
         self.tree.run()
         self.assertEqual(self.tree.calls(), 3)
+
+    def test_runs_it_again_when_clang_tidy_is_updated(self) -> None:
+        self.tree.run()
+        stat = os.stat(self.tree.tidy)
+        os.utime(self.tree.tidy, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
+        self.tree.run()
+        self.assertEqual(self.tree.calls(), 2)
 
     def test_ignores_where_the_build_folder_is(self) -> None:
         self.tree.run()
