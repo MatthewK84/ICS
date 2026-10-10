@@ -1,12 +1,11 @@
 # ics::timing (ICS-019): the station's time quality from ptp4l's management
-# socket, and the local socket ics-timingd publishes it on. See
-# services/timingd for the service.
+# socket. See services/timingd for the service, which serves it over gRPC
+# (#150).
 add_library(ics_timing STATIC
   src/camera_offsets.cpp
   src/clock_state.cpp
   src/ptp_client.cpp
   src/ptp_management.cpp
-  src/publisher.cpp
   src/quality.cpp
   src/unix_socket.cpp)
 add_library(ics::timing ALIAS ics_timing)
@@ -19,7 +18,6 @@ ics_add_gtest(timing_test
     test/clock_state_test.cpp
     test/ptp_client_test.cpp
     test/ptp_management_test.cpp
-    test/publisher_test.cpp
     test/quality_test.cpp
     test/unix_socket_test.cpp
   LIBRARIES ics::timing)

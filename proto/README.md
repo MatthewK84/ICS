@@ -14,6 +14,7 @@ Protobuf contracts, the single source of truth for every message that crosses a 
 | [`time_quality.proto`](ics/v1/time_quality.proto) | `TimeQuality` | A station's clock state, PTP and IRIG-B health, error bound and per-camera offsets | ics-timingd (ICS-019), strobe analyzer (ICS-029) |
 | [`pli.proto`](ics/v1/pli.proto) | `PliRecord`, `PliEvent` | Vehicle positions, velocities and attitude with their time basis and σ; arming, modes, commands, status text and link loss | PLI adapters (ICS-021 to ICS-025), ics-plid (ICS-030) |
 | [`pli_query.proto`](ics/v1/pli_query.proto) | `PliQueryService`, `QueryPliRequest`, `QueryPliResponse` | Queries for the stored PLI: records or events in a time range, of one entity if named, in batches | ics-plid (ICS-030) |
+| [`time_quality_service.proto`](ics/v1/time_quality_service.proto) | `TimeQualityService`, `WatchTimeQualityRequest`, `WatchTimeQualityResponse` | The stream of a station's `TimeQuality` reports | ics-timingd (#150) |
 | [`mount_sample.proto`](ics/v1/mount_sample.proto) | `MountSample` | Encoder-tagged axis angles and rates, mount mode and the sun interlock | Time-tagger (ICS-032), mount client (ICS-033) |
 | [`camera_frame_meta.proto`](ics/v1/camera_frame_meta.proto) | `CameraFrameMeta` | When and how each frame was exposed | ics-camd (ICS-031) |
 | [`trigger_event.proto`](ics/v1/trigger_event.proto) | `TriggerEvent` | Arming, closest-approach predictions, firing and faults | Trigger controller (ICS-040) |
@@ -23,7 +24,7 @@ Protobuf contracts, the single source of truth for every message that crosses a 
 | [`footprint.proto`](ics/v1/footprint.proto) | `Footprint` | Ground-impact probability regions as WGS84 polygons | Footprint Monte Carlo (ICS-051, ICS-077) |
 | [`run_record.proto`](ics/v1/run_record.proto) | `RunRecord` | One run's headline results, C4 measurements, flags, and a SHA-256 manifest of its parameters, models and artifacts | Run records (ICS-079) |
 
-The contracts define messages. Each service defines its own gRPC service when it is built, as ics-plid's `PliQueryService` does. ics-plid serves it over gRPC on a local Unix-domain socket; its C++ service code is generated at build time by the `grpc_cpp_plugin` of the Conan gRPC package the library comes from, not committed ([`cpp/README.md`](../cpp/README.md#pli-store)).
+The contracts define messages. Each service defines its own gRPC service when it is built, as ics-plid's `PliQueryService` and ics-timingd's `TimeQualityService` (#150) do. Each is served over gRPC on a local Unix-domain socket; its C++ service code is generated at build time by the `grpc_cpp_plugin` of the Conan gRPC package the library comes from, not committed ([`cpp/README.md`](../cpp/README.md#pli-store)). `WatchTimeQualityRequest` has no fields, so it has no golden file (below): it is always written as no bytes at all.
 
 [`third_party/`](third_party/README.md) holds protobuf files copied unchanged from other projects, which ICS reads but does not own: SAPIENT's BSI Flex 335 v2.0 messages, for the SAPIENT adapter ([ICS-024](https://github.com/MatthewK84/ICS/issues/24)). The conventions below are for ICS's own contracts and do not apply to them.
 

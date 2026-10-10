@@ -11,6 +11,7 @@
 #include "ics/v1/pli_query.pb.h"
 #include "ics/v1/run_record.pb.h"
 #include "ics/v1/time_quality.pb.h"
+#include "ics/v1/time_quality_service.pb.h"
 #include "ics/v1/track.pb.h"
 #include "ics/v1/trigger_event.pb.h"
 
@@ -62,12 +63,16 @@ TEST(ProtoGolden, RunRecord) { expect_same_bytes<ics::v1::RunRecord>("run_record
 TEST(ProtoGolden, TimeQuality) { expect_same_bytes<ics::v1::TimeQuality>("time_quality"); }
 TEST(ProtoGolden, Track) { expect_same_bytes<ics::v1::Track>("track"); }
 TEST(ProtoGolden, TriggerEvent) { expect_same_bytes<ics::v1::TriggerEvent>("trigger_event"); }
+TEST(ProtoGolden, WatchTimeQualityResponse) {
+  expect_same_bytes<ics::v1::WatchTimeQualityResponse>("watch_time_quality_response");
+}
 
 TEST(ProtoGolden, HasATestForEveryGoldenFile) {
   const std::set<std::string> tested{
       "camera_frame_meta", "footprint",          "fragment",   "kill_assessment", "mount_sample",
       "pli_event",         "pli_record",         "query_pli_request", "query_pli_response", "run_record",
       "time_quality",      "track",              "trigger_event",
+      "watch_time_quality_response",
   };
   std::set<std::string> found;
   for (const auto& entry : std::filesystem::directory_iterator{golden_dir()}) {

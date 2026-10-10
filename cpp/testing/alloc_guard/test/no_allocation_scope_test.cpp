@@ -1,10 +1,12 @@
 #include "ics/testing/no_allocation_scope.hpp"
 
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <new>
+#include <thread>
 
 #include <gtest/gtest-spi.h>
 #include <gtest/gtest.h>
@@ -19,6 +21,7 @@ using owner = T;
 namespace {
 
 using ics::testing::NoAllocationScope;
+using ics::testing::ThisThreadOnly;
 
 constexpr std::size_t kSize = 24;
 constexpr std::size_t kCount = 2;
@@ -96,6 +99,25 @@ std::size_t allocate_aligned_forms() {
   return scope.allocations();
 }
 
+// Another thread allocates once while a scope for every thread and one for
+// this thread alone are open. Returns what the first counted, and sets own to
+// what the second did.
+std::size_t allocations_beside_another_thread(std::size_t& own) {
+  std::atomic<bool> go{false};
+  std::thread other([&go] {
+    go.wait(false);
+    const gsl::owner<Plain*> value = kept(new Plain());
+    delete value;
+  });
+  const NoAllocationScope every_thread;
+  const NoAllocationScope this_thread{ThisThreadOnly{}};
+  go.store(true);
+  go.notify_one();
+  other.join();
+  own = this_thread.allocations();
+  return every_thread.allocations();
+}
+
 TEST(NoAllocationScope, PassesWithoutAllocation) {
   const NoAllocationScope scope;
   EXPECT_EQ(scope.allocations(), 0U);
@@ -109,6 +131,22 @@ TEST(NoAllocationScope, FailsTheTestOnAllocation) {
         delete value;
       },
       "1 allocation(s) after initialization");
+}
+
+TEST(NoAllocationScope, ThisThreadOnlyCountsItsOwnThread) {
+  EXPECT_NONFATAL_FAILURE(
+      {
+        const NoAllocationScope scope{ThisThreadOnly{}};
+        const gsl::owner<Plain*> value = kept(new Plain());
+        delete value;
+      },
+      "1 allocation(s) after initialization");
+}
+
+TEST(NoAllocationScope, ThisThreadOnlyIgnoresOtherThreads) {
+  std::size_t own = 1;
+  EXPECT_NONFATAL_FAILURE(EXPECT_GE(allocations_beside_another_thread(own), 1U), "allocation(s) after initialization");
+  EXPECT_EQ(own, 0U);
 }
 
 TEST(NoAllocationScope, CountsEveryPlainForm) {

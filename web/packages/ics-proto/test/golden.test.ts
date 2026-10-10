@@ -25,6 +25,7 @@ import {
   toBinary,
   TrackSchema,
   TriggerEventSchema,
+  WatchTimeQualityResponseSchema,
 } from "../src/index.ts";
 
 const GOLDEN_DIR = new URL("../../../../golden/proto/", import.meta.url);
@@ -44,6 +45,7 @@ const GOLDEN: readonly (readonly [string, DescMessage])[] = [
   ["time_quality", TimeQualitySchema],
   ["track", TrackSchema],
   ["trigger_event", TriggerEventSchema],
+  ["watch_time_quality_response", WatchTimeQualityResponseSchema],
 ];
 
 function readGolden(name: string): Uint8Array {

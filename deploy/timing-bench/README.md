@@ -19,12 +19,12 @@ Each trial:
 
 1. waits a random 0 to 0.5 s, so trials fall at different points in the announce and poll cycles;
 2. notes the time, then sets the grandmaster's GNSS loss;
-3. waits for the `clock_state` line with `"state":"holdover"` in the `ics-timingd` log, and takes its `ts`;
-4. sets GNSS lock again, and waits for `"state":"locked"`.
+3. waits for the first report with `CLOCK_STATE_HOLDOVER` that [`ics-time-watch`](../../cpp/README.md#timing), a gRPC subscriber to `ics-timingd`'s reports, receives, and takes its `time_utc_ns`;
+4. sets GNSS lock again, and waits for a report with `CLOCK_STATE_LOCKED`.
 
-The latency is the time from step 2 to that `ts`. Both come from the host's clock. A trial passes when the latency is 1 s or less, and the bench passes when all 20 do.
+The latency is the time from step 2 to that `time_utc_ns`. Both come from the host's clock. A trial passes when the latency is 1 s or less, and the bench passes when all 20 do.
 
-The latency budget is the grandmaster's announce interval (250 ms), which delays the station seeing the new class, plus the poll interval (100 ms), plus a few milliseconds of processing. Local runs measured 31 to 297 ms.
+The latency budget is the grandmaster's announce interval (250 ms), which delays the station seeing the new class, plus the poll interval (100 ms), plus a few milliseconds of processing. Local runs measured 31 to 297 ms reading the log, and 6 to 326 ms reading the reports over gRPC (#150).
 
 ## What it does not show
 
@@ -37,11 +37,11 @@ As root, with `ip`, `ptp4l` and `pmc` installed ([`apt-packages.txt`](apt-packag
 
 ```sh
 deploy/toolchain/conan-install.sh gcc-release
-(cd cpp && cmake --preset gcc-release && cmake --build build/gcc-release --target ics-timingd)
+(cd cpp && cmake --preset gcc-release && cmake --build build/gcc-release --target ics-timingd ics-time-watch)
 sudo env BENCH_OUT=/tmp/timing-bench deploy/timing-bench/run-bench.sh cpp/build/gcc-release/services/timingd/ics-timingd 20
 ```
 
-`ics-timingd` reads its config from `/etc/ics/ics-timingd.toml`, so the bench runs it in its own mount namespace with the bench's config mounted over `/etc/ics`; the host's `/etc/ics` is never changed. It prints each trial's latency and the worst one. With `BENCH_OUT` set, it keeps `trials.csv` (trial, latency in ns) and the `ptp4l` and `ics-timingd` logs there. It removes its namespaces and processes when it exits, pass or fail.
+`ics-timingd` reads its config from `/etc/ics/ics-timingd.toml`, so the bench runs it in its own mount namespace with the bench's config mounted over `/etc/ics`; the host's `/etc/ics` is never changed. It prints each trial's latency and the worst one. It takes `ics-time-watch` from `ics-timingd`'s folder. With `BENCH_OUT` set, it keeps `trials.csv` (trial, latency in ns), the reports (`reports.jsonl`) and the `ptp4l`, `ics-timingd` and `ics-time-watch` logs there. It removes its namespaces and processes when it exits, pass or fail.
 
 ## On real hardware
 

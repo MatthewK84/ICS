@@ -32,13 +32,25 @@ std::atomic<std::size_t>& allocation_count() noexcept {
   return count;
 }
 
-gsl::owner<void*> allocate(std::size_t size) noexcept {
+// This thread's allocations alone, for the scopes given ThisThreadOnly.
+// Constant-initialized, so reading it allocates nothing.
+std::size_t& thread_allocation_count() noexcept {
+  thread_local std::size_t count = 0;
+  return count;
+}
+
+void count_allocation() noexcept {
   allocation_count().fetch_add(1, std::memory_order_relaxed);
+  ++thread_allocation_count();
+}
+
+gsl::owner<void*> allocate(std::size_t size) noexcept {
+  count_allocation();
   return std::malloc(size == 0 ? 1 : size);
 }
 
 gsl::owner<void*> allocate_aligned(std::size_t size, std::align_val_t alignment) noexcept {
-  allocation_count().fetch_add(1, std::memory_order_relaxed);
+  count_allocation();
   const auto align = static_cast<std::size_t>(alignment);
   if (size > std::numeric_limits<std::size_t>::max() - align) {
     return nullptr;
@@ -100,7 +112,11 @@ void operator delete[](gsl::owner<void*> memory, std::align_val_t /*alignment*/,
 
 namespace ics::testing {
 
-NoAllocationScope::NoAllocationScope() noexcept : start_{allocation_count().load(std::memory_order_relaxed)} {}
+NoAllocationScope::NoAllocationScope() noexcept
+    : this_thread_{false}, start_{allocation_count().load(std::memory_order_relaxed)} {}
+
+NoAllocationScope::NoAllocationScope(ThisThreadOnly /*only*/) noexcept
+    : this_thread_{true}, start_{thread_allocation_count()} {}
 
 NoAllocationScope::~NoAllocationScope() {
   const std::size_t count = allocations();
@@ -110,7 +126,8 @@ NoAllocationScope::~NoAllocationScope() {
 }
 
 std::size_t NoAllocationScope::allocations() const noexcept {
-  return allocation_count().load(std::memory_order_relaxed) - start_;
+  const std::size_t now = this_thread_ ? thread_allocation_count() : allocation_count().load(std::memory_order_relaxed);
+  return now - start_;
 }
 
 }  // namespace ics::testing
