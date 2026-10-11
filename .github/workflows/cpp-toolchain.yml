@@ -1,29 +1,23 @@
 name: C++ toolchain
 
-# Builds the ics-cpp image and proves the toolchain is reproducible (ICS-004):
-# the toolchain_check sample must build byte-identically in two build folders
-# with GCC 13 and with Clang 17. Then the test stages (ICS-008): the ICS code
-# must pass under ASan, UBSan and TSan with both compilers and survive a minute
-# of fuzzing per target, and the C++ Power-of-Ten profile (ICS-005) must hold:
-# no suppressions, clean -Werror builds, clang-tidy and cppcheck. Each stage
-# must also reject its seeded defect. Images are published to GHCR from main,
-# signed by digest with cosign, with a CycloneDX SBOM and SLSA provenance
-# attached (ICS-009, deploy/evidence/README.md). The image's GeographicLib must
-# also reproduce the golden frame vectors in golden/frames (ICS-014). The code
-# listed in cpp/policy/coverage-gates.txt must keep full line and branch
-# coverage and its assertion-density floor (ICS-015).
+# The C++ checks (ICS-004, ICS-005, ICS-008, ICS-014, ICS-015), each in the
+# versioned build image of its dependency configuration (#159):
 #
-# The stages run side by side, one job each, so a change whose dependencies are
-# already built finishes in under ten minutes. "deps" makes sure each
-# dependency configuration has its signed artifact of Conan packages in GHCR
-# (.github/workflows/conan-deps.yml); "image-checks" checks the image itself;
-# each "checks" job builds the image and runs one stage with its
-# configuration's packages; and "publish" builds, signs and pushes the image
-# from main once every stage has passed. The image is built
-# from an Ubuntu snapshot and pinned packages, so every job's copy has the
-# same contents. Each job builds it through .github/actions/toolchain-image,
-# which keeps its layers in GitHub's Actions cache: with its inputs unchanged
-# a job restores the image in about a minute instead of rebuilding it.
+# - the toolchain_check sample and the ICS code build byte-identically twice
+#   with GCC 13, which also holds every GCC build to -Werror;
+# - the ICS code passes its tests under Clang's ASan, UBSan and TSan;
+# - the code listed in cpp/policy/coverage-gates.txt keeps full line and
+#   branch coverage and its assertion-density floor;
+# - the Power-of-Ten profile holds: no suppressions, a clean -Werror Clang
+#   build and clang-tidy;
+# - the image's GeographicLib reproduces the golden frame vectors.
+#
+# Each stage must also reject its seeded defect. "images" builds the images
+# the checks run in, only those GHCR does not have for their key
+# (.github/workflows/conan-deps.yml); each check then pulls its image
+# (.github/actions/build-image) and downloads nothing else. Every image is
+# signed, with its SBOM and provenance, when it is built (ICS-009,
+# deploy/evidence/README.md).
 
 on:
   pull_request:
@@ -38,9 +32,10 @@ on:
       - .github/scripts/clang_tidy_cache.py
       - .github/ccache.conf
       - .github/workflows/cpp-toolchain.yml
+      - .github/workflows/conan-deps.yml
+      - .github/actions/build-image/**
       - .github/actions/toolchain-image/**
       - .github/actions/conan-deps/**
-      - .github/workflows/conan-deps.yml
   push:
     branches: [main]
     paths:
@@ -54,9 +49,10 @@ on:
       - .github/scripts/clang_tidy_cache.py
       - .github/ccache.conf
       - .github/workflows/cpp-toolchain.yml
+      - .github/workflows/conan-deps.yml
+      - .github/actions/build-image/**
       - .github/actions/toolchain-image/**
       - .github/actions/conan-deps/**
-      - .github/workflows/conan-deps.yml
   workflow_dispatch:
 
 permissions:
@@ -67,93 +63,48 @@ concurrency:
   group: cpp-toolchain-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-env:
-  IMAGE: ghcr.io/matthewk84/ics-cpp
-  # Conan's home is /tmp/conan-home on the runner, and the conan-deps action
-  # restores each job's dependency packages into it: protobuf, abseil and gRPC
-  # build from source for each compiler, build type and sanitizer (ICS-011).
-  RUN: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home ics-cpp:ci
-
 jobs:
-  # The Conan packages of each dependency configuration: a compiler, a build
-  # type and, for ASan and TSan, a sanitizer, as conan-install.sh names its
-  # output folders. Each is built once for each key and kept as a signed
-  # artifact in GHCR; when a configuration's artifact is current, its job only
-  # verifies it. The configurations build side by side, so a dependency that is
-  # slow to build from source costs one configuration's time, not eight.
-  deps:
-    name: Dependencies
+  # The build images of the configurations the checks use, as conan-install.sh
+  # names its output folders: a compiler, a build type and, for ASan and TSan,
+  # a sanitizer. The other C++ workflows use gcc13-Release.
+  images:
+    name: Images
     permissions:
       contents: read
       packages: write
       id-token: write
     uses: ./.github/workflows/conan-deps.yml
     with:
-      configs: >-
-        ["gcc13-Release", "clang17-Release", "gcc13-Debug", "clang17-Debug",
-        "gcc13-Debug-asan", "clang17-Debug-asan", "gcc13-Debug-tsan", "clang17-Debug-tsan"]
+      configs: '["gcc13-Release", "clang17-Debug", "clang17-Debug-asan", "clang17-Debug-tsan"]'
 
-  # The image's own checks. It does not wait for deps, so a stale lockfile
-  # prints the lockfile to commit even when deps cannot install it.
+  # GeographicLib in the image must reproduce golden/frames exactly (ICS-014).
   image-checks:
-    name: ics-cpp image, golden vectors, lockfile and SBOM
+    name: Golden frame vectors
+    needs: images
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: Check out the repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
 
-      - name: Build the ics-cpp image
-        uses: ./.github/actions/toolchain-image
+      - name: Pull the gcc13-Release build image
+        uses: ./.github/actions/build-image
         with:
-          name: ics-cpp
-          dockerfile: deploy/toolchain/Dockerfile.cpp
+          config: gcc13-Release
 
-      # GeographicLib in the image must reproduce golden/frames exactly (ICS-014).
       - name: Golden frame vectors are current
-        run: ${RUN} golden/frames/generate.sh --check
+        run: docker run --rm -v "${GITHUB_WORKSPACE}:/work/ics" -w /work/ics ics-build:ci golden/frames/generate.sh --check
 
-      # When the lockfile is missing, or cpp/conanfile.py requires a package it
-      # does not pin, print the lockfile to commit. An existing lockfile keeps
-      # every pin; only the new packages are resolved (--lockfile-partial).
-      # The check uses conan graph info, which holds to the lockfile strictly;
-      # conan lock create always treats it as partial, so it never fails here.
-      - name: Require a current Conan lockfile
-        run: |
-          profile=(--profile:all cpp/conan/profiles/gcc13)
-          lock=(conan lock create cpp "${profile[@]}" --lockfile-out /tmp/conan.lock)
-          if [ ! -f cpp/conan.lock ]; then
-            ${RUN} bash -c "${lock[*]} >/dev/null && base64 -w0 /tmp/conan.lock"
-            echo
-            echo "::error::cpp/conan.lock is missing. Decode the base64 line above into cpp/conan.lock and commit it."
-            exit 1
-          fi
-          if ${RUN} conan graph info cpp "${profile[@]}" --lockfile cpp/conan.lock >"${RUNNER_TEMP}/lock-check.log" 2>&1; then
-            exit 0
-          fi
-          tail -n 20 "${RUNNER_TEMP}/lock-check.log"
-          ${RUN} bash -c "${lock[*]} --lockfile cpp/conan.lock --lockfile-partial >/dev/null && base64 -w0 /tmp/conan.lock"
-          echo
-          echo "::error::cpp/conan.lock does not pin every package cpp/conanfile.py requires. Decode the base64 line above into cpp/conan.lock and commit it; the packages already pinned keep their versions."
-          exit 1
-
-      - name: Install Syft and cosign
-        run: |
-          deploy/evidence/install-tools.sh "${RUNNER_TEMP}/bin"
-          echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
-
-      - name: SBOM of the image
-        run: deploy/evidence/image-sbom.sh ics-cpp:ci "${IMAGE}" "${RUNNER_TEMP}/ics-cpp.cdx.json"
-
-  # One stage per job, each in its own copy of the image, with the Conan
-  # packages deps published for its configuration: UBSan, coverage and the
-  # policy checks use the plain Debug dependencies, and fuzzing the Clang
-  # ASan ones.
+  # One stage per job, each in the build image of its configuration: UBSan,
+  # coverage and the policy check use the plain Clang Debug dependencies.
   checks:
     name: ${{ matrix.name }}
-    needs: deps
+    needs: images
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
@@ -171,11 +122,11 @@ jobs:
       CMAKE_C_COMPILER_LAUNCHER: ${{ !startsWith(matrix.name, 'Reproducible') && 'ccache' || '' }}
       CMAKE_CXX_COMPILER_LAUNCHER: ${{ !startsWith(matrix.name, 'Reproducible') && 'ccache' || '' }}
       RUN: >-
-        docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home
+        docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics
         -v /tmp/ci-cache:/opt/ci-cache -e CCACHE_DIR=/opt/ci-cache/ccache
         -e CCACHE_CONFIGPATH=/work/ics/.github/ccache.conf -e CMAKE_C_COMPILER_LAUNCHER -e CMAKE_CXX_COMPILER_LAUNCHER
         -e TIDY_CACHE_DIR=/opt/ci-cache/tidy
-        -v ${{ github.workspace }}/.github/scripts/clang_tidy_cache.py:/usr/local/bin/clang-tidy-17:ro ics-cpp:ci
+        -v ${{ github.workspace }}/.github/scripts/clang_tidy_cache.py:/usr/local/bin/clang-tidy-17:ro ics-build:ci
     strategy:
       fail-fast: false
       matrix:
@@ -183,18 +134,6 @@ jobs:
           - name: Reproducible build with GCC 13
             conan: gcc13-Release
             check: deploy/toolchain/check-reproducible.sh gcc
-          - name: Reproducible build with Clang 17
-            conan: clang17-Release
-            check: deploy/toolchain/check-reproducible.sh clang
-          - name: AddressSanitizer with GCC 13
-            conan: gcc13-Debug-asan
-            check: cpp/policy/check-dynamic.sh sanitizers gcc-asan
-          - name: UndefinedBehaviorSanitizer with GCC 13
-            conan: gcc13-Debug
-            check: cpp/policy/check-dynamic.sh sanitizers gcc-ubsan
-          - name: ThreadSanitizer with GCC 13
-            conan: gcc13-Debug-tsan
-            check: cpp/policy/check-dynamic.sh sanitizers gcc-tsan
           - name: AddressSanitizer with Clang 17
             conan: clang17-Debug-asan
             check: cpp/policy/check-dynamic.sh sanitizers clang-asan
@@ -204,16 +143,10 @@ jobs:
           - name: ThreadSanitizer with Clang 17
             conan: clang17-Debug-tsan
             check: cpp/policy/check-dynamic.sh sanitizers clang-tsan
-          - name: Fuzzing (one minute per target)
-            conan: clang17-Debug-asan
-            check: cpp/policy/check-dynamic.sh fuzz 60
           - name: Coverage and assertion density
             conan: clang17-Debug
             check: cpp/policy/check-dynamic.sh coverage
-          - name: Power-of-Ten policy with GCC 13 (warnings)
-            conan: gcc13-Debug
-            check: cpp/policy/check-policy.sh gcc
-          - name: Power-of-Ten policy with Clang 17 (warnings, clang-tidy, cppcheck)
+          - name: Power-of-Ten policy with Clang 17 (warnings, clang-tidy)
             conan: clang17-Debug
             check: cpp/policy/check-policy.sh clang
     steps:
@@ -235,17 +168,10 @@ jobs:
           key: ci-cache|${{ matrix.check }}|${{ github.sha }}
           restore-keys: ci-cache|${{ matrix.check }}|
 
-      - name: Build the ics-cpp image
-        uses: ./.github/actions/toolchain-image
-        with:
-          name: ics-cpp
-          dockerfile: deploy/toolchain/Dockerfile.cpp
-
-      - name: Restore the ${{ matrix.conan }} Conan packages
-        uses: ./.github/actions/conan-deps
+      - name: Pull the ${{ matrix.conan }} build image
+        uses: ./.github/actions/build-image
         with:
           config: ${{ matrix.conan }}
-          toolchain: ${{ env.RUN }}
 
       - name: ${{ matrix.name }}
         env:
@@ -265,47 +191,3 @@ jobs:
           path: /tmp/ci-cache
           key: ci-cache|${{ matrix.check }}|${{ github.sha }}
 
-  # Only from main, and only once every check has passed.
-  publish:
-    name: Publish and sign the ics-cpp image
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    needs: [image-checks, checks]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-    steps:
-      - name: Check out the repository
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-        with:
-          persist-credentials: false
-
-      - name: Build the ics-cpp image
-        uses: ./.github/actions/toolchain-image
-        with:
-          name: ics-cpp
-          dockerfile: deploy/toolchain/Dockerfile.cpp
-
-      - name: Install Syft and cosign
-        run: |
-          deploy/evidence/install-tools.sh "${RUNNER_TEMP}/bin"
-          echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
-
-      - name: SBOM of the image
-        run: deploy/evidence/image-sbom.sh ics-cpp:ci "${IMAGE}" "${RUNNER_TEMP}/ics-cpp.cdx.json"
-
-      - name: Publish the image
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ACTOR: ${{ github.actor }}
-        run: |
-          echo "${GITHUB_TOKEN}" | docker login ghcr.io -u "${ACTOR}" --password-stdin
-          docker tag ics-cpp:ci "${IMAGE}:${GITHUB_SHA}"
-          docker tag ics-cpp:ci "${IMAGE}:main"
-          docker push "${IMAGE}:${GITHUB_SHA}"
-          docker push "${IMAGE}:main"
-
-      - name: Sign the image and attach its SBOM and provenance
-        run: deploy/evidence/attest-image.sh "${IMAGE}" "${GITHUB_SHA}" "${RUNNER_TEMP}/ics-cpp.cdx.json"

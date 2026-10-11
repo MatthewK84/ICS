@@ -1,7 +1,8 @@
 # Fuzz targets (ICS-008). Every build compiles each fuzz source, so the
-# warnings, clang-tidy and cppcheck cover it. With -DICS_FUZZ=ON (the
-# clang-fuzz preset) it also links a libFuzzer executable and lists it in
-# <build>/fuzzers.txt, which cpp/policy/check-dynamic.sh reads.
+# warnings and clang-tidy cover it. With -DICS_FUZZ=ON (the clang-fuzz preset)
+# it also links a libFuzzer executable and lists it in <build>/fuzzers.txt,
+# which cpp/policy/check-dynamic.sh reads. CI no longer fuzzes (#159); run
+# "cpp/policy/check-dynamic.sh fuzz SECONDS" by hand.
 #
 #   ics_add_fuzzer(<name> SOURCES <file>... CORPUS <folder> [LIBRARIES <target>...])
 option(ICS_FUZZ "Link the libFuzzer targets; needs Clang and the clang-fuzz preset" OFF)

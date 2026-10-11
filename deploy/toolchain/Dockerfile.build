@@ -1,0 +1,21 @@
+# An ICS build image (#159): the ics-cpp toolchain image with one dependency
+# configuration's Conan packages in its Conan home, so a job builds and tests
+# the ICS code without downloading anything. The C++ toolchain workflow builds
+# it once for each key (deploy/toolchain/image-key.sh), through
+# .github/workflows/conan-deps.yml, from a folder that holds only the
+# configuration's archive (conan-deps.sh build):
+#
+#   docker build -f deploy/toolchain/Dockerfile.build --build-arg TOOLCHAIN_TAG=<key> FOLDER
+#
+# TOOLCHAIN_TAG is the toolchain image's tag (image-key.sh toolchain, with
+# -prN for a pull request's own). The archive is mounted, not copied, so the
+# image holds the packages once.
+ARG TOOLCHAIN_TAG
+FROM ghcr.io/matthewk84/ics-cpp:${TOOLCHAIN_TAG}
+
+RUN --mount=type=bind,source=conan-packages.tgz,target=/tmp/conan-packages.tgz \
+    conan cache restore -vwarning /tmp/conan-packages.tgz >/dev/null
+
+# conan-install.sh installs from the Conan cache alone, building and
+# downloading nothing, and fails if a package is missing.
+ENV CONAN_OFFLINE=1

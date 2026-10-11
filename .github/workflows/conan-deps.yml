@@ -1,22 +1,33 @@
-name: Conan dependencies
+name: Build images
 
-# Builds the Conan packages of each dependency configuration once for each
-# key, and keeps them in GHCR as a signed artifact
-# (deploy/evidence/dependency-artifact.sh) that every C++ job restores through
-# .github/actions/conan-deps. The key covers everything that decides the
-# packages' contents (deploy/toolchain/conan-deps.sh key), so a configuration
-# is rebuilt only when one of those changes, never because a cache expired.
+# Builds the versioned images every C++ job runs in (#159), and only the ones
+# GHCR does not have yet. deploy/toolchain/image-key.sh names each by a hash of
+# the committed files that decide its contents:
 #
-# When a configuration's artifact for the key is missing, its job restores the
-# last one built on main, builds only the packages that are missing, checks
-# that the archive installs on its own, and publishes it, signed keyless by
-# this workflow. Runs on main publish CONFIG-KEY and point CONFIG-main at the
-# key's artifact, whether they published it or found it; runs for a pull
-# request from this repository publish CONFIG-KEY-prN, which only that pull
-# request trusts. Other runs publish nothing, and their jobs build what they
-# need themselves.
+#   ghcr.io/matthewk84/ics-cpp:KEY           the toolchain (Dockerfile.cpp)
+#   ghcr.io/matthewk84/ics-build:CONFIG-KEY  the toolchain with CONFIG's Conan
+#                                            packages (Dockerfile.build)
 #
-# Called by the C++ toolchain workflow, which lists the configurations.
+# Runs on main build under those tags. A run for a pull request from this
+# repository builds the ones main has none of, tagged with -prN after them,
+# which only that pull request uses; main never runs an image a pull request
+# built. Other runs build nothing and fail when an image is missing.
+#
+# Each image is signed keyless by this workflow when it is pushed, with its
+# SBOM and SLSA provenance attached, and the signature checked then, once
+# (deploy/evidence/attest-image.sh). The jobs that run in the images trust the
+# repository's registry and check nothing (.github/actions/build-image).
+#
+# Building is the only time anything is fetched from outside GitHub: the
+# toolchain from the Ubuntu snapshot, PyPI and the geoid grid, unless the image
+# layer cache has them; the Conan packages from their last signed archive in
+# GHCR (deploy/evidence/dependency-artifact.sh), building only the ones it
+# lacks. A configuration's archive is still published for each key, so the
+# next image starts from it. The file keeps its name, conan-deps.yml, because
+# those archives are signed with its identity.
+#
+# Called by the C++ toolchain workflow, whose paths cover every input of the
+# images; jobs in other workflows wait for the images it builds.
 
 on:
   workflow_call:
@@ -29,12 +40,87 @@ on:
 permissions:
   contents: read
 
+env:
+  TOOLCHAIN_IMAGE: ghcr.io/matthewk84/ics-cpp
+  BUILD_IMAGE: ghcr.io/matthewk84/ics-build
+  PUBLISH: ${{ github.ref == 'refs/heads/main' || github.event.pull_request.head.repo.full_name == github.repository }}
+  SUFFIX: ${{ github.event_name == 'pull_request' && format('-pr{0}', github.event.pull_request.number) || '' }}
+  SIGNER_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/conan-deps.yml@${{ github.ref }}
+
 jobs:
-  packages:
-    name: Conan packages (${{ matrix.config }})
+  toolchain:
+    name: Toolchain image
     runs-on: ubuntu-24.04
-    # gRPC alone takes up to two hours with sanitizers (#146). A key change
-    # usually builds a package or two on top of main's last artifact.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    outputs:
+      ref: ${{ steps.find.outputs.ref || steps.publish.outputs.ref }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Log in to GHCR
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: echo "${TOKEN}" | docker login ghcr.io -u "${ACTOR}" --password-stdin
+
+      - name: Look up the toolchain image
+        id: find
+        run: |
+          key="$(deploy/toolchain/image-key.sh toolchain)"
+          echo "key=${key}" >> "${GITHUB_OUTPUT}"
+          for ref in "${TOOLCHAIN_IMAGE}:${key}" "${TOOLCHAIN_IMAGE}:${key}${SUFFIX}"; do
+            if docker buildx imagetools inspect "${ref}" >/dev/null 2>&1; then
+              echo "ref=${ref}" >> "${GITHUB_OUTPUT}"
+              echo "Toolchain image: ${ref}"
+              exit 0
+            fi
+          done
+          echo "No toolchain image for ${key} yet"
+
+      - name: Stop when the image cannot be published
+        if: steps.find.outputs.ref == '' && env.PUBLISH != 'true'
+        run: |
+          echo "::error::the toolchain image is missing, and this run cannot publish one"
+          exit 1
+
+      - name: Build the toolchain image
+        if: steps.find.outputs.ref == ''
+        uses: ./.github/actions/toolchain-image
+        with:
+          name: ics-cpp
+          dockerfile: deploy/toolchain/Dockerfile.cpp
+
+      - name: Install Syft and cosign
+        if: steps.find.outputs.ref == ''
+        run: |
+          deploy/evidence/install-tools.sh "${RUNNER_TEMP}/bin"
+          echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
+
+      - name: Publish, sign and verify the toolchain image
+        id: publish
+        if: steps.find.outputs.ref == ''
+        env:
+          TAG: ${{ steps.find.outputs.key }}${{ env.SUFFIX }}
+        run: |
+          docker tag ics-cpp:ci "${TOOLCHAIN_IMAGE}:${TAG}"
+          docker push --quiet "${TOOLCHAIN_IMAGE}:${TAG}"
+          deploy/evidence/image-sbom.sh ics-cpp:ci "${TOOLCHAIN_IMAGE}" "${RUNNER_TEMP}/ics-cpp.cdx.json"
+          deploy/evidence/attest-image.sh "${TOOLCHAIN_IMAGE}" "${TAG}" "${RUNNER_TEMP}/ics-cpp.cdx.json"
+          echo "ref=${TOOLCHAIN_IMAGE}:${TAG}" >> "${GITHUB_OUTPUT}"
+
+  configs:
+    name: Build image (${{ matrix.config }})
+    needs: toolchain
+    runs-on: ubuntu-24.04
+    # gRPC alone takes up to two hours with sanitizers (#146), but only when
+    # the configuration's last archive lacks it.
     timeout-minutes: 300
     permissions:
       contents: read
@@ -45,23 +131,81 @@ jobs:
       matrix:
         config: ${{ fromJSON(inputs.configs) }}
     env:
+      CONFIG: ${{ matrix.config }}
+      TOOLCHAIN: ${{ needs.toolchain.outputs.ref }}
       RUN: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home ics-cpp:ci
       ARCHIVE: cpp/build/conan-deps/${{ matrix.config }}/conan-packages.tgz
-      PUBLISH: ${{ github.ref == 'refs/heads/main' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Check out the repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
 
-      - name: Build the ics-cpp image
-        uses: ./.github/actions/toolchain-image
-        with:
-          name: ics-cpp
-          dockerfile: deploy/toolchain/Dockerfile.cpp
+      - name: Log in to GHCR
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: echo "${TOKEN}" | docker login ghcr.io -u "${ACTOR}" --password-stdin
+
+      - name: Look up the ${{ matrix.config }} build image
+        id: find
+        run: |
+          name="$(deploy/toolchain/image-key.sh "${CONFIG}")"
+          echo "name=${name}" >> "${GITHUB_OUTPUT}"
+          if image="$(deploy/toolchain/find-image.sh "${CONFIG}" "${SUFFIX}" 2>/dev/null)"; then
+            echo "found=true" >> "${GITHUB_OUTPUT}"
+            echo "Build image: ${image}"
+          else
+            echo "No ${CONFIG} build image for ${name} yet"
+          fi
+
+      - name: Stop when the image cannot be published
+        if: steps.find.outputs.found != 'true' && env.PUBLISH != 'true'
+        run: |
+          echo "::error::the ${CONFIG} build image is missing, and this run cannot publish one"
+          exit 1
+
+      # The Conan packages and the image together take about 15 GB; the
+      # runner's preinstalled SDKs are not used.
+      - name: Make room on the runner
+        if: steps.find.outputs.found != 'true'
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+
+      - name: Pull the toolchain image
+        if: steps.find.outputs.found != 'true'
+        run: |
+          docker pull --quiet "${TOOLCHAIN}"
+          docker tag "${TOOLCHAIN}" ics-cpp:ci
+
+      # When the lockfile is missing, or cpp/conanfile.py requires a package it
+      # does not pin, print the lockfile to commit. The lockfile is an input of
+      # every build image, so this runs only when an image is built. An
+      # existing lockfile keeps every pin; only the new packages are resolved
+      # (--lockfile-partial). The check uses conan graph info, which holds to
+      # the lockfile strictly; conan lock create always treats it as partial.
+      - name: Require a current Conan lockfile
+        if: steps.find.outputs.found != 'true' && matrix.config == 'gcc13-Release'
+        run: |
+          profile=(--profile:all cpp/conan/profiles/gcc13)
+          lock=(conan lock create cpp "${profile[@]}" --lockfile-out /tmp/conan.lock)
+          if [ ! -f cpp/conan.lock ]; then
+            ${RUN} bash -c "${lock[*]} >/dev/null && base64 -w0 /tmp/conan.lock"
+            echo
+            echo "::error::cpp/conan.lock is missing. Decode the base64 line above into cpp/conan.lock and commit it."
+            exit 1
+          fi
+          if ${RUN} conan graph info cpp "${profile[@]}" --lockfile cpp/conan.lock >"${RUNNER_TEMP}/lock-check.log" 2>&1; then
+            exit 0
+          fi
+          tail -n 20 "${RUNNER_TEMP}/lock-check.log"
+          ${RUN} bash -c "${lock[*]} --lockfile cpp/conan.lock --lockfile-partial >/dev/null && base64 -w0 /tmp/conan.lock"
+          echo
+          echo "::error::cpp/conan.lock does not pin every package cpp/conanfile.py requires. Decode the base64 line above into cpp/conan.lock and commit it; the packages already pinned keep their versions."
+          exit 1
 
       - name: Look up the ${{ matrix.config }} packages
         id: deps
+        if: steps.find.outputs.found != 'true'
         uses: ./.github/actions/conan-deps
         with:
           config: ${{ matrix.config }}
@@ -69,25 +213,29 @@ jobs:
           for-build: 'true'
 
       - name: Build the missing ${{ matrix.config }} packages and save them
-        if: steps.deps.outputs.match != 'current' && env.PUBLISH == 'true'
-        env:
-          CONFIG: ${{ matrix.config }}
+        if: steps.find.outputs.found != 'true'
         run: ${RUN} deploy/toolchain/conan-deps.sh build "${CONFIG}" "${ARCHIVE}"
 
       - name: Publish and sign the ${{ matrix.config }} packages
-        if: steps.deps.outputs.match != 'current' && env.PUBLISH == 'true'
+        if: steps.find.outputs.found != 'true' && steps.deps.outputs.match != 'current'
         env:
-          CONFIG: ${{ matrix.config }}
           KEY: ${{ steps.deps.outputs.key }}
         run: deploy/evidence/dependency-artifact.sh publish "${CONFIG}" "${KEY}" "${ARCHIVE}"
 
       - name: Point ${{ matrix.config }}-main at the current packages
-        if: github.ref == 'refs/heads/main'
+        if: steps.find.outputs.found != 'true' && github.ref == 'refs/heads/main'
         env:
-          CONFIG: ${{ matrix.config }}
           KEY: ${{ steps.deps.outputs.key }}
         run: deploy/evidence/dependency-artifact.sh point "${CONFIG}" "${KEY}"
 
-      - name: Leave the ${{ matrix.config }} packages to the jobs that use them
-        if: steps.deps.outputs.match != 'current' && env.PUBLISH != 'true'
-        run: echo "::notice::this run cannot publish dependency artifacts; each job builds the packages it is missing"
+      - name: Build, publish, sign and verify the ${{ matrix.config }} build image
+        if: steps.find.outputs.found != 'true'
+        env:
+          TAG: ${{ steps.find.outputs.name }}${{ env.SUFFIX }}
+        run: |
+          sudo rm -rf /tmp/conan-home
+          docker build --quiet -f deploy/toolchain/Dockerfile.build --build-arg "TOOLCHAIN_TAG=${TOOLCHAIN##*:}" \
+            -t "${BUILD_IMAGE}:${TAG}" "$(dirname "${ARCHIVE}")"
+          docker push --quiet "${BUILD_IMAGE}:${TAG}"
+          deploy/evidence/image-sbom.sh "${BUILD_IMAGE}:${TAG}" "${BUILD_IMAGE}" "${RUNNER_TEMP}/ics-build.cdx.json"
+          deploy/evidence/attest-image.sh "${BUILD_IMAGE}" "${TAG}" "${RUNNER_TEMP}/ics-build.cdx.json"

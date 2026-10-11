@@ -1,0 +1,62 @@
+name: Build image
+description: >-
+  Pulls the versioned build image of one dependency configuration from GHCR
+  (#159): the ics-cpp toolchain with that configuration's Conan packages, made
+  by .github/workflows/conan-deps.yml and named by
+  deploy/toolchain/image-key.sh. It is loaded as ics-build:ci. Its signature
+  was verified once, when it was built; nothing is downloaded from outside
+  GitHub. A job that starts while the C++ toolchain workflow is still
+  building the image waits for it.
+
+inputs:
+  config:
+    description: The dependency configuration, such as gcc13-Release.
+    required: true
+  pull:
+    description: "'false' only finds the image, for a job that runs in it as its container."
+    required: false
+    default: 'true'
+  wait-minutes:
+    description: How long to wait for an image the C++ toolchain workflow is still building.
+    required: false
+    default: '0'
+  token:
+    description: A token that can read the repository's packages.
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  ref:
+    description: The image's reference in GHCR.
+    value: ${{ steps.find.outputs.ref }}
+  tag:
+    description: "The image's tag: a job container names ghcr.io/matthewk84/ics-build:TAG."
+    value: ${{ steps.find.outputs.tag }}
+
+runs:
+  using: composite
+  steps:
+    - name: Find the ${{ inputs.config }} build image
+      id: find
+      shell: bash
+      env:
+        CONFIG: ${{ inputs.config }}
+        SUFFIX: ${{ github.event_name == 'pull_request' && format('-pr{0}', github.event.pull_request.number) || '' }}
+        WAIT_MINUTES: ${{ inputs.wait-minutes }}
+        TOKEN: ${{ inputs.token }}
+        ACTOR: ${{ github.actor }}
+      run: |
+        echo "${TOKEN}" | docker login ghcr.io -u "${ACTOR}" --password-stdin >/dev/null
+        image="$(deploy/toolchain/find-image.sh "${CONFIG}" "${SUFFIX}" "${WAIT_MINUTES}")"
+        echo "ref=${image}" >> "${GITHUB_OUTPUT}"
+        echo "tag=${image##*:}" >> "${GITHUB_OUTPUT}"
+        echo "Build image: ${image}"
+
+    - name: Pull the ${{ inputs.config }} build image
+      if: inputs.pull == 'true'
+      shell: bash
+      env:
+        IMAGE: ${{ steps.find.outputs.ref }}
+      run: |
+        docker pull --quiet "${IMAGE}"
+        docker tag "${IMAGE}" ics-build:ci

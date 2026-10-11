@@ -12,8 +12,6 @@ name: Lattice sandbox
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "17 7 * * *"
 
 permissions:
   contents: read
@@ -24,7 +22,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RUN: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home ics-cpp:ci
+  RUN: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics ics-build:ci
 
 jobs:
   sandbox:
@@ -54,19 +52,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Build the ics-cpp image
+      - name: Pull the gcc13-Release build image
         if: steps.secrets.outputs.ready == 'true'
-        uses: ./.github/actions/toolchain-image
-        with:
-          name: ics-cpp
-          dockerfile: deploy/toolchain/Dockerfile.cpp
-
-      - name: Restore the gcc13-Release Conan packages
-        if: steps.secrets.outputs.ready == 'true'
-        uses: ./.github/actions/conan-deps
+        uses: ./.github/actions/build-image
         with:
           config: gcc13-Release
-          toolchain: ${{ env.RUN }}
 
       - name: Build ics-lattice-probe
         if: steps.secrets.outputs.ready == 'true'
@@ -95,7 +85,7 @@ jobs:
         run: |
           status=0
           docker run --rm -v "${GITHUB_WORKSPACE}:/work/ics" -w /work/ics -v "${RUNNER_TEMP}/lattice:/run/lattice:ro" \
-            ics-cpp:ci cpp/build/lattice-probe/testing/lattice_probe/ics-lattice-probe "${LATTICE_URL}" \
+            ics-build:ci cpp/build/lattice-probe/testing/lattice_probe/ics-lattice-probe "${LATTICE_URL}" \
             /run/lattice/token 60 1 40 -100 700 /run/lattice/sandbox-token > "${RUNNER_TEMP}/records.jsonl" || status=$?
           echo "Records written: $(wc -l < "${RUNNER_TEMP}/records.jsonl")"
           exit "${status}"

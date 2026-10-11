@@ -84,8 +84,14 @@ class NameTests(unittest.TestCase):
                 self.assertEqual(dr.image_name(reference), expected)
 
     def test_rejects_images_built_from_variables(self) -> None:
-        with self.assertRaisesRegex(dr.RegisterError, "written out"):
-            dr.image_name("${BASE}:latest")
+        for reference in ("${BASE}:latest", "${{", "${REGISTRY}/ics-cpp:1", "ghcr.io/${OWNER}/ics-cpp"):
+            with self.subTest(reference=reference), self.assertRaisesRegex(dr.RegisterError, "written out"):
+                dr.image_name(reference)
+
+    def test_takes_a_tag_or_digest_from_a_variable(self) -> None:
+        self.assertEqual(dr.image_name("ghcr.io/matthewk84/ics-cpp:${TOOLCHAIN_TAG}"), "ghcr.io/matthewk84/ics-cpp")
+        self.assertEqual(dr.image_name("ghcr.io/matthewk84/ics-build:${{"), "ghcr.io/matthewk84/ics-build")
+        self.assertEqual(dr.image_name("ubuntu@${DIGEST}"), "docker.io/library/ubuntu")
 
 
 class ConanTests(unittest.TestCase):

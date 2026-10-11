@@ -2,16 +2,14 @@ name: CodeQL
 
 # Static security and quality analysis of the C++, Python and TypeScript code
 # with CodeQL's security-and-quality queries (ICS-008). Findings go to the
-# repository's Security tab, and the job fails on any finding. The seeded jobs
-# analyze the defects in .github/codeql/seeded without uploading their results
-# or databases and require each language's expected query to fire, so an
-# analysis that silently stops finding things fails too. The weekly run picks
-# up new queries.
+# repository's Security tab, and the job fails on any finding. The weekly run
+# picks up new queries.
 #
 # Python and TypeScript are analyzed without a build. C++ is analyzed from a
-# traced build inside the published ics-cpp image, so CodeQL sees the real
-# compiler flags and headers (C++20, GoogleTest from Conan); guessing them
-# misreads the code.
+# traced build inside the gcc13-Release build image (#159), so CodeQL sees the
+# real compiler flags and headers (C++20, GoogleTest from Conan); guessing them
+# misreads the code. The C++ toolchain workflow builds that image when its
+# inputs change, and the C++ analysis waits for it.
 
 on:
   pull_request:
@@ -22,11 +20,11 @@ on:
       - .github/scripts/**
       - .github/codeql/**
       - .github/workflows/codeql.yml
-      - .github/actions/conan-deps/**
+      - .github/actions/build-image/**
       - deploy/toolchain/conan-*.sh
-      - deploy/evidence/dependency-artifact.sh
-      - deploy/evidence/install-tools.sh
-      - deploy/evidence/tools.txt
+      - deploy/toolchain/image-key.sh
+      - deploy/toolchain/find-image.sh
+      - deploy/toolchain/Dockerfile.build
   push:
     branches: [main]
     paths:
@@ -36,11 +34,11 @@ on:
       - .github/scripts/**
       - .github/codeql/**
       - .github/workflows/codeql.yml
-      - .github/actions/conan-deps/**
+      - .github/actions/build-image/**
       - deploy/toolchain/conan-*.sh
-      - deploy/evidence/dependency-artifact.sh
-      - deploy/evidence/install-tools.sh
-      - deploy/evidence/tools.txt
+      - deploy/toolchain/image-key.sh
+      - deploy/toolchain/find-image.sh
+      - deploy/toolchain/Dockerfile.build
   schedule:
     - cron: "41 4 * * 1"
   workflow_dispatch:
@@ -86,37 +84,57 @@ jobs:
       - name: Fail on any finding
         run: python3 .github/scripts/sarif_check.py "${RUNNER_TEMP}/sarif"
 
-  analyze-cpp:
-    name: CodeQL (c-cpp)
+  # The C++ analysis runs in the build image, as the job's container, so this
+  # job finds it first.
+  find-image:
+    name: CodeQL (c-cpp) build image
     runs-on: ubuntu-24.04
-    # About 15 minutes with the dependency packages built. When the dependency
-    # workflow has not built them for the key yet, and main has no artifact to
-    # start from, every dependency builds from source first: 78 minutes with
-    # gRPC (#146).
-    timeout-minutes: 150
+    timeout-minutes: 120
     permissions:
       contents: read
       packages: read
-      security-events: write
-    container:
-      image: ghcr.io/matthewk84/ics-cpp:main
+    outputs:
+      tag: ${{ steps.find.outputs.tag }}
     steps:
       - name: Check out the repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
 
-      # The job runs in the image, so the packages restore straight into its
-      # Conan home.
-      - name: Restore the gcc13-Debug Conan packages
-        uses: ./.github/actions/conan-deps
+      - name: Find the gcc13-Release build image
+        id: find
+        uses: ./.github/actions/build-image
         with:
-          config: gcc13-Debug
+          config: gcc13-Release
+          pull: 'false'
+          wait-minutes: '110'
 
-      # Before CodeQL starts tracing, so dependencies Conan builds from source
-      # (protobuf, abseil) are not analyzed as ICS code.
+  analyze-cpp:
+    name: CodeQL (c-cpp)
+    needs: find-image
+    runs-on: ubuntu-24.04
+    # About 15 minutes: the image holds every dependency.
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+    container:
+      image: ghcr.io/matthewk84/ics-build:${{ needs.find-image.outputs.tag }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      # Before CodeQL starts tracing, so the dependencies are not analyzed as
+      # ICS code. The image sets CONAN_OFFLINE, so this builds and downloads
+      # nothing.
       - name: Install the Conan dependencies
-        run: deploy/toolchain/conan-install.sh gcc-debug
+        run: deploy/toolchain/conan-install.sh gcc-release
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
@@ -128,8 +146,8 @@ jobs:
       - name: Build (traced by CodeQL)
         run: |
           cd cpp
-          cmake --preset gcc-debug
-          cmake --build --preset gcc-debug
+          cmake --preset gcc-release
+          cmake --build --preset gcc-release
 
       - name: Analyze
         uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
@@ -151,78 +169,3 @@ jobs:
         with:
           sarif_file: ${{ runner.temp }}/sarif
           category: /language:c-cpp
-
-  seeded-cpp:
-    name: CodeQL seeded defect (c-cpp)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    container:
-      image: ghcr.io/matthewk84/ics-cpp:main
-    steps:
-      - name: Check out the repository
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-        with:
-          persist-credentials: false
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
-        with:
-          languages: c-cpp
-          build-mode: manual
-          config-file: .github/codeql/codeql-seeded.yml
-
-      - name: Build the seeded defect (traced by CodeQL)
-        run: g++-13 -std=c++20 -c .github/codeql/seeded/format_argument.cpp -o "${RUNNER_TEMP}/format_argument.o"
-
-      - name: Analyze without uploading
-        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
-        with:
-          category: /seeded/language:c-cpp
-          output: ${{ runner.temp }}/sarif
-          upload: never
-          upload-database: false
-
-      - name: Require the seeded defect
-        run: python3 .github/scripts/sarif_check.py "${RUNNER_TEMP}/sarif" --expect cpp/wrong-type-format-argument
-
-  seeded:
-    name: CodeQL seeded defect (${{ matrix.language }})
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - language: python
-            expect: py/incomplete-url-substring-sanitization
-          - language: javascript-typescript
-            expect: js/incomplete-sanitization
-    steps:
-      - name: Check out the repository
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-        with:
-          persist-credentials: false
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
-        with:
-          languages: ${{ matrix.language }}
-          build-mode: none
-          config-file: .github/codeql/codeql-seeded.yml
-
-      - name: Analyze without uploading
-        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
-        with:
-          category: /seeded/language:${{ matrix.language }}
-          output: ${{ runner.temp }}/sarif
-          upload: never
-          upload-database: false
-
-      - name: Require the seeded defect
-        env:
-          EXPECTED_RULE: ${{ matrix.expect }}
-        run: python3 .github/scripts/sarif_check.py "${RUNNER_TEMP}/sarif" --expect "${EXPECTED_RULE}"

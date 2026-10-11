@@ -19,7 +19,9 @@ readonly SBOM="${3:?usage: attest-image.sh IMAGE TAG SBOM}"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 readonly ROOT
 readonly SHA="${GITHUB_SHA:?GITHUB_SHA must be set}"
-readonly IDENTITY="${GITHUB_SERVER_URL:?}/${GITHUB_WORKFLOW_REF:?}"
+# A reusable workflow signs with its own identity, not its caller's, which is
+# what GITHUB_WORKFLOW_REF names there; it passes its own as SIGNER_WORKFLOW_REF.
+readonly IDENTITY="${GITHUB_SERVER_URL:?}/${SIGNER_WORKFLOW_REF:-${GITHUB_WORKFLOW_REF:?}}"
 readonly ISSUER="https://token.actions.githubusercontent.com"
 WORK="$(mktemp -d)"
 readonly WORK

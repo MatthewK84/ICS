@@ -221,7 +221,7 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
 - **Events.** `PREEXISTING`, `CREATED` and `UPDATE` events of a live entity with a position give a record; a deleted or expired entity, or one without a position, gives nothing, and staleness is left to `ics-plid` (ICS-030). Lattice writes protobuf messages as JSON, which leaves out zeros, so a missing number inside a position, vector or matrix is 0. Times are RFC 3339 from 1970 to 2200, read with the CoT time parser: protobuf's own `TimeUtil::FromString` aborts in a debug build on a year past 9999, which fuzzing found.
 - **Connection.** Each request asks for every existing entity and then every change, with a heartbeat every 5 s. A failed or ended connection, a 408, 429 or 5xx answer, or 15 s without a byte means connecting again after a pause that doubles from 1 s to 30 s; every new connection sends every existing entity again. Any other 4xx, such as 401 or 403 for a refused token, ends the run with an error.
 - **Security.** HTTPS with the server's certificate and name verified; plain HTTP only to this host, for tests. Redirects are not followed. The token is read from a file that only its owner may reach, and must be printable ASCII without spaces, so it cannot add a header; it is never logged. The client only reads the stream; the token's read-only scope is set in Lattice. Sandboxes also take `Anduril-Sandbox-Authorization`.
-- **Probe.** [`testing/lattice_probe`](testing/lattice_probe/main.cpp) is `ics-lattice-probe`, which streams for a while and prints the records as JSON lines. The [Lattice sandbox workflow](../.github/workflows/lattice-sandbox.yml) runs it nightly against a Lattice Sandbox once the `LATTICE_URL`, `LATTICE_ENVIRONMENT_TOKEN` and `LATTICE_SANDBOX_TOKEN` secrets are set.
+- **Probe.** [`testing/lattice_probe`](testing/lattice_probe/main.cpp) is `ics-lattice-probe`, which streams for a while and prints the records as JSON lines. The [Lattice sandbox workflow](../.github/workflows/lattice-sandbox.yml) runs it by hand against a Lattice Sandbox once the `LATTICE_URL`, `LATTICE_ENVIRONMENT_TOKEN` and `LATTICE_SANDBOX_TOKEN` secrets are set.
 - **Tests.** A synthetic [sample stream](lattice/test/samples/README.md), read in chunks of every size from 1 to 64 bytes, and a loopback HTTP server that plays back streams, errors and silences to the client. The fuzz target reads its input as a stream and as an event.
 
 ## SAPIENT
@@ -401,19 +401,18 @@ The C++ rules from the coding-standards table in [docs/build-plan.md](../docs/bu
 |---|---|
 | No goto; no recursion; functions of 50 lines or fewer; no owning raw pointers or malloc; `std::span` over pointer arithmetic; no mutable globals | clang-tidy, configured in [`.clang-tidy`](.clang-tidy); every finding is an error |
 | `[[nodiscard]]` results are used; no implicit narrowing | `-Wall -Wextra -Wpedantic -Wconversion -Werror` for GCC and Clang, in [`cmake/Warnings.cmake`](cmake/Warnings.cmake) |
-| Defects such as out-of-bounds access or uninitialized reads | cppcheck 2.13 (warning, style, performance and portability checks) over the whole build; every finding is an error |
-| No suppressions | [`policy/check-policy.sh`](policy/check-policy.sh) rejects `NOLINT`, `cppcheck-suppress`, `diagnostic ignored` pragmas, `-Wno-` flags and any extra `.clang-tidy` file |
+| No suppressions | [`policy/check-policy.sh`](policy/check-policy.sh) rejects `NOLINT`, `diagnostic ignored` pragmas, `-Wno-` flags and any extra `.clang-tidy` file |
 | No allocation after initialization | [`ics::testing::NoAllocationScope`](testing/alloc_guard/include/ics/testing/no_allocation_scope.hpp) fails a test that allocates inside it |
 
-Run all of it the way CI does, inside the `ics-cpp` image:
+Run it inside the `ics-cpp` image:
 
 ```sh
 cpp/policy/check-policy.sh          # everything
 cpp/policy/check-policy.sh gcc      # the GCC build and its seeds
-cpp/policy/check-policy.sh clang    # the Clang build, clang-tidy, cppcheck and their seeds
+cpp/policy/check-policy.sh clang    # the Clang build, clang-tidy and their seeds
 ```
 
-CI runs the `gcc` and `clang` halves side by side; both check for suppressions. The script also proves each rule still fires: every file in [`policy/seeded/`](policy/seeded) breaks exactly one rule and must be rejected with the diagnostic named on its first line. The seeds build only with `-DICS_POLICY_SEEDS=ON`.
+CI runs the `clang` half (#159): every build holds both compilers to `-Werror`, and the GCC reproducible build compiles all the ICS code. Both halves check for suppressions. The script also proves each rule still fires: every file in [`policy/seeded/`](policy/seeded) breaks exactly one rule and must be rejected with the diagnostic named on its first line. The seeds build only with `-DICS_POLICY_SEEDS=ON`.
 
 Add tests with `ics_add_gtest(name SOURCES … LIBRARIES …)` from [`cmake/Testing.cmake`](cmake/Testing.cmake). It links GoogleTest and the allocation guard, which replaces the global `operator new` and `delete` so that allocations are counted. Open a `NoAllocationScope` once a component is initialized and run its steady-state path inside it.
 
@@ -426,14 +425,14 @@ Not enforced here: "no exceptions on real-time paths" needs `-fno-exceptions` on
 
 ## Test stages
 
-The dynamic stages run in CI on every change to `cpp/` (ICS-008), through [`policy/check-dynamic.sh`](policy/check-dynamic.sh):
+The dynamic stages run through [`policy/check-dynamic.sh`](policy/check-dynamic.sh) (ICS-008). CI runs the Clang sanitizers and coverage on every change to `cpp/`; the GCC sanitizers and fuzzing run by hand (#159):
 
 | Stage | How | Seeded defect it must catch |
 |---|---|---|
 | AddressSanitizer | `gcc-asan` and `clang-asan` presets; every test must pass | a heap buffer overflow |
 | UndefinedBehaviorSanitizer | `gcc-ubsan` and `clang-ubsan` presets, stopping at the first undefined behaviour | a signed integer overflow |
 | ThreadSanitizer | `gcc-tsan` and `clang-tsan` presets | a data race |
-| libFuzzer | `clang-fuzz` preset (libFuzzer with ASan and UBSan): one minute per fuzz target per change, and an hour per target nightly ([`fuzz-nightly.yml`](../.github/workflows/fuzz-nightly.yml)) | a heap overflow behind a four-byte magic prefix, which must be found within two minutes |
+| libFuzzer | `clang-fuzz` preset (libFuzzer with ASan and UBSan), by hand, for as long as given per fuzz target | a heap overflow behind a four-byte magic prefix, which must be found within two minutes |
 | Coverage (ICS-015) | `clang-coverage` preset (Clang source-based coverage): every line and branch of each path in [`policy/coverage-gates.txt`](policy/coverage-gates.txt) covered, and its assertion density at or above its floor | a branch no test takes, and a function with no `ics::check` under a floor of 1 |
 
 ```sh
@@ -443,7 +442,9 @@ cpp/policy/check-dynamic.sh fuzz 60                # seconds per fuzz target
 cpp/policy/check-dynamic.sh coverage
 ```
 
-The fuzz stage builds only the fuzz targets and runs as many at once as there are processors, so each still gets its full time. In CI, the [C++ toolchain workflow](../.github/workflows/cpp-toolchain.yml) runs every stage as its own job, side by side: the two reproducible builds, the six sanitizer presets, fuzzing, coverage and the two policy halves. With its dependencies already built, a change takes under ten minutes. Each dependency configuration's Conan packages are built once for each key, which covers the lockfile, the profiles and the compilers, and kept in GHCR as an artifact signed by the [dependency workflow](../.github/workflows/conan-deps.yml); every C++ job restores its configuration's packages through [`.github/actions/conan-deps`](../.github/actions/conan-deps/action.yml) after verifying the signature. A change of key rebuilds only the packages that changed, on top of main's last artifact. A pull request's own artifacts serve only that pull request, and main trusts only those built on main.
+The fuzz stage builds only the fuzz targets and runs as many at once as there are processors, so each still gets its full time. In CI, the [C++ toolchain workflow](../.github/workflows/cpp-toolchain.yml) runs six stages as their own jobs, side by side: the GCC reproducible build, the three Clang sanitizers, coverage and the Clang policy half.
+
+Each job runs in the versioned build image of its dependency configuration (#159): the `ics-cpp` toolchain with that configuration's Conan packages, named by a hash of the files that decide its contents ([`deploy/toolchain/image-key.sh`](../deploy/toolchain/image-key.sh)). The [image workflow](../.github/workflows/conan-deps.yml) builds an image only when GHCR has none for its key, signs it with its SBOM and provenance, and verifies the signature then, once. The jobs pull their image through [`.github/actions/build-image`](../.github/actions/build-image/action.yml) and download nothing else. A pull request's own images serve only that pull request, and main uses only images built on main.
 
 The assertion density of a gated path is the number of `ics::check` calls in its functions longer than three lines, divided by the number of those functions. Power of Ten rule 5 asks for two per function; container code, with one failure mode per operation, sits near 0.5, and logging and config, where bad input is an expected outcome rather than a bug, sit lower. Frames code sits at 0: its inputs are checked once, where they are made, and any further check could never fail, so its failure branch could never be covered. So each path has a floor that only rises: CI fails below it, and asks for the floor to be raised when the density rises above it. [`.github/scripts/cpp_coverage.py`](../.github/scripts/cpp_coverage.py) reads function extents from `llvm-cov export`, so a template member counts only once some test instantiates it. Add a library to the gates file when it is written, at its measured density. Test and fuzz folders are never gated. Comparisons in gated code are written out rather than defaulted, because Clang 17's coverage miscounts the branches of a defaulted comparison. The `clang-coverage` preset counts atomically (`-fprofile-update=atomic`): ics-plid's tests run the store's code on several threads at once, and plain counters lose increments there, which made a branch `store_test` takes read as never taken, and could make a branch no test takes read as taken.
 
@@ -451,7 +452,7 @@ The seeded defects live in [`policy/seeded-runtime/`](policy/seeded-runtime), ea
 
 The `asan`, `tsan` and `fuzz` presets link dependencies built with the same sanitizer, from the [`asan`](conan/profiles/asan) and [`tsan`](conan/profiles/tsan) Conan profiles: protobuf and abseil annotate their containers for ASan only when they are built with it, and TSan cannot see synchronization in uninstrumented code. Mixing instrumented and uninstrumented code gives false reports. The `ubsan` presets use the plain debug dependencies, since UBSan checks only the code it instruments. A build folder configured before this change keeps its old toolchain file; configure it again with `cmake --preset <name> --fresh`.
 
-Add a fuzz target with `ics_add_fuzzer(name SOURCES … LIBRARIES … CORPUS folder)` from [`cmake/Fuzzing.cmake`](cmake/Fuzzing.cmake), with a few small inputs in the corpus folder; see [`toolchain_check/fuzz`](toolchain_check/fuzz). Every build compiles fuzz sources, so the warnings, clang-tidy and cppcheck cover them; the `clang-fuzz` preset links them with libFuzzer. A nightly crash fails the run, and the crashing input is uploaded as the `fuzz-crashes` artifact; reproduce it with the fuzz target and the input file as its only argument.
+Add a fuzz target with `ics_add_fuzzer(name SOURCES … LIBRARIES … CORPUS folder)` from [`cmake/Fuzzing.cmake`](cmake/Fuzzing.cmake), with a few small inputs in the corpus folder; see [`toolchain_check/fuzz`](toolchain_check/fuzz). Every build compiles fuzz sources, so the warnings and clang-tidy cover them; the `clang-fuzz` preset links them with libFuzzer. A crash fails the fuzz stage and keeps the crashing input in `ARTIFACT_DIR`, if set; reproduce it with the fuzz target and the input file as its only argument.
 
 CodeQL analyzes the C++ code too, with the Python and TypeScript code; see [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml).
 

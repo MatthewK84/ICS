@@ -4,7 +4,9 @@ description: >-
   NAME:ci, with its layers kept in GitHub's Actions cache. The image is one
   install layer on a pinned base, so when the Dockerfile and the files it
   copies are unchanged the job restores that layer in about a minute instead
-  of rebuilding it; any change rebuilds it, as before.
+  of rebuilding it; any change rebuilds it, as before. The image workflow
+  (.github/workflows/conan-deps.yml) builds ics-cpp with it once for each key
+  (#159); the C++ jobs pull their build image instead.
 
 inputs:
   name:
