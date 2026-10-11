@@ -40,9 +40,10 @@ AppliedRates limit_rates(const AxisRates& demand, const MountStatus& status, con
     static_cast<void>(ics::check(limits.axes[i].max_rate_rad_per_s >= 0.0));
     const double max_rate = std::max(limits.axes[i].max_rate_rad_per_s, 0.0);
     // A demand that is not a number is taken as 0, and counts as clamped.
-    const double wanted = std::isfinite(demand.rad_per_s[i]) ? demand.rad_per_s[i] : 0.0;
+    const bool finite = std::isfinite(demand.rad_per_s[i]);
+    const double wanted = finite ? demand.rad_per_s[i] : 0.0;
     const double rate = std::clamp(wanted, -max_rate, max_rate);
-    out.clamped[i] = rate != demand.rad_per_s[i];
+    out.clamped[i] = !finite || std::abs(wanted) > max_rate;
     const Range allowed = range(limits.axes[i], status.axes[i]);
     const double ahead = status.axes[i].position.value() + (rate * lookahead_s);
     out.stopped_at_limit[i] = (rate > 0.0 && ahead > allowed.max) || (rate < 0.0 && ahead < allowed.min);
