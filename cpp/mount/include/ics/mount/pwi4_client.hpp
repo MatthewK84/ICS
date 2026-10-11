@@ -58,7 +58,7 @@ struct ClientStats {
 class Pwi4Client {
  public:
   // Error::kInvalidArgument for port 0, no attempts or no timeout.
-  [[nodiscard]] static Result<Pwi4Client> make(Pwi4Settings settings);
+  [[nodiscard]] static Result<Pwi4Client> make(const Pwi4Settings& settings);
 
   ~Pwi4Client();
   Pwi4Client(const Pwi4Client&) = delete;
@@ -94,7 +94,7 @@ class Pwi4Client {
  private:
   struct Connection;
 
-  Pwi4Client(Pwi4Settings settings, std::unique_ptr<Connection> connection) noexcept;
+  Pwi4Client(const Pwi4Settings& settings, std::unique_ptr<Connection> connection) noexcept;
 
   // GETs path, retrying under the policy: the answer's body.
   [[nodiscard]] Result<std::string> request(const std::string& path, Deadline deadline);

@@ -71,8 +71,8 @@ std::size_t on_data(const char* data, const std::size_t size, const std::size_t 
 
 }  // namespace
 
-Pwi4Client::Pwi4Client(Pwi4Settings settings, std::unique_ptr<Connection> connection) noexcept
-    : settings_(std::move(settings)),
+Pwi4Client::Pwi4Client(const Pwi4Settings& settings, std::unique_ptr<Connection> connection) noexcept
+    : settings_(settings),
       base_url_(std::string(kLocalPwi4) + std::to_string(settings_.port)),
       connection_(std::move(connection)) {}
 
@@ -80,7 +80,7 @@ Pwi4Client::~Pwi4Client() = default;
 Pwi4Client::Pwi4Client(Pwi4Client&& other) noexcept = default;
 Pwi4Client& Pwi4Client::operator=(Pwi4Client&& other) noexcept = default;
 
-Result<Pwi4Client> Pwi4Client::make(Pwi4Settings settings) {
+Result<Pwi4Client> Pwi4Client::make(const Pwi4Settings& settings) {
   static const bool initialized = curl_global_init(CURL_GLOBAL_DEFAULT) == CURLE_OK;
   static_cast<void>(ics::check(initialized));
   if (!valid(settings)) {
@@ -91,7 +91,6 @@ Result<Pwi4Client> Pwi4Client::make(Pwi4Settings settings) {
   static_cast<void>(ics::check(connection->handle != nullptr));
   CURL* const handle = connection->handle.get();
   const std::array set{
-      curl_easy_setopt(handle, CURLOPT_PROTOCOLS_STR, "http"),
       curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, 0L),
       curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L),
       curl_easy_setopt(handle, CURLOPT_TCP_NODELAY, 1L),
@@ -101,7 +100,7 @@ Result<Pwi4Client> Pwi4Client::make(Pwi4Settings settings) {
   for (const CURLcode code : set) {
     static_cast<void>(ics::check(code == CURLE_OK));
   }
-  return Pwi4Client(std::move(settings), std::move(connection));
+  return Pwi4Client(settings, std::move(connection));
 }
 
 Result<MountStatus> Pwi4Client::status(const Deadline deadline) {
