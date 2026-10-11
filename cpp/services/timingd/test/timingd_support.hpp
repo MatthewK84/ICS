@@ -2,21 +2,22 @@
 
 // Helpers for the ics-timingd tests (ICS-019).
 
-#include <array>
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <optional>
+#include <thread>
+#include <vector>
 
-#include <poll.h>
-#include <sys/socket.h>
-#include <sys/un.h>
+#include <grpcpp/grpcpp.h>
 
 #include "ics/common/units.hpp"
 #include "ics/logging/json_line.hpp"
-#include "ics/timing/unix_socket.hpp"
 #include "ics/timingd/config.hpp"
 #include "ics/v1/time_quality.pb.h"
+#include "ics/v1/time_quality_service.grpc.pb.h"
 #include "support.hpp"
 
 namespace ics::timingd::testing {
@@ -38,33 +39,87 @@ inline Config test_config(const timing::testing::TempDir& dir) {
   return config;
 }
 
-// A subscriber to the reports published at path.
+// Waits up to ten seconds for condition to hold, and says whether it does.
+template <typename Condition>
+[[nodiscard]] bool wait_until(Condition condition) {
+  for (int wait = 0; wait < 1000 && !condition(); ++wait) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  return condition();
+}
+
+// report serialized, as the poll loop posts it.
+[[nodiscard]] inline std::vector<std::byte> serialized(const v1::TimeQuality& report) {
+  std::vector<std::byte> out(report.ByteSizeLong());
+  static_cast<void>(report.SerializeToArray(out.data(), static_cast<int>(out.size())));
+  return out;
+}
+
+// A report from station-1 with clock_state and time_utc_ns set.
+[[nodiscard]] inline v1::TimeQuality report_at(const std::int64_t time_utc_ns,
+                                               const v1::TimeQuality::ClockState clock_state) {
+  v1::TimeQuality report;
+  report.set_station_id("station-1");
+  report.set_time_utc_ns(time_utc_ns);
+  report.set_clock_state(clock_state);
+  return report;
+}
+
+// A gRPC subscriber to the reports ics-timingd serves at path (#150). Its
+// stream ends after kTimeout at the latest, so a test that waits for a report
+// that never comes fails instead of hanging.
 class Subscriber {
  public:
-  explicit Subscriber(const std::filesystem::path& path)
-      : socket_(::socket(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0)), connected_(connect(socket_, path)) {}
+  static constexpr std::chrono::seconds kTimeout{30};
 
-  // The next report, waiting up to a second for it; none if not connected.
-  [[nodiscard]] std::optional<v1::TimeQuality> next() const {
-    pollfd ready{socket_.get(), POLLIN, 0};
-    std::array<std::byte, 512> buffer{};
-    const bool waiting = connected_ && ::poll(&ready, 1, 1000) > 0;
-    const ssize_t size = waiting ? ::recv(socket_.get(), buffer.data(), buffer.size(), 0) : -1;
-    v1::TimeQuality report;
-    if (size < 0 || !report.ParseFromArray(buffer.data(), static_cast<int>(size))) {
+  explicit Subscriber(const std::filesystem::path& path)
+      : stub_(v1::TimeQualityService::NewStub(
+            grpc::CreateChannel("unix:" + path.native(), grpc::InsecureChannelCredentials()))) {
+    context_.set_deadline(std::chrono::system_clock::now() + kTimeout);
+    reader_ = stub_->WatchTimeQuality(&context_, v1::WatchTimeQualityRequest());
+  }
+
+  ~Subscriber() {
+    context_.TryCancel();
+    static_cast<void>(finish());
+  }
+  Subscriber(const Subscriber&) = delete;
+  Subscriber& operator=(const Subscriber&) = delete;
+  Subscriber(Subscriber&&) = delete;
+  Subscriber& operator=(Subscriber&&) = delete;
+
+  // The next report; none once the stream has ended.
+  [[nodiscard]] std::optional<v1::TimeQuality> next() {
+    v1::WatchTimeQualityResponse response;
+    if (status_ || !reader_->Read(&response)) {
+      static_cast<void>(finish());
       return std::nullopt;
     }
-    return report;
+    return response.report();
+  }
+
+  // Asks the server to end the stream; a report already sent may still come.
+  void cancel() { context_.TryCancel(); }
+
+  // Waits for the stream to end, skipping the reports still coming, and
+  // returns its status.
+  [[nodiscard]] grpc::StatusCode finish() {
+    if (status_) {
+      return *status_;
+    }
+    v1::WatchTimeQualityResponse skipped;
+    for (bool reading = true; reading;) {
+      reading = reader_->Read(&skipped);
+    }
+    status_ = reader_->Finish().error_code();
+    return *status_;
   }
 
  private:
-  static bool connect(const timing::Fd& socket, const std::filesystem::path& path) {
-    const sockaddr_un address = timing::unix_address(path).value();
-    return ::connect(socket.get(), reinterpret_cast<const sockaddr*>(&address), sizeof(address)) == 0;
-  }
-
-  timing::Fd socket_;
-  bool connected_ = false;
+  std::unique_ptr<v1::TimeQualityService::Stub> stub_;
+  grpc::ClientContext context_;
+  std::unique_ptr<grpc::ClientReader<v1::WatchTimeQualityResponse>> reader_;
+  std::optional<grpc::StatusCode> status_;
 };
 
 }  // namespace ics::timingd::testing

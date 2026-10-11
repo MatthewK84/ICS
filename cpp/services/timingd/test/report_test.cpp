@@ -84,7 +84,7 @@ TEST(Report, SerializesWithoutAllocating) {
   std::vector<std::byte> buffer(ics::timingd::max_report_size(report));
   std::span<const std::byte> written;
   {
-    const ics::testing::NoAllocationScope no_allocation;
+    const ics::testing::NoAllocationScope no_allocation{ics::testing::ThisThreadOnly{}};
     written = ics::timingd::serialize(report, buffer);
   }
   TimeQuality read;

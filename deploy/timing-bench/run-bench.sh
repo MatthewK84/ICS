@@ -10,10 +10,13 @@
 # 0.5 s, so trials fall at different points of the announce and poll cycles,
 # then emulates GNSS loss: pmc sets the grandmaster's clockClass from 6 to 7
 # and its timeSource from GNSS (0x20) to its internal oscillator (0xA0). The
-# latency is the time from just before that pmc command to the "ts" of the
-# "clock_state" holdover line ics-timingd logs. Then GNSS comes back and the
-# next trial waits for "locked" again. Fails unless every trial is flagged
-# within 1 s.
+# latency is the time from just before that pmc command to the time_utc_ns of
+# the first holdover report that ics-time-watch, a gRPC subscriber, receives
+# from ics-timingd (#150). Then GNSS comes back and the next trial waits for a
+# locked report again. Fails unless every trial is flagged within 1 s.
+#
+# ics-time-watch is taken from ICS_TIMINGD's folder, where the build puts
+# both.
 #
 # ics-timingd reads its config from /etc/ics/ics-timingd.toml. The bench runs
 # it in its own mount namespace with the bench's config mounted there, so the
@@ -22,13 +25,15 @@
 #
 # Run as root: network and mount namespaces need it. Needs ip, ptp4l and pmc
 # (apt-packages.txt), and unshare and mount. Prints one line per trial, and
-# writes trials.csv and the logs of ptp4l and ics-timingd to $BENCH_OUT, if
-# set.
+# writes trials.csv, the reports (reports.jsonl) and the logs of ptp4l,
+# ics-timingd and ics-time-watch to $BENCH_OUT, if set.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 readonly HERE
 readonly TIMINGD="${1:?usage: run-bench.sh ICS_TIMINGD [TRIALS]}"
+WATCH="$(dirname "${TIMINGD}")/ics-time-watch"
+readonly WATCH
 readonly TRIALS="${2:-20}"
 readonly LIMIT_NS=1000000000
 # Seconds to wait for the bench to settle, and for each state change.
@@ -40,6 +45,7 @@ readonly ST_NS="ics-tb-st"
 WORK="$(mktemp -d /tmp/ics-tb.XXXXXX)"
 readonly WORK
 readonly LOG="${WORK}/ics-timingd.log"
+readonly REPORTS="${WORK}/reports.jsonl"
 readonly CSV="${WORK}/trials.csv"
 readonly ETC_ICS="/etc/ics"
 PIDS=()
@@ -64,7 +70,7 @@ cleanup() {
   fi
   if [[ -n "${BENCH_OUT:-}" ]]; then
     mkdir -p "${BENCH_OUT}"
-    cp "${WORK}"/*.log "${WORK}"/*.csv "${BENCH_OUT}/" 2>/dev/null || true
+    cp "${WORK}"/*.log "${WORK}"/*.csv "${WORK}"/*.jsonl "${BENCH_OUT}/" 2>/dev/null || true
   fi
   rm -rf "${WORK}"
 }
@@ -118,14 +124,22 @@ station_is_slave() {
   pmc_to st-ro "GET PORT_DATA_SET" | grep -qE "portState[[:space:]]+SLAVE"
 }
 
-# The number of clock_state lines ics-timingd has logged for STATE.
-state_lines() {
-  grep -c "\"event\":\"clock_state\",\"state\":\"$1\"" "${LOG}" || true
+# The number of reports ics-time-watch has received.
+report_count() {
+  wc -l <"${REPORTS}"
 }
 
-# more_state_lines STATE COUNT: true once there are more than COUNT.
-more_state_lines() {
-  (($(state_lines "$1") > $2))
+# first_report_after COUNT STATE: the time_utc_ns of the first report after
+# the first COUNT whose clock state is STATE (LOCKED, HOLDOVER and so on);
+# nothing if there is none yet.
+first_report_after() {
+  tail -n +"$(($1 + 1))" "${REPORTS}" | grep -m 1 "\"clock_state\":\"CLOCK_STATE_$2\"" \
+    | sed -n 's/.*"time_utc_ns":"\([0-9]*\)".*/\1/p'
+}
+
+# report_after COUNT STATE: true once a report after the first COUNT is STATE.
+report_after() {
+  [[ -n "$(first_report_after "$1" "$2")" ]]
 }
 
 # wait_until SECONDS WHAT COMMAND...: runs COMMAND every 50 ms until it
@@ -138,14 +152,6 @@ wait_until() {
     ((SECONDS < deadline)) || fail "timed out after ${seconds} s waiting for ${what}"
     sleep 0.05
   done
-}
-
-# The time of the last clock_state line for STATE, in ns since the epoch.
-last_state_ns() {
-  local ts
-  ts="$(grep "\"event\":\"clock_state\",\"state\":\"$1\"" "${LOG}" | tail -n 1 | sed -n 's/.*"ts":"\([^"]*\)".*/\1/p')"
-  [[ -n "${ts}" ]] || fail "no clock_state $1 line in ${LOG}"
-  date -u -d "${ts}" +%s%N
 }
 
 # Starts ics-timingd in its own mount namespace, with $WORK/etc-ics mounted
@@ -177,21 +183,29 @@ EOF
   PIDS+=("$!")
 }
 
+# Subscribes to ics-timingd's reports over gRPC once its socket is there,
+# writing each to $REPORTS as it comes.
+start_watch() {
+  wait_until "${SETTLE_S}" "ics-timingd's report socket" test -S "${WORK}/time-quality"
+  "${WATCH}" "${WORK}/time-quality" >"${REPORTS}" 2>"${WORK}/ics-time-watch.log" &
+  PIDS+=("$!")
+}
+
 # One trial: GNSS loss, then recovery. Appends "trial,latency_ns" to the CSV.
 run_trial() {
-  local trial="$1" holdovers locks start detected latency
+  local trial="$1" seen start detected latency
   sleep "0.$(printf '%03d' $((RANDOM % 500)))"
-  holdovers="$(state_lines holdover)"
+  seen="$(report_count)"
   start="$(date -u +%s%N)"
   set_gnss lost
-  wait_until "${CHANGE_S}" "holdover in trial ${trial}" more_state_lines holdover "${holdovers}"
-  detected="$(last_state_ns holdover)"
+  wait_until "${CHANGE_S}" "holdover in trial ${trial}" report_after "${seen}" HOLDOVER
+  detected="$(first_report_after "${seen}" HOLDOVER)"
   latency=$((detected - start))
   echo "${trial},${latency}" >>"${CSV}"
-  printf 'Trial %2d: holdover flagged %4d ms after GNSS loss\n' "${trial}" $((latency / 1000000))
-  locks="$(state_lines locked)"
+  printf 'Trial %2d: holdover reported %4d ms after GNSS loss\n' "${trial}" $((latency / 1000000))
+  seen="$(report_count)"
   set_gnss locked
-  wait_until "${CHANGE_S}" "relock in trial ${trial}" more_state_lines locked "${locks}"
+  wait_until "${CHANGE_S}" "relock in trial ${trial}" report_after "${seen}" LOCKED
 }
 
 # Fails unless every trial is within the limit.
@@ -200,13 +214,14 @@ judge() {
   worst="$(cut -d, -f2 "${CSV}" | sort -n | tail -n 1)"
   echo "Worst of ${TRIALS} trials: $((worst / 1000000)) ms (limit $((LIMIT_NS / 1000000)) ms)"
   ((worst <= LIMIT_NS)) || fail "holdover took $((worst / 1000000)) ms to flag, over the limit"
-  echo "Timing bench: ok; holdover flagged within 1 s in ${TRIALS} of ${TRIALS} trials"
+  echo "Timing bench: ok; holdover reported within 1 s in ${TRIALS} of ${TRIALS} trials"
 }
 
 main() {
   local trial
   ((EUID == 0)) || fail "run as root: network namespaces need it"
   [[ -x "${TIMINGD}" ]] || fail "${TIMINGD} is not an executable"
+  [[ -x "${WATCH}" ]] || fail "${WATCH} is not an executable; build it beside ${TIMINGD}"
   [[ "${TRIALS}" =~ ^[1-9][0-9]*$ ]] || fail "TRIALS must be a positive integer, not ${TRIALS}"
   make_link
   start_ptp4l "${GM_NS}" grandmaster.cfg ics-tb-gm0 gm
@@ -217,7 +232,8 @@ main() {
   mark_station_certain
   wait_until "${SETTLE_S}" "the station to follow the grandmaster" station_is_slave
   start_timingd
-  wait_until "${SETTLE_S}" "ics-timingd to report locked" more_state_lines locked 0
+  start_watch
+  wait_until "${SETTLE_S}" "ics-timingd to report locked" report_after 0 LOCKED
   for ((trial = 1; trial <= TRIALS; trial++)); do
     run_trial "${trial}"
   done

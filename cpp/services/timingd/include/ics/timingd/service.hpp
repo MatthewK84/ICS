@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -10,24 +11,26 @@
 #include "ics/timing/camera_offsets.hpp"
 #include "ics/timing/clock_state.hpp"
 #include "ics/timing/ptp_client.hpp"
-#include "ics/timing/publisher.hpp"
 #include "ics/timing/quality.hpp"
 #include "ics/timingd/config.hpp"
+#include "ics/timingd/report_server.hpp"
 #include "ics/v1/time_quality.pb.h"
 
 namespace ics::timingd {
 
 // ics-timingd's work (ICS-019): each step polls ptp4l once, tracks the clock
-// state and publishes an ics.v1.TimeQuality to every subscriber. All memory
-// is allocated when it opens, except for log lines.
+// state and posts an ics.v1.TimeQuality for its gRPC subscribers (#150). All
+// memory is allocated when it opens, except for log lines and when the camera
+// offsets change; the subscribers' threads allocate on their own.
 class Service {
  public:
-  // Opens the client end of ptp4l's socket and the publish socket. Fails as
-  // ics::timing::PtpClient::open and ics::timing::Publisher::open do.
+  // Opens the client end of ptp4l's socket, and serves the reports on the
+  // publish socket. Fails as ics::timing::PtpClient::open and
+  // ReportServer::open do.
   [[nodiscard]] static Result<Service> open(const Config& config);
 
   // Polls ptp4l, waiting up to the poll interval for its answers, and
-  // publishes the report. Logs "clock_state" when the state changes, and
+  // posts the report for the subscribers, without waiting for them. Logs "clock_state" when the state changes, and
   // "ptp4l_answering" or "ptp4l_unavailable" when ptp4l starts or stops
   // answering; a ptp4l that does not answer means free-running. When the
   // camera offsets file changes, the report takes its offsets, and logs
@@ -37,16 +40,16 @@ class Service {
   void step(const logging::Logger& logger);
 
   [[nodiscard]] timing::ClockState state() const noexcept { return tracker_.state(); }
-  [[nodiscard]] std::size_t subscribers() const noexcept { return publisher_.subscribers(); }
+  [[nodiscard]] std::size_t subscribers() const noexcept { return server_->subscribers(); }
 
  private:
-  Service(timing::PtpClient client, timing::Publisher publisher, const Config& config);
+  Service(timing::PtpClient client, std::unique_ptr<ReportServer> server, const Config& config);
   void log_answering(const logging::Logger& logger, const Result<timing::Snapshot>& polled);
   void log_state(const logging::Logger& logger, const timing::Quality& quality);
   void update_offsets(const logging::Logger& logger);
 
   timing::PtpClient client_;
-  timing::Publisher publisher_;
+  std::unique_ptr<ReportServer> server_;
   timing::QualityTracker tracker_;
   timing::CameraOffsetsWatcher offsets_;
   Duration poll_timeout_;

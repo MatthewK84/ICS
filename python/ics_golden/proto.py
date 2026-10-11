@@ -27,6 +27,7 @@ from ics.v1 import (
     pli_query_pb2,
     run_record_pb2,
     time_quality_pb2,
+    time_quality_service_pb2,
     track_pb2,
     trigger_event_pb2,
 )
@@ -85,7 +86,11 @@ def message_descriptor(message: Message) -> Descriptor:
 
 
 def golden_types() -> tuple[tuple[str, type[Message]], ...]:
-    """Each top-level ICS message and the name of its golden file."""
+    """Each top-level ICS message and the name of its golden file.
+
+    WatchTimeQualityRequest has no fields, so it has none: it is always
+    written as no bytes at all.
+    """
     return (
         ("camera_frame_meta", camera_frame_meta_pb2.CameraFrameMeta),
         ("footprint", footprint_pb2.Footprint),
@@ -100,6 +105,7 @@ def golden_types() -> tuple[tuple[str, type[Message]], ...]:
         ("time_quality", time_quality_pb2.TimeQuality),
         ("track", track_pb2.Track),
         ("trigger_event", trigger_event_pb2.TriggerEvent),
+        ("watch_time_quality_response", time_quality_service_pb2.WatchTimeQualityResponse),
     )
 
 

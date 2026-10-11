@@ -10,8 +10,8 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include <pthread.h>
 #include <signal.h>
-#include <unistd.h>
 
 #include "ics/logging/json_line.hpp"
 #include "ics/logging/logger.hpp"
@@ -25,7 +25,10 @@ using ics::timing::testing::TempDir;
 using ics::timingd::Config;
 
 // Blocks SIGTERM in this thread, and in threads it starts, while it lives;
-// then discards a SIGTERM left pending and restores the signal mask.
+// then discards a SIGTERM left pending and restores the signal mask. The
+// tests send SIGTERM to the serving thread, not to the process: the gRPC
+// threads earlier tests left running do not block it, and one of them could
+// take a signal sent to the process, which would end the test run.
 class BlockedSigterm {
  public:
   BlockedSigterm() {
@@ -79,7 +82,7 @@ TEST(Run, ServesTheConfigFileUntilSigterm) {
                       << "ptp_domain = 0\npoll_interval_ns = 10_000_000\nasymmetry_bound_ns = 1_000\n"
                       << "holdover_drift_ns_per_s = 50.0\n";
   const BlockedSigterm blocked;
-  ::kill(::getpid(), SIGTERM);
+  ::pthread_kill(::pthread_self(), SIGTERM);
   EXPECT_EQ(run({"ics-timingd"}, path), ics::timingd::kExitStopped);
 }
 
@@ -87,9 +90,10 @@ TEST(Run, StepsEachIntervalUntilSigterm) {
   const TempDir dir;
   const BlockedSigterm blocked;
   Logged logged;
-  std::thread stopper([] {
+  const pthread_t serving_thread = ::pthread_self();
+  std::thread stopper([serving_thread] {
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    ::kill(::getpid(), SIGTERM);
+    ::pthread_kill(serving_thread, SIGTERM);
   });
   const int status = ics::timingd::serve(ics::timingd::testing::test_config(dir), logged.logger);
   stopper.join();

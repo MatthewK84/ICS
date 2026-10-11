@@ -1,0 +1,28 @@
+// The stream of a station's time quality reports (#150). ics-timingd serves
+// TimeQualityService over gRPC on a local Unix-domain socket: a client sends
+// one WatchTimeQualityRequest and reads a WatchTimeQualityResponse for each
+// report, until it or the server stops.
+
+syntax = "proto3";
+
+package ics.v1;
+
+import "ics/v1/time_quality.proto";
+
+// A station's time quality, as ics-timingd reports it.
+service TimeQualityService {
+  // The latest report at once, then each new one. A client that reads more
+  // slowly than ics-timingd reports gets the latest report on each read, not
+  // every report.
+  rpc WatchTimeQuality(WatchTimeQualityRequest) returns (stream WatchTimeQualityResponse);
+}
+
+// A request to watch the reports. It has no fields: every client gets every
+// report it can keep up with.
+message WatchTimeQualityRequest {}
+
+// One report.
+message WatchTimeQualityResponse {
+  // The station's time quality when the report was made.
+  TimeQuality report = 1;
+}

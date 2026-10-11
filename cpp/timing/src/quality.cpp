@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "ics/common/check.hpp"
 #include "ics/timing/clock_state.hpp"
 
 namespace ics::timing {
@@ -52,6 +53,8 @@ Quality QualityTracker::quality(const SteadyTime now) const noexcept {
     return quality;
   }
   if (state_ == ClockState::kHoldover) {
+    // The steady clock never runs backwards, so neither does holdover.
+    static_cast<void>(ics::check(now >= holdover_start_));
     quality.holdover = now - holdover_start_;
   }
   quality.error_bound = error_bound(quality.holdover);

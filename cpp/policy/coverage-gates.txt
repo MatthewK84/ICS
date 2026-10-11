@@ -15,7 +15,7 @@ cpp/logging 0.14
 cpp/config 0.07
 cpp/frames 0.00
 cpp/timing 0.05
-cpp/services/timingd 0.23
+cpp/services/timingd 0.25
 cpp/capture 0.05
 cpp/mavlink 0.10
 cpp/cot 0.21

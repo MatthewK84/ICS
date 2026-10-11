@@ -109,7 +109,7 @@ if (!config) {
 
 ## Timing
 
-[`services/timingd/`](services/timingd) is `ics-timingd` (ICS-019), built on `ics::timing` in [`timing/`](timing). It reads the station's PTP state from `ptp4l` and publishes `ics.v1.TimeQuality` reports to the processes on the station that need them.
+[`services/timingd/`](services/timingd) is `ics-timingd` (ICS-019), built on `ics::timing` in [`timing/`](timing). It reads the station's PTP state from `ptp4l` and serves `ics.v1.TimeQuality` reports over gRPC to the processes on the station that need them.
 
 Each poll interval, `ics-timingd` sends GET requests for four data sets (current, parent, time properties and port) to `ptp4l`'s read-only management socket (`uds_ro_address`), and matches the answers to its requests by sequence number. [`ptp_management.hpp`](timing/include/ics/timing/ptp_management.hpp) encodes the requests and decodes the answers (IEEE 1588-2008 clause 15). The decoder's tests and its fuzz target's seed corpus are answers captured from `ptp4l` 4.0.
 
@@ -121,7 +121,13 @@ Each poll interval, `ics-timingd` sends GET requests for four data sets (current
 
 The report's `error_bound_ns` is a model, not a measurement: |offset| plus the accuracy the grandmaster announces (IEEE 1588-2019 Table 5) plus `asymmetry_bound_ns` when locked; the same plus `holdover_drift_ns_per_s` times the time in holdover; and unbounded, written as INT64_MAX, when free-running. Holdover is timed from the first poll that shows it. PTP does not carry `gnss_satellite_count` or `irig_b_locked`, so they stay 0 and false.
 
-- **Reports.** The build plan has `ics-timingd` serve reports as a gRPC server stream. gRPC joined the toolchain with #146, and moving `ics-timingd` to it is #150. Until then, [`publisher.hpp`](timing/include/ics/timing/publisher.hpp) sends each report to every subscriber on a local `SOCK_SEQPACKET` socket (`publish_socket`), one serialized `TimeQuality` per message, which is a server stream's shape. Up to 16 subscribers; one that cannot take a report at once is dropped and must reconnect.
+- **Reports.** `ics-timingd` serves `TimeQualityService` ([`time_quality_service.proto`](../proto/ics/v1/time_quality_service.proto)) over gRPC on a Unix-domain socket at `publish_socket` (#150). `WatchTimeQuality` is a server stream: the latest report at once, then each new one. [`report_server.hpp`](services/timingd/include/ics/timingd/report_server.hpp) serves it.
+  - The poll loop never waits for a subscriber. It posts each serialized report to [`report_board.hpp`](services/timingd/include/ics/timingd/report_board.hpp), which holds only the latest, and each subscriber's gRPC thread copies it out from there.
+    - Posting allocates nothing; gRPC allocates on the subscribers' threads only.
+    - The loop waits only while a subscriber's thread copies the previous report, which takes microseconds.
+  - A subscriber that reads more slowly than the loop reports skips to the latest report. Subscribers want the current state, not its history.
+  - Up to 16 subscribers, which bounds the server's memory; the next is refused with `RESOURCE_EXHAUSTED` until one leaves.
+  - [`ics-time-watch [SOCKET [COUNT]]`](services/timingd/include/ics/timingd/watch_client.hpp) prints each report as it comes, one JSON line each in protobuf's JSON form, from `/run/ics-timingd/time-quality` unless SOCKET is given. With COUNT it stops after that many. The timing bench reads holdover from it.
 - **Camera offsets.** `camera_offsets` comes from the camera offsets file the strobe analyzer writes ([Strobe calibration](#strobe-calibration)), named by `camera_offsets_file`. [`camera_offsets.hpp`](timing/include/ics/timing/camera_offsets.hpp) reads and writes it: a serialized `TimeQuality` with only `station_id` and `camera_offsets` set, at most 1 MiB, written to a temporary file, synced and renamed over the old one, so a reader never sees half a file.
   - Each poll checks the file's modification time, which allocates nothing. Only when it changes is the file read again, and its offsets copied into every report until it next changes.
   - A missing file means no camera is calibrated yet, and the reports carry no offsets.

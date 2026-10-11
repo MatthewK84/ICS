@@ -53,13 +53,13 @@ struct Rig {
 
 TEST(Service, PublishesTheLockedState) {
   Rig rig;
-  const Subscriber subscriber(rig.config.publish_socket);
+  Subscriber subscriber(rig.config.publish_socket);
   rig.ptp4l.answer(rig.config.client_socket, 0);
   rig.service.step(rig.logger);
   EXPECT_EQ(rig.service.state(), ClockState::kLocked);
-  EXPECT_EQ(rig.service.subscribers(), 1U);
   const std::optional<TimeQuality> report = subscriber.next();
   ASSERT_TRUE(report.has_value());
+  EXPECT_EQ(rig.service.subscribers(), 1U);
   EXPECT_EQ(report->station_id(), "station-1");
   EXPECT_GT(report->time_utc_ns(), 0);
   EXPECT_EQ(report->clock_state(), TimeQuality::CLOCK_STATE_LOCKED);
@@ -73,13 +73,13 @@ TEST(Service, PublishesTheLockedState) {
 
 TEST(Service, FlagsHoldoverOnThePollThatShowsIt) {
   Rig rig;
-  const Subscriber subscriber(rig.config.publish_socket);
+  Subscriber subscriber(rig.config.publish_socket);
   rig.ptp4l.answer(rig.config.client_socket, 0);
   rig.service.step(rig.logger);
+  ASSERT_TRUE(subscriber.next().has_value());
   rig.ptp4l.answer(rig.config.client_socket, 4, ics::timing::testing::kHoldover);
   rig.service.step(rig.logger);
   EXPECT_EQ(rig.service.state(), ClockState::kHoldover);
-  ASSERT_TRUE(subscriber.next().has_value());
   const std::optional<TimeQuality> report = subscriber.next();
   ASSERT_TRUE(report.has_value());
   EXPECT_EQ(report->clock_state(), TimeQuality::CLOCK_STATE_HOLDOVER);
@@ -112,24 +112,28 @@ TEST(Service, TreatsASilentPtp4lAsFreeRunning) {
   EXPECT_EQ(count(rig.log.str(), R"("event":"ptp4l_answering")"), 2U);
 }
 
+// The poll loop's thread allocates nothing while a subscriber watches; the
+// subscriber's gRPC thread allocates as it sends, on its own.
 TEST(Service, StepsWithoutAllocatingOnceSettled) {
   Rig rig;
-  const Subscriber subscriber(rig.config.publish_socket);
+  Subscriber subscriber(rig.config.publish_socket);
   rig.ptp4l.answer(rig.config.client_socket, 0);
   rig.service.step(rig.logger);
+  ASSERT_TRUE(subscriber.next().has_value());
   rig.ptp4l.answer(rig.config.client_socket, 4);
   {
-    const ics::testing::NoAllocationScope no_allocation;
+    const ics::testing::NoAllocationScope no_allocation{ics::testing::ThisThreadOnly{}};
     rig.service.step(rig.logger);
   }
   EXPECT_EQ(rig.service.state(), ClockState::kLocked);
-  ASSERT_TRUE(subscriber.next().has_value());
-  EXPECT_TRUE(subscriber.next().has_value());
+  const std::optional<TimeQuality> report = subscriber.next();
+  ASSERT_TRUE(report.has_value());
+  EXPECT_EQ(report->clock_state(), TimeQuality::CLOCK_STATE_LOCKED);
 }
 
 TEST(Service, PublishesTheStrobeCalibrationsOffsets) {
   Rig rig;
-  const Subscriber subscriber(rig.config.publish_socket);
+  Subscriber subscriber(rig.config.publish_socket);
   rig.ptp4l.answer(rig.config.client_socket, 0);
   rig.service.step(rig.logger);
   EXPECT_EQ(subscriber.next().value().camera_offsets_size(), 0);
@@ -156,7 +160,7 @@ TEST(Service, PublishesTheStrobeCalibrationsOffsets) {
 
 TEST(Service, PublishesNoOffsetsFromAFileItCannotUse) {
   Rig rig;
-  const Subscriber subscriber(rig.config.publish_socket);
+  Subscriber subscriber(rig.config.publish_socket);
   ics::v1::TimeQuality::CameraOffset offset;
   offset.set_camera_id("phantom-1");
   offset.set_measured_utc_ns(1);

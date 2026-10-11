@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <utility>
 
@@ -10,14 +11,15 @@
 
 namespace ics::timingd {
 
-Service::Service(timing::PtpClient client, timing::Publisher publisher, const Config& config)
+Service::Service(timing::PtpClient client, std::unique_ptr<ReportServer> server, const Config& config)
     : client_(std::move(client)),
-      publisher_(std::move(publisher)),
+      server_(std::move(server)),
       tracker_(config.model),
       offsets_(config.camera_offsets_file),
       poll_timeout_(config.poll_interval) {
   report_.set_station_id(config.station_id);
   buffer_.resize(max_report_size(report_));
+  server_->reserve(buffer_.size());
 }
 
 Result<Service> Service::open(const Config& config) {
@@ -26,11 +28,11 @@ Result<Service> Service::open(const Config& config) {
   if (!client) {
     return fail(client.error());
   }
-  Result<timing::Publisher> publisher = timing::Publisher::open(config.publish_socket);
-  if (!publisher) {
-    return fail(publisher.error());
+  Result<std::unique_ptr<ReportServer>> server = ReportServer::open(config.publish_socket);
+  if (!server) {
+    return fail(server.error());
   }
-  return Service(std::move(*client), std::move(*publisher), config);
+  return Service(std::move(*client), std::move(*server), config);
 }
 
 void Service::step(const logging::Logger& logger) {
@@ -42,7 +44,7 @@ void Service::step(const logging::Logger& logger) {
   log_state(logger, quality);
   update_offsets(logger);
   fill(quality, logging::system_now(), report_);
-  publisher_.publish(serialize(report_, buffer_));
+  server_->post(serialize(report_, buffer_));
 }
 
 void Service::log_answering(const logging::Logger& logger, const Result<timing::Snapshot>& polled) {
@@ -76,6 +78,7 @@ void Service::update_offsets(const logging::Logger& logger) {
     logger.warn("camera_offsets_unusable", {{"error", read ? "another station's" : to_string(read.error())}});
   }
   buffer_.resize(max_report_size(report_));
+  server_->reserve(buffer_.size());
   // The buffer holds the report at its longest, so serialize never fails.
   static_cast<void>(check(buffer_.size() >= report_.ByteSizeLong()));
 }

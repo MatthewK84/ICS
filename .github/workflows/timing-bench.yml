@@ -62,11 +62,11 @@ jobs:
           config: gcc13-Release
           toolchain: ${{ env.RUN }}
 
-      - name: Build ics-timingd
+      - name: Build ics-timingd and ics-time-watch
         run: >-
           ${RUN} bash -c 'deploy/toolchain/conan-install.sh gcc-release
           && cd cpp && cmake --preset gcc-release >/dev/null
-          && cmake --build build/gcc-release --target ics-timingd'
+          && cmake --build build/gcc-release --target ics-timingd ics-time-watch'
 
       - name: Install the bench's host tools
         run: |

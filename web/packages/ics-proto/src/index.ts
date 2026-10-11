@@ -14,5 +14,6 @@ export * from "./gen/ics/v1/pli_pb.ts";
 export * from "./gen/ics/v1/pli_query_pb.ts";
 export * from "./gen/ics/v1/run_record_pb.ts";
 export * from "./gen/ics/v1/time_quality_pb.ts";
+export * from "./gen/ics/v1/time_quality_service_pb.ts";
 export * from "./gen/ics/v1/track_pb.ts";
 export * from "./gen/ics/v1/trigger_event_pb.ts";
