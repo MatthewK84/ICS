@@ -125,6 +125,17 @@ The strobe calibration ([`cpp/strobe`](../cpp/README.md#strobe-calibration), ICS
 
 A frame is `TIME_SOURCE_IRIG` only when the settings the camera reports it applied follow IRIG-B, and `TimeQuality.irig_b_locked` was true when its segment was recorded. Otherwise it is `TIME_SOURCE_HOST`, and its segment does not verify.
 
+### Encoder clocks
+
+The encoder time-tagger ([`cpp/tagger`](../cpp/README.md#encoder-time-tagger), ICS-032) stamps the mount's encoder counts on the MCU's own counter, which it disciplines to UTC.
+
+- **The edge and its label.** The station's GNSS PPS edge marks the start of each UTC second. The station host, whose clock follows PTP through `ics-timingd`, tells the tagger which second an edge began, within half a second of it; the tagger counts on from there. A host label that differs from the count wins.
+- **The rate.** The counter's rate is the mean of the last 8 intervals between accepted edges. A reading's time is its edge's second plus the ticks since the edge over that rate. A reading latched just before an edge, but handled after it, is stamped just before the edge's second.
+- **Accepting an edge.** An edge counts only within 100 µs of a whole number of seconds after the last, widened by the crystal's ±50 ppm before the rate is measured and by 2 µs a second after. An edge elsewhere is a glitch. Three glitches in a row mean the PPS source moved: the clock starts again, and needs a new label.
+- **Locked.** Three accepted edges in a row and a label lock the clock. A locked sample's bound is 1 µs: the edge's jitter, the counter's resolution and the rate's error over a second.
+- **Holdover.** When an edge is more than 100 µs overdue, samples are extrapolated at the last rate and marked holdover, their bound growing by 2 µs a second. C18's 50 µs then holds for 24 s without PPS. When edges return a whole number of seconds on, the clock locks again at once.
+- **C18.** Time-tag error ≤50 µs against injected PPS. The emulated bench (`TaggerBench.MeetsC18AgainstInjectedPps`) gives a worst locked error of 244 ns and a worst holdover error of 3.4 µs over 20 s without PPS, with every sample within its bound. The board test is [#163](https://github.com/MatthewK84/ICS/issues/163).
+
 ## Golden vectors
 
 [`golden/frames/generate.sh`](../golden/frames/generate.sh) runs GeographicLib 2.3's `CartConvert`, `GeoidEval` and `GeoConvert` over the case lists in [`golden/frames/inputs/`](../golden/frames/inputs), in the ics-cpp image:
