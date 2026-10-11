@@ -31,6 +31,8 @@ using std::chrono::milliseconds;
 using std::chrono::steady_clock;
 
 constexpr long kHttpOk = 200;
+// PWI4 on this machine: plain HTTP never leaves it.
+constexpr std::string_view kLocalPwi4 = "http://127.0.0.1:";
 constexpr double kArcsecPerRadian = 180.0 * 3600.0 / std::numbers::pi;
 constexpr double kDegreesPerTurn = 360.0;
 
@@ -56,7 +58,7 @@ std::size_t on_data(const char* data, const std::size_t size, const std::size_t 
 [[nodiscard]] double arcsec_per_s(const double rad_per_s) noexcept { return rad_per_s * kArcsecPerRadian; }
 
 [[nodiscard]] bool valid(const Pwi4Settings& settings) noexcept {
-  return !settings.host.empty() && settings.port != 0 && settings.retry.attempts > 0 &&
+  return settings.port != 0 && settings.retry.attempts > 0 &&
          settings.timeout > milliseconds::zero();
 }
 
@@ -71,7 +73,7 @@ std::size_t on_data(const char* data, const std::size_t size, const std::size_t 
 
 Pwi4Client::Pwi4Client(Pwi4Settings settings, std::unique_ptr<Connection> connection) noexcept
     : settings_(std::move(settings)),
-      base_url_("http://" + settings_.host + ":" + std::to_string(settings_.port)),
+      base_url_(std::string(kLocalPwi4) + std::to_string(settings_.port)),
       connection_(std::move(connection)) {}
 
 Pwi4Client::~Pwi4Client() = default;

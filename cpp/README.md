@@ -425,6 +425,7 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
   - `/mount/offset`, with `axis0_set_rate_arcsec_per_sec`, `axis1_set_rate_arcsec_per_sec` and `axisN_stop_rate`.
 
   The stations' mounts are alt-az: axis0 is azimuth and axis1 altitude. Whether offset rates move a mount from rest is to be confirmed on a bench mount (#165).
+- **This machine only.** PWI4 speaks only plain HTTP, so the client sends to nothing but `127.0.0.1`, on the configured port; there is no host setting. A PWI4 on another computer is reached through a local tunnel, such as SSH or TLS port forwarding, which also encrypts the hop across the station network. This is the Lattice client's rule too: plain HTTP only to this host.
 - **Limits.** The client holds every command to them before sending it; the narrower of ICS's limits and the mount's mechanical ones applies.
   - A goto below or above the altitude limits is refused and never sent. A goto's azimuth wraps as the mount chooses, and the mount enforces its own azimuth limits.
   - Each rate is clamped to its axis's maximum. A rate that would carry an axis past a limit within 1 s is set to 0; a rate away from a limit is always allowed.

@@ -25,15 +25,13 @@ using std::chrono::milliseconds;
 TEST(Pwi4Client, RefusesBadSettings) {
   EmulatedPwi4 pwi4;
   const Pwi4Settings good = ics::mount::testing::settings_for(pwi4);
-  Pwi4Settings no_host = good;
-  no_host.host.clear();
   Pwi4Settings no_port = good;
   no_port.port = 0;
   Pwi4Settings no_attempts = good;
   no_attempts.retry.attempts = 0;
   Pwi4Settings no_timeout = good;
   no_timeout.timeout = milliseconds::zero();
-  for (const Pwi4Settings& bad : {no_host, no_port, no_attempts, no_timeout}) {
+  for (const Pwi4Settings& bad : {no_port, no_attempts, no_timeout}) {
     EXPECT_EQ(Pwi4Client::make(bad).error(), ics::Error::kInvalidArgument);
   }
 }

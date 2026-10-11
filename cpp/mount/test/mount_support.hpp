@@ -29,8 +29,7 @@ inline MountLimits test_limits() {
 
 // A client of the emulator, with the default timeout and retries.
 inline Pwi4Settings settings_for(const EmulatedPwi4& pwi4) {
-  return Pwi4Settings{.host = "127.0.0.1",
-                      .port = pwi4.port(),
+  return Pwi4Settings{.port = pwi4.port(),
                       .timeout = std::chrono::milliseconds(10),
                       .retry = {},
                       .limits = test_limits()};

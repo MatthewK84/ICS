@@ -26,9 +26,10 @@ struct RetryPolicy {
 
 // Where PWI4 listens, and how long to wait for it.
 struct Pwi4Settings {
-  // PWI4's host, a name or an address, and its HTTP port (PWI4's default is
-  // 8220).
-  std::string host = "127.0.0.1";
+  // PWI4's HTTP port (PWI4's default is 8220) on the machine the client runs
+  // on, at 127.0.0.1. PWI4 speaks only plain HTTP, so the client never sends
+  // it off the machine; a PWI4 on another computer is reached through a local
+  // tunnel that forwards this port to it.
   std::uint16_t port = 8220;
   // The longest one attempt may take, cut short by the request's deadline.
   std::chrono::milliseconds timeout{10};
@@ -49,14 +50,14 @@ struct ClientStats {
 
 // PlaneWave Interface 4's HTTP interface for a station mount (ICS-033), as
 // PlaneWave documents it: GET requests with their parameters in the query,
-// each answered with keyword=value status text. It works in ICS units and
+// each answered with keyword=value status text, on this machine only. It works in ICS units and
 // holds every goto and rate to the limits before sending it. Each request is
 // retried under the retry policy, and none outlasts its deadline. One
 // connection is kept open across requests. Not safe to use from two threads
 // at once.
 class Pwi4Client {
  public:
-  // Error::kInvalidArgument for no host, port 0, no attempts or no timeout.
+  // Error::kInvalidArgument for port 0, no attempts or no timeout.
   [[nodiscard]] static Result<Pwi4Client> make(Pwi4Settings settings);
 
   ~Pwi4Client();
