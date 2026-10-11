@@ -4,8 +4,9 @@ description: >-
   artifact in GHCR (deploy/evidence/dependency-artifact.sh): the artifact for
   the current key when there is one, else the last one built on main, from
   which Conan then builds only what is missing. Each artifact's signature is
-  verified before it is used. A job that runs the toolchain with docker run
-  builds the ics-cpp image first.
+  verified before it is used. Only the image workflow
+  (.github/workflows/conan-deps.yml) uses it, to make a build image (#159);
+  the C++ jobs pull that image instead.
 
 inputs:
   config:

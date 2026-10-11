@@ -1,13 +1,13 @@
 name: Capture bench
 
 # Runs the capture bench (ICS-020, deploy/capture-bench/README.md): ics-capd,
-# built with GCC 13 in the ics-cpp image, captures one end of a veth pair while
+# built with GCC 13 in the gcc13-Release build image, captures one end of a veth pair while
 # ics-capture-send sends numbered UDP datagrams into the other, from another
 # network namespace. The bench fails unless every file's SHA-256 matches, the
 # files hold every datagram sent, in order, and ics-capd logs no drops.
 #
 # GitHub-hosted jobs stop at 6 h, so the 24 h acceptance capture runs
-# accelerated: every night, the 172.8 million packets a day carries at 2,000
+# accelerated, by hand: the 172.8 million packets a day carries at 2,000
 # packets/s, sent at 100,000/s, rotating every 72 s so it writes the same 24
 # files (about 30 minutes). Pull requests that change the capture code or the
 # bench run a 2-minute version. A manual run can instead capture in real time
@@ -15,12 +15,10 @@ name: Capture bench
 # ics-capd log are kept as the capture-bench-<run id> artifact for 30 days.
 
 on:
-  schedule:
-    - cron: "43 4 * * *"
   workflow_dispatch:
     inputs:
       mode:
-        description: "accelerated (the nightly run) or realtime"
+        description: "accelerated (the 24 h acceptance capture) or realtime"
         type: choice
         options:
           - accelerated
@@ -37,8 +35,7 @@ on:
       - cpp/testing/capture_bench/**
       - deploy/capture-bench/**
       - .github/workflows/capture-bench.yml
-      - .github/actions/toolchain-image/**
-      - .github/actions/conan-deps/**
+      - .github/actions/build-image/**
 
 permissions:
   contents: read
@@ -49,8 +46,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # The Conan home that the conan-deps action restores the packages into.
-  RUN: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home ics-cpp:ci
+  RUN: docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics ics-build:ci
   RECORDS: /tmp/capture-bench
   BUILD: cpp/build/gcc-release
 
@@ -58,9 +54,8 @@ jobs:
   bench:
     name: Capture every packet with zero drops
     runs-on: ubuntu-24.04
-    # With the Conan packages restored, building takes about 10 minutes;
-    # without them, protobuf, abseil and OpenSSL build from source, about
-    # 50. The accelerated bench takes about 30 and a real-time one up to 5 h.
+    # Building takes about 10 minutes. The accelerated bench takes about 30
+    # and a real-time one up to 5 h.
     timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'realtime' && 355 || 100 }}
     steps:
       - name: Choose the run's size
@@ -84,18 +79,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Build the ics-cpp image
-        uses: ./.github/actions/toolchain-image
-        with:
-          name: ics-cpp
-          dockerfile: deploy/toolchain/Dockerfile.cpp
-
-      # Restored only: the C++ toolchain workflow builds and publishes them.
-      - name: Restore the gcc13-Release Conan packages
-        uses: ./.github/actions/conan-deps
+      # Built by the C++ toolchain workflow, which this waits for when the
+      # image's inputs change (#159).
+      - name: Pull the gcc13-Release build image
+        uses: ./.github/actions/build-image
         with:
           config: gcc13-Release
-          toolchain: ${{ env.RUN }}
+          wait-minutes: '60'
 
       - name: Build ics-capd and the bench's tools
         run: >-

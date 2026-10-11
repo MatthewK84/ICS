@@ -1,6 +1,14 @@
 # C++ toolchain images
 
-Pinned build environments for ICS C++ code (ICS-004). CI builds both images and publishes them from `main` to GitHub's container registry, tagged with the commit SHA and `main`. Each published image is signed by digest with cosign and carries a CycloneDX SBOM and SLSA provenance; see [`../evidence/`](../evidence/README.md) to verify them.
+Pinned build environments for ICS C++ code (ICS-004). Each published image is signed by digest with cosign and carries a CycloneDX SBOM and SLSA provenance; see [`../evidence/`](../evidence/README.md) to verify them. The CUDA workflow publishes `ics-cuda` from `main`, tagged with the commit SHA and `main`.
+
+The C++ jobs run in versioned build images instead (#159), each built once and pulled from GitHub's container registry, so a job downloads nothing else:
+
+- `ghcr.io/matthewk84/ics-cpp:KEY` is the toolchain, built from [`Dockerfile.cpp`](Dockerfile.cpp).
+- `ghcr.io/matthewk84/ics-build:CONFIG-KEY` is the toolchain with one dependency configuration's Conan packages, built from [`Dockerfile.build`](Dockerfile.build), with `CONAN_OFFLINE=1` so `conan-install.sh` installs from them alone.
+- [`image-key.sh`](image-key.sh) names both by a hash of the committed files that decide their contents, so a change to any of them gives a new key, and nothing else does.
+- The [image workflow](../../.github/workflows/conan-deps.yml) builds an image only when the registry has none for its key: on `main` under the tags above, and for a pull request with `-prN` after them, which only that pull request uses. It signs each image when it pushes it and verifies the signature then, once.
+- The jobs find their image with [`find-image.sh`](find-image.sh), through [`.github/actions/build-image`](../../.github/actions/build-image/action.yml), and check nothing more.
 
 | Image | Base | Contents | Used for |
 |---|---|---|---|
@@ -37,6 +45,6 @@ Behind a TLS-inspecting proxy, pass its CA bundle as a build secret: `--secret i
 ## Scripts
 
 - [`conan-install.sh PRESET...`](conan-install.sh): installs the Conan dependencies that one or more CMake presets need, from `cpp/conan.lock`. For the `asan`, `tsan` and `fuzz` presets it builds them with the matching sanitizer, from the [`asan`](../../cpp/conan/profiles/asan) and [`tsan`](../../cpp/conan/profiles/tsan) profiles.
-- [`check-reproducible.sh gcc|clang`](check-reproducible.sh): builds the `toolchain_check` sample twice in different build folders and fails unless every output is byte-identical. The first folder also builds and tests all the ICS code in release; the second builds only the sample. This is the ICS-004 "Done when" test ("a sample target builds bit-identically twice on both compilers"), run in CI for both compilers.
+- [`check-reproducible.sh gcc|clang`](check-reproducible.sh): builds the `toolchain_check` sample twice in different build folders and fails unless every output is byte-identical. The first folder also builds and tests all the ICS code in release; the second builds only the sample. This is the ICS-004 "Done when" test ("a sample target builds bit-identically twice on both compilers"). CI runs it for GCC; run it for Clang by hand (#159).
 - [`install-toolchain.sh SNAPSHOT_ID`](install-toolchain.sh): used by both Dockerfiles.
 - [`install-geoids.sh TARGET_DIR [CA_BUNDLE]`](install-geoids.sh): downloads each geoid grid pinned in `tools.txt`, refuses one whose checksum does not match, and unpacks it into `TARGET_DIR`. `install-toolchain.sh` runs it.

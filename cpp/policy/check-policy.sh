@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 # Enforce the C++ Power-of-Ten profile and prove that it rejects violations
-# (ICS-005 "Done when": CI fails on one seeded violation of each rule; ICS-008
-# adds cppcheck).
+# (ICS-005 "Done when": CI fails on one seeded violation of each rule).
 #
 # Usage: check-policy.sh [gcc|clang]
 #
-#   1. No suppressions: no NOLINT, cppcheck-suppress or "diagnostic ignored"
-#      pragma in C++ files, no -Wno- flag in CMake files, and no .clang-tidy
+#   1. No suppressions: no NOLINT or "diagnostic ignored" pragma in C++
+#      files, no -Wno- flag in CMake files, and no .clang-tidy
 #      file beyond the two allowed ones.
 #   2. Clean code: the ICS code builds with GCC 13 and Clang 17 with every
-#      warning an error, and clang-tidy and cppcheck find nothing.
+#      warning an error, and clang-tidy finds nothing.
 #   3. Seeds: every file in cpp/policy/seeded is rejected, each with the
 #      diagnostic named on its first line, so a rule that silently stops
 #      firing fails too.
 #
 # With no argument it checks everything. "gcc" checks the GCC build and its
-# seeds; "clang" the Clang build, clang-tidy, cppcheck and their seeds, so CI
-# can run the two side by side. Both check the suppressions.
+# seeds; "clang" the Clang build, clang-tidy and their seeds. CI runs "clang"
+# (#159): every build already holds GCC to -Werror, the reproducible one in CI.
+# Both check the suppressions.
 #
 # Set SKIP_CONAN_INSTALL=1 when dependencies are already installed.
 set -euo pipefail
@@ -27,14 +27,11 @@ readonly SEEDS="${CPP}/policy/seeded"
 readonly WORK="$(mktemp -d)"
 readonly ALLOWED_TIDY_CONFIGS="cpp/.clang-tidy
 cpp/testing/alloc_guard/src/.clang-tidy"
-readonly CODE_SUPPRESSION='NOLINT|cppcheck-suppress|diagnostic[[:space:]]+ignored'
+readonly CODE_SUPPRESSION='NOLINT|diagnostic[[:space:]]+ignored'
 readonly BUILD_SUPPRESSION='-Wno-'
 readonly SCAN_SEEDS=(nolint.cpp pragma_diagnostic.cpp warning_off.cmake)
 readonly TIDY_SEEDS=(goto recursion function_size owning_memory malloc pointer_arithmetic mutable_global)
 readonly COMPILER_SEEDS=(conversion nodiscard)
-readonly CPPCHECK_SEEDS=(cppcheck_out_of_bounds.cpp)
-# Warnings and style findings are errors; inline suppressions stay disabled.
-readonly CPPCHECK_ARGS=(--enable=warning,style,performance,portability --library=googletest --error-exitcode=1 --quiet)
 readonly ALLOCATION_SEED="post_init_allocation_test.cpp"
 trap 'rm -rf "${WORK}"' EXIT
 
@@ -93,7 +90,7 @@ check_no_suppressions() {
 check_seed_list() {
   local listed actual
   listed="$(printf '%s\n' "${SCAN_SEEDS[@]}" "${TIDY_SEEDS[@]/%/.cpp}" "${COMPILER_SEEDS[@]/%/.cpp}" \
-    "${CPPCHECK_SEEDS[@]}" "${ALLOCATION_SEED}" | LC_ALL=C sort)"
+    "${ALLOCATION_SEED}" | LC_ALL=C sort)"
   actual="$(cd "${SEEDS}" && find . -type f ! -name CMakeLists.txt -printf '%f\n' | LC_ALL=C sort)"
   [[ "${listed}" == "${actual}" ]] || fail "check-policy.sh must list every seed; listed:"$'\n'"${listed}"$'\n'"found:"$'\n'"${actual}"
 }
@@ -115,14 +112,11 @@ build_clean() {
   echo "Clean code: ok (${compiler} with warnings as errors)"
 }
 
-# clang-tidy and cppcheck over the Clang build's compile commands.
+# clang-tidy over the Clang build's compile commands.
 check_static_analysis() {
   quietly run-clang-tidy-17 -quiet -p "${WORK}/clang" '^(?!.*/(policy/seeded|proto/gen/))' \
     || fail "clang-tidy found violations in the ICS code"
-  quietly cppcheck "${CPPCHECK_ARGS[@]}" --project="${WORK}/clang/compile_commands.json" \
-    -i "${CPP}/policy/seeded" -i "${CPP}/policy/seeded-runtime" -i "${CPP}/proto/gen" -i "${WORK}/clang/proto/gen" \
-    || fail "cppcheck found defects in the ICS code"
-  echo "Clean code: ok (clang-tidy, cppcheck)"
+  echo "Clean code: ok (clang-tidy)"
 }
 
 check_scan_seeds() {
@@ -151,15 +145,6 @@ check_compiler_seeds() {
   done
 }
 
-check_cppcheck_seeds() {
-  local seed output status
-  for seed in "${CPPCHECK_SEEDS[@]}"; do
-    status=0
-    output="$(cppcheck "${CPPCHECK_ARGS[@]}" --std=c++20 "${SEEDS}/${seed}" 2>&1)" || status=$?
-    expect_rejected "cppcheck" "${SEEDS}/${seed}" "${status}" "${output}"
-  done
-}
-
 check_allocation_seed() {
   local output status=0
   quietly cmake --build "${WORK}/clang" --target seed_post_init_allocation || fail "the allocation seed does not build"
@@ -177,7 +162,6 @@ check_clang() {
   check_static_analysis
   check_tidy_seeds
   check_compiler_seeds clang
-  check_cppcheck_seeds
   check_allocation_seed
 }
 

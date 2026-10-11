@@ -7,7 +7,6 @@ queries:
 paths-ignore:
   - "**/policy/seeded/**"
   - "**/policy/seeded-runtime/**"
-  - .github/codeql/seeded/**
   - "**/node_modules/**"
   - "**/dist/**"
   - "**/build/**"
