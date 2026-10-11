@@ -5,6 +5,7 @@
 export { create, equals, fromBinary, toBinary } from "@bufbuild/protobuf";
 
 export * from "./gen/ics/v1/camera_frame_meta_pb.ts";
+export * from "./gen/ics/v1/camera_service_pb.ts";
 export * from "./gen/ics/v1/common_pb.ts";
 export * from "./gen/ics/v1/footprint_pb.ts";
 export * from "./gen/ics/v1/fragment_pb.ts";

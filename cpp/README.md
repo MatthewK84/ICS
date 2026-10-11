@@ -360,6 +360,21 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
 
   The fuzz target reads any bytes. It checks that each cine it reads keeps the reader's promises, and that a cine the writer can write, with images up to 16 MiB, reads back unchanged.
 
+## Camera service
+
+[`services/camd/`](services/camd) is `ics-camd` (ICS-031, CPP-14). It drives every camera of a station, and serves `CameraService` ([`camera_service.proto`](../proto/ics/v1/camera_service.proto)) over gRPC on a Unix-domain socket. Its config is [`ics-camd.toml`](services/camd/ics-camd.toml), read from `/etc/ics/ics-camd.toml`.
+
+- **One command.** [`ics-cam-offload RUN_ID [SOCKET]`](services/camd/include/ics/camd/command_client.hpp) sends `ArmAndOffload`. ics-camd then:
+  1. makes the run's folder, `offload_folder/RUN_ID`, and refuses a run ID that is not a plain folder name or whose folder exists;
+  2. watches ics-timingd's `TimeQualityService` (#150), waiting up to `time_wait_ns` for its first report;
+  3. runs `record_and_offload` on every camera at once, one thread each, into `RUN_ID/CAMERA_ID`;
+  4. writes each segment's `CameraFrameMeta` beside its cine, as `cine-NNN.meta`: length-delimited messages, one per frame.
+
+  It answers with each camera's segments, frames, files and whether they verified. ics-cam-offload prints one JSON line per camera, and exits 0 only when every camera verified. One command runs at a time: another is refused with `FAILED_PRECONDITION`, since arming a camera again would discard the segments it has not yet saved.
+- **Without ics-timingd.** When no report comes, the cameras still record, since an engagement cannot be repeated. Their frames are not IRIG-timed, so their segments do not verify, and an X6980 that stamps no year fails, as `FlirCamera` does without the station's UTC.
+- **Camera SDKs.** [`drivers.hpp`](services/camd/include/ics/camd/drivers.hpp) is where a camera's SDK joins ics-camd. Each camera's `[camera.ID.driver]` table names its driver and holds that driver's settings; `emulated-phantom` and `emulated-x6980` exist today. A new SDK adds a settings struct, its name, its reader and its opener, all in `drivers.hpp` and `drivers.cpp`, and the build fails until each is there. The config, the offload and the gRPC service take any `SegmentCamera` and do not change. A driver that connects to its camera does so in `configure`, so a camera that cannot be reached fails only its own offload.
+- **Done when.** One `ics-cam-offload` arms and offloads both emulated cameras through a running ics-camd, with ics-timingd's own report server: two verified segments of 300 frames each per camera, every cine and metadata file on disk (`CamdRun.OneCommandArmsAndOffloadsEveryCamera`).
+
 ## Strobe calibration
 
 [`strobe/`](strobe) is `ics::strobe` (ICS-029, CPP-04). It measures each camera's time offset, its frame time stamp less the true start of the frame's exposure, from the PPS strobe the camera recorded. It publishes the offset through `ics-timingd`'s camera offsets file. `frame_meta` (ICS-027, ICS-028) subtracts the latest offset from every frame time, so the calibration corrects every frame downstream ([Camera clocks](../docs/frames-and-time.md#camera-clocks)).

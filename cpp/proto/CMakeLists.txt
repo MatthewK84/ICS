@@ -30,9 +30,9 @@ endif()
 
 set(ICS_PROTO_ROOT "${PROJECT_SOURCE_DIR}/../proto")
 set(ICS_GRPC_GEN "${CMAKE_CURRENT_BINARY_DIR}/gen")
-# The files that define a service: ics-plid's queries (#146) and ics-timingd's
-# reports (#150). Each is generated on its own.
-set(ICS_GRPC_PROTOS ics/v1/pli_query ics/v1/time_quality_service)
+# The files that define a service: ics-camd's cameras (ICS-031), ics-plid's
+# queries (#146) and ics-timingd's reports (#150). Each is generated on its own.
+set(ICS_GRPC_PROTOS ics/v1/camera_service ics/v1/pli_query ics/v1/time_quality_service)
 set(ICS_GRPC_SOURCES "")
 foreach(proto IN LISTS ICS_GRPC_PROTOS)
   add_custom_command(

@@ -3,6 +3,7 @@
 // python/ics_golden/proto.py must parse, hold no field this code does not
 // know, and serialize back to the same bytes.
 #include "ics/v1/camera_frame_meta.pb.h"
+#include "ics/v1/camera_service.pb.h"
 #include "ics/v1/footprint.pb.h"
 #include "ics/v1/fragment.pb.h"
 #include "ics/v1/kill_assessment.pb.h"
@@ -50,6 +51,12 @@ void expect_same_bytes(const std::string& name) {
   EXPECT_EQ(message.SerializeAsString(), golden) << name;
 }
 
+TEST(ProtoGolden, ArmAndOffloadRequest) {
+  expect_same_bytes<ics::v1::ArmAndOffloadRequest>("arm_and_offload_request");
+}
+TEST(ProtoGolden, ArmAndOffloadResponse) {
+  expect_same_bytes<ics::v1::ArmAndOffloadResponse>("arm_and_offload_response");
+}
 TEST(ProtoGolden, CameraFrameMeta) { expect_same_bytes<ics::v1::CameraFrameMeta>("camera_frame_meta"); }
 TEST(ProtoGolden, Footprint) { expect_same_bytes<ics::v1::Footprint>("footprint"); }
 TEST(ProtoGolden, Fragment) { expect_same_bytes<ics::v1::Fragment>("fragment"); }
@@ -69,6 +76,7 @@ TEST(ProtoGolden, WatchTimeQualityResponse) {
 
 TEST(ProtoGolden, HasATestForEveryGoldenFile) {
   const std::set<std::string> tested{
+      "arm_and_offload_request", "arm_and_offload_response",
       "camera_frame_meta", "footprint",          "fragment",   "kill_assessment", "mount_sample",
       "pli_event",         "pli_record",         "query_pli_request", "query_pli_response", "run_record",
       "time_quality",      "track",              "trigger_event",

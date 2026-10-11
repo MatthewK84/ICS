@@ -19,6 +19,7 @@ from google.protobuf.descriptor import Descriptor, FieldDescriptor
 from google.protobuf.message import Message
 from ics.v1 import (
     camera_frame_meta_pb2,
+    camera_service_pb2,
     footprint_pb2,
     fragment_pb2,
     kill_assessment_pb2,
@@ -92,6 +93,8 @@ def golden_types() -> tuple[tuple[str, type[Message]], ...]:
     written as no bytes at all.
     """
     return (
+        ("arm_and_offload_request", camera_service_pb2.ArmAndOffloadRequest),
+        ("arm_and_offload_response", camera_service_pb2.ArmAndOffloadResponse),
         ("camera_frame_meta", camera_frame_meta_pb2.CameraFrameMeta),
         ("footprint", footprint_pb2.Footprint),
         ("fragment", fragment_pb2.Fragment),
