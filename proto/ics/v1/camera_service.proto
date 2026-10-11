@@ -1,0 +1,55 @@
+// A station's cameras, as ics-camd drives them (ICS-031). ics-camd serves
+// CameraService over gRPC on a local Unix-domain socket: one
+// ArmAndOffloadRequest arms every camera of the station, records its
+// segments and offloads them, and the ArmAndOffloadResponse says how each
+// camera's offload verified.
+
+syntax = "proto3";
+
+package ics.v1;
+
+// The station's cameras.
+service CameraService {
+  // Arms every camera, triggers each of its segments, saves each segment as
+  // a cine with its frames' CameraFrameMeta beside it, and verifies the
+  // cines' times; the cameras run at once. Fails with INVALID_ARGUMENT for a
+  // bad run_id, ALREADY_EXISTS when the run's folder exists, and
+  // FAILED_PRECONDITION while another request is running. A camera that
+  // fails does not fail the request: its CameraOffload says why.
+  rpc ArmAndOffload(ArmAndOffloadRequest) returns (ArmAndOffloadResponse);
+}
+
+// Which run to record.
+message ArmAndOffloadRequest {
+  // Names the run: its files go in a new folder of this name under
+  // ics-camd's offload folder. 1 to 64 letters, digits, '.', '_' or '-',
+  // and not "." or "..".
+  string run_id = 1;
+}
+
+// How one camera's offload went.
+message CameraOffload {
+  // The camera, as named in the station configuration.
+  string camera_id = 1;
+  // Whether every segment it saved verified: IRIG-timed, ordered, evenly
+  // spaced, triggered where the camera reported, and holding the frames
+  // planned.
+  bool verified = 2;
+  // The segments saved, a count.
+  uint32 segments = 3;
+  // The frames saved, in all its segments, a count.
+  uint64 frames = 4;
+  // The files saved: each segment's cine, then its frames' metadata, a
+  // sequence of length-delimited CameraFrameMeta.
+  repeated string files = 5;
+  // Why the camera's offload failed; empty when it ran.
+  string error = 6;
+}
+
+// How every camera's offload went.
+message ArmAndOffloadResponse {
+  // The run's folder, which holds a folder for each camera.
+  string folder = 1;
+  // One for each camera, in the station configuration's order.
+  repeated CameraOffload cameras = 2;
+}

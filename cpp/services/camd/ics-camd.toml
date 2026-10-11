@@ -1,0 +1,65 @@
+# An example ics-camd config (ICS-031); see cpp/README.md. ics-camd reads its
+# config from /etc/ics/ics-camd.toml. Every setting is required.
+
+[log]
+level = "info"
+service = "ics-camd"
+
+[camd]
+# The station, as named in the range configuration.
+station_id = "station-1"
+# Where ics-cam-offload sends its command (CameraService).
+command_socket = "/run/ics-camd/command"
+# ics-timingd's time quality reports.
+time_socket = "/run/ics-timingd/time-quality"
+# Each run's folder goes here, with a folder for each camera in it.
+offload_folder = "/var/lib/ics/cameras"
+# How long a command waits for ics-timingd's first report, 0 to 10 s. Without
+# one, the cameras still record, and their segments do not verify.
+time_wait_ns = 2_000_000_000
+# The station's cameras, each with a [camera.ID] table below.
+cameras = ["north-hs", "north-mwir"]
+
+# A high-speed visible camera: 5,000 frames/s, triggers 120 ms apart, each
+# segment 100 ms.
+[camera.north-hs]
+width_px = 64
+height_px = 32
+window_x_px = 0
+window_y_px = 0
+frame_rate_hz = 5_000
+exposure_ns = 150_000
+segment_frames = 500
+post_trigger_frames = 400
+irig = true
+segments = 2
+# The frames saved of each segment, by number from its trigger frame.
+first_frame = -50
+frame_count = 300
+
+# The camera's driver and its settings (include/ics/camd/drivers.hpp). A
+# camera SDK joins ics-camd as a driver.
+[camera.north-hs.driver]
+name = "emulated-phantom"
+trigger_interval_ns = 120_000_000
+
+# An MWIR camera: 1,004 frames/s in a window at (288, 240), triggers 600 ms
+# apart, each segment 498 ms.
+[camera.north-mwir]
+width_px = 64
+height_px = 32
+window_x_px = 288
+window_y_px = 240
+frame_rate_hz = 1_004
+exposure_ns = 800_000
+segment_frames = 500
+post_trigger_frames = 400
+irig = true
+segments = 2
+first_frame = -50
+frame_count = 300
+
+[camera.north-mwir.driver]
+name = "emulated-x6980"
+trigger_interval_ns = 600_000_000
+stamps_year = false

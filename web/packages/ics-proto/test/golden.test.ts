@@ -8,6 +8,8 @@ import type { DescMessage } from "@bufbuild/protobuf";
 import { describe, expect, it } from "vitest";
 
 import {
+  ArmAndOffloadRequestSchema,
+  ArmAndOffloadResponseSchema,
   CameraFrameMetaSchema,
   create,
   FootprintSchema,
@@ -32,6 +34,8 @@ const GOLDEN_DIR = new URL("../../../../golden/proto/", import.meta.url);
 const TIME_UTC_NS = 1_790_000_000_123_456_789n;
 
 const GOLDEN: readonly (readonly [string, DescMessage])[] = [
+  ["arm_and_offload_request", ArmAndOffloadRequestSchema],
+  ["arm_and_offload_response", ArmAndOffloadResponseSchema],
   ["camera_frame_meta", CameraFrameMetaSchema],
   ["footprint", FootprintSchema],
   ["fragment", FragmentSchema],
