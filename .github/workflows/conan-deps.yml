@@ -203,14 +203,15 @@ jobs:
           echo "::error::cpp/conan.lock does not pin every package cpp/conanfile.py requires. Decode the base64 line above into cpp/conan.lock and commit it; the packages already pinned keep their versions."
           exit 1
 
-      - name: Look up the ${{ matrix.config }} packages
+      # Restores the packages, so the next step builds only those the archive
+      # lacks: none when it is current for the key.
+      - name: Look up and restore the ${{ matrix.config }} packages
         id: deps
         if: steps.find.outputs.found != 'true'
         uses: ./.github/actions/conan-deps
         with:
           config: ${{ matrix.config }}
           toolchain: ${{ env.RUN }}
-          for-build: 'true'
 
       - name: Build the missing ${{ matrix.config }} packages and save them
         if: steps.find.outputs.found != 'true'
