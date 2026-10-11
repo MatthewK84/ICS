@@ -1,14 +1,14 @@
 name: SITL rig
 
-# Flies the SITL rig's three scripted engagements every night (ICS-018,
+# Flies the SITL rig's three scripted engagements (ICS-018,
 # deploy/sitl/README.md): PX4 and ArduPilot SITL in containers, one flying a
 # target and the other an interceptor, their MAVLink mirrored to an emulated
 # TAP port and captured there. A run fails if any engagement fails or the
-# capture is missing a datagram the rig counted. It also runs on pull requests
-# that change the rig.
+# capture is missing a datagram the rig counted. It runs on pull requests that
+# change the rig, and by hand.
 #
 # Each capture is then replayed through the MAVLink adapter (ICS-021,
-# cpp/mavlink), built in the ics-cpp image, and the run fails unless every
+# cpp/mavlink), built in the gcc13-Release build image, and the run fails unless every
 # position, status text and refused command in the engagement's truth log
 # comes out of it (python -m ics_sitl compare). ics-plid (ICS-030) then stores
 # each capture, and the run fails unless the records and events it serves back
@@ -26,8 +26,6 @@ name: SITL rig
 # SBOMs, are kept as the sitl-<run id> artifact for 30 days.
 
 on:
-  schedule:
-    - cron: "41 4 * * *"
   workflow_dispatch:
   pull_request:
     paths:
@@ -35,8 +33,7 @@ on:
       - deploy/evidence/image-sbom.sh
       - python/ics_sitl/**
       - .github/workflows/sitl.yml
-      - .github/actions/toolchain-image/**
-      - .github/actions/conan-deps/**
+      - .github/actions/build-image/**
 
 permissions:
   contents: read
@@ -51,17 +48,16 @@ jobs:
     name: Fly the scripted engagements
     runs-on: ubuntu-24.04
     # Compiling both autopilots takes about 15 minutes; building the MAVLink
-    # replay about 10 with the Conan packages restored and 50 without; each
-    # engagement about 3.
+    # replay about 10; each engagement about 3.
     timeout-minutes: 100
     env:
       IMAGES: /tmp/sitl-images
       RECORDS: /tmp/sitl-records
-      # The ics-cpp image, with the Conan packages the C++ toolchain workflow
-      # publishes and the engagement records mounted as they lie.
+      # The gcc13-Release build image, with the engagement records mounted as
+      # they lie.
       RUN: >-
-        docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics -v /tmp/conan-home:/opt/conan-home
-        -v /tmp/sitl-records:/tmp/sitl-records ics-cpp:ci
+        docker run --rm -v ${{ github.workspace }}:/work/ics -w /work/ics
+        -v /tmp/sitl-records:/tmp/sitl-records ics-build:ci
       REPLAY: cpp/build/gcc-release/testing/mavlink_replay/ics-mavlink-replay
       TIME_ALIGN: cpp/build/gcc-release/testing/time_align/ics-time-align
     steps:
@@ -118,18 +114,13 @@ jobs:
               "${RECORDS}/ics-sitl-${autopilot}.cdx.json" deb
           done
 
-      - name: Build the ics-cpp image
-        uses: ./.github/actions/toolchain-image
-        with:
-          name: ics-cpp
-          dockerfile: deploy/toolchain/Dockerfile.cpp
-
-      # Restored only: the C++ toolchain workflow builds and publishes them.
-      - name: Restore the gcc13-Release Conan packages
-        uses: ./.github/actions/conan-deps
+      # Built by the C++ toolchain workflow, which this waits for when the
+      # image's inputs change (#159).
+      - name: Pull the gcc13-Release build image
+        uses: ./.github/actions/build-image
         with:
           config: gcc13-Release
-          toolchain: ${{ env.RUN }}
+          wait-minutes: '60'
 
       - name: Build the MAVLink replay and time alignment
         run: >-

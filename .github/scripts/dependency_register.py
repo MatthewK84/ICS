@@ -93,13 +93,18 @@ def normalize(ecosystem: str, name: str) -> str:
 
 
 def image_name(reference: str) -> str:
-    """A container image reference without its tag or digest, with Docker Hub spelled out."""
-    if "$" in reference:
-        raise RegisterError(f"image '{reference}' must be written out, not built from variables")
+    """A container image reference without its tag or digest, with Docker Hub spelled out.
+
+    The name must be written out. Only the tag or digest may come from a
+    variable, as for ICS's own build images, whose tags are their versions
+    (#159).
+    """
     without_digest = reference.split("@", 1)[0]
     last_slash = without_digest.rfind("/")
     colon = without_digest.rfind(":")
     name = without_digest[:colon] if colon > last_slash else without_digest
+    if "$" in name:
+        raise RegisterError(f"image '{reference}' must be written out, not built from variables")
     parts = name.split("/")
     if len(parts) == 1:
         return f"docker.io/library/{name}".lower()
