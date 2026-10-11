@@ -408,6 +408,27 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
   - The analysis, `publish`, the settings and the command, on the emulated cameras.
   - The offsets file's fuzz target reads any bytes, and checks that what it accepts keeps its promises and reads back unchanged.
 
+## Encoder time-tagger
+
+[`tagger/`](tagger) is `ics::tagger` (ICS-032, FW-01): the encoder time-tagger's core, the part that runs the same on any board. It is freestanding C++20, allocating nothing after start-up and throwing nothing, so it builds for the tagger's MCU as well as here. The board port is [`firmware/encoder_tagger`](../firmware/encoder_tagger) ([#163](https://github.com/MatthewK84/ICS/issues/163)).
+
+| Header | Provides |
+|---|---|
+| [`counter.hpp`](tagger/include/ics/tagger/counter.hpp) | `CounterExtender`: the MCU's 32-bit counter as 64 bits, through wraps and readings slightly out of order |
+| [`pps_clock.hpp`](tagger/include/ics/tagger/pps_clock.hpp) | `PpsClock`: UTC on the counter from the PPS edge and the host's label; each reading's time, bound and state (acquiring, locked or holdover) |
+| [`sampler.hpp`](tagger/include/ics/tagger/sampler.hpp) | `Sampler`: both encoders' counts, stamped, in batches of 10 |
+| [`datagram.hpp`](tagger/include/ics/tagger/datagram.hpp) | `encode` and `decode`: a batch as a 256-byte UDP datagram with a sequence number and a CRC-32C; `angle_rad` |
+
+- **The clock.** How it accepts edges, locks and holds over is in [Encoder clocks](../docs/frames-and-time.md#encoder-clocks).
+- **Done when.** C18, time-tag error ≤50 µs against injected PPS, on an emulated bench (`TaggerBench.MeetsC18AgainstInjectedPps`). It runs 10 minutes at 1,000 samples a second through the datagram, with:
+  - a crystal 20 ppm fast and wandering;
+  - 30 ns of PPS jitter;
+  - a glitch edge every 37 s;
+  - 20 s without PPS.
+
+  The worst locked error is 244 ns, and every sample is within its bound. A second run uses a crystal 45 ppm slow and 200 ns of jitter.
+- **Tests and fuzzing.** Tests cover every refusal of the decoder and that nothing allocates. The fuzz target decodes any bytes, and re-encodes what it reads to the same bytes.
+
 ## Power-of-Ten checks
 
 The C++ rules from the coding-standards table in [docs/build-plan.md](../docs/build-plan.md) are enforced by tools, not review (ICS-005):
