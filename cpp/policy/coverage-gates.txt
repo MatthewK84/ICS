@@ -25,6 +25,7 @@ cpp/services/capd 0.08
 cpp/services/plid 0.15
 cpp/services/camd 0.22
 cpp/tagger 0.22
+cpp/mount 0.36
 cpp/flightlog 0.09
 cpp/timealign 0.40
 cpp/camera 0.14

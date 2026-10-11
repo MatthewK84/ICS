@@ -408,6 +408,41 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
   - The analysis, `publish`, the settings and the command, on the emulated cameras.
   - The offsets file's fuzz target reads any bytes, and checks that what it accepts keeps its promises and reads back unchanged.
 
+## Mount client
+
+[`mount/`](mount) is `ics::mount` (ICS-033, CPP-16): the client for PlaneWave Interface 4 (PWI4), which runs each station's mount, and the loop that sends it rate demands. `ics-mountd` (ICS-041) will run it, with the sun keep-out (ICS-034) wrapped around it. A run on a bench mount is [#165](https://github.com/MatthewK84/ICS/issues/165).
+
+| Header | Provides |
+|---|---|
+| [`pwi4_status.hpp`](mount/include/ics/mount/pwi4_status.hpp) | `parse_status`: PWI4's `keyword=value` status, in ICS units; `MountStatus` and `AxisStatus` |
+| [`limits.hpp`](mount/include/ics/mount/limits.hpp) | `check_goto` and `limit_rates`: a goto or rates held to the axis limits; `MountLimits` |
+| [`pwi4_client.hpp`](mount/include/ics/mount/pwi4_client.hpp) | `Pwi4Client`: status, connect, enable, goto, rates and stop over PWI4's HTTP interface, with bounded retries |
+| [`rate_loop.hpp`](mount/include/ics/mount/rate_loop.hpp) | `RateLoop`: the latest demand from a `RateSource`, sent at 20 to 50 Hz, stopping the mount on a fault |
+
+- **PWI4's interface.** The client uses only commands PlaneWave documents in its published client (`pwi4_client.py`): GET requests with their parameters in the query, each answered with status text. The commands are:
+  - `/status`, `/mount/connect`, `/mount/enable`;
+  - `/mount/goto_alt_az`, `/mount/stop`;
+  - `/mount/offset`, with `axis0_set_rate_arcsec_per_sec`, `axis1_set_rate_arcsec_per_sec` and `axisN_stop_rate`.
+
+  The stations' mounts are alt-az: axis0 is azimuth and axis1 altitude. Whether offset rates move a mount from rest is to be confirmed on a bench mount (#165).
+- **Limits.** The client holds every command to them before sending it; the narrower of ICS's limits and the mount's mechanical ones applies.
+  - A goto below or above the altitude limits is refused and never sent. A goto's azimuth wraps as the mount chooses, and the mount enforces its own azimuth limits.
+  - Each rate is clamped to its axis's maximum. A rate that would carry an axis past a limit within 1 s is set to 0; a rate away from a limit is always allowed.
+  - A demand that is not a number is taken as 0. Every change is reported.
+- **Retries.** Every command the client sends is idempotent, so it is retried: by default 3 attempts, 5 ms then 10 ms apart. No attempt or wait passes the request's deadline. Set the timeout to 40% of the loop period, or less, so a slow answer leaves room for a retry.
+- **The loop.** Each period asks for the status, then sends the latest demand, held to the limits against that status, all within the period. It stops the mount (zero rates, then `/mount/stop`) and returns when either of these happens, and never starts it moving again on its own:
+  - no demand is fresher than 200 ms;
+  - 3 periods in a row fail to reach the mount.
+
+  When told to stop, it sends zero rates.
+- **Done when.** A stable 20 to 50 Hz rate loop, here against an emulated PWI4 with two simulated axes. Over 10 s at 50 Hz and at 20 Hz, with a moving demand (`MountBench`):
+  - a rate command each period, with at most 1% of periods late or missing theirs;
+  - every command within the limits;
+  - the axes following the demand.
+
+  Runs here have had 0 to 3 late or missed periods in 500.
+- **Tests and fuzzing.** Tests cover every refusal of the parser, each limit, retries, timeouts, dropped connections, and each fault. The fuzz target reads any status text.
+
 ## Encoder time-tagger
 
 [`tagger/`](tagger) is `ics::tagger` (ICS-032, FW-01): the encoder time-tagger's core, the part that runs the same on any board. It is freestanding C++20, allocating nothing after start-up and throwing nothing, so it builds for the tagger's MCU as well as here. The board port is [`firmware/encoder_tagger`](../firmware/encoder_tagger) ([#163](https://github.com/MatthewK84/ICS/issues/163)).

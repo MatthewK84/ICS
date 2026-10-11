@@ -1,0 +1,15 @@
+pwi4.version=4.1.9 beta 22
+mount.is_connected=true
+mount.is_slewing=false
+mount.is_tracking=false
+mount.distance_to_sun_degs=95.5
+mount.axis0.is_enabled=true
+mount.axis0.position_degs=12.5
+mount.axis0.measured_velocity_degs_per_sec=0.5
+mount.axis0.min_mech_position_degs=-270
+mount.axis0.max_mech_position_degs=270
+mount.axis1.is_enabled=true
+mount.axis1.position_degs=45
+mount.axis1.measured_velocity_degs_per_sec=0.5
+mount.axis1.min_mech_position_degs=0
+mount.axis1.max_mech_position_degs=90
