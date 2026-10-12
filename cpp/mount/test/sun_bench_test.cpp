@@ -136,7 +136,7 @@ double trial(Rng& rng, std::uint64_t& gotos) {
     const bool new_phase = phase != last_phase;
     last_phase = phase;
     const Command goto_or_none = new_phase ? Command::kGoto : Command::kNone;
-    period(rig, rng, phase % 2 == 1 ? Command::kRates : goto_or_none, gotos);
+    period(rig, rng, phase % 2 != 0 ? Command::kRates : goto_or_none, gotos);
     next += step;
     std::this_thread::sleep_until(next);
   }
