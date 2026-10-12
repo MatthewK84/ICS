@@ -410,14 +410,17 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
 
 ## Mount client
 
-[`mount/`](mount) is `ics::mount` (ICS-033, CPP-16): the client for PlaneWave Interface 4 (PWI4), which runs each station's mount, and the loop that sends it rate demands. `ics-mountd` (ICS-041) will run it, with the sun keep-out (ICS-034) wrapped around it. A run on a bench mount is [#165](https://github.com/MatthewK84/ICS/issues/165).
+[`mount/`](mount) is `ics::mount` (ICS-033, CPP-16): the client for PlaneWave Interface 4 (PWI4), which runs each station's mount, and the loop that sends it rate demands, with the sun keep-out interlock around both (ICS-034, CPP-17). `ics-mountd` (ICS-041) will run them. A run on a bench mount is [#165](https://github.com/MatthewK84/ICS/issues/165).
 
 | Header | Provides |
 |---|---|
 | [`pwi4_status.hpp`](mount/include/ics/mount/pwi4_status.hpp) | `parse_status`: PWI4's `keyword=value` status, in ICS units; `MountStatus` and `AxisStatus` |
 | [`limits.hpp`](mount/include/ics/mount/limits.hpp) | `check_goto` and `limit_rates`: a goto or rates held to the axis limits; `MountLimits` |
 | [`pwi4_client.hpp`](mount/include/ics/mount/pwi4_client.hpp) | `Pwi4Client`: status, connect, enable, goto, rates and stop over PWI4's HTTP interface, with bounded retries |
-| [`rate_loop.hpp`](mount/include/ics/mount/rate_loop.hpp) | `RateLoop`: the latest demand from a `RateSource`, sent at 20 to 50 Hz, stopping the mount on a fault |
+| [`rate_loop.hpp`](mount/include/ics/mount/rate_loop.hpp) | `RateLoop`: the latest demand from a `RateSource`, sent at 20 to 50 Hz through the interlock, stopping the mount on a fault |
+| [`sun.hpp`](mount/include/ics/mount/sun.hpp) | `sun_position`: the sun's azimuth and altitude at a site and UTC time, by NREL's Solar Position Algorithm |
+| [`keep_out.hpp`](mount/include/ics/mount/keep_out.hpp) | `KeepOut` and the geometry of the keep-out: separations, the closest approach over a sweep, `clear_ahead`, `escape_rates`, `sun_safe_all_year` |
+| [`interlock.hpp`](mount/include/ics/mount/interlock.hpp) | `SunGuard`, the keep-out's decisions, and `SunInterlock`, which every command to the mount goes through; `ClockSource` |
 
 - **PWI4's interface.** The client uses only commands PlaneWave documents in its published client (`pwi4_client.py`): GET requests with their parameters in the query, each answered with status text. The commands are:
   - `/status`, `/mount/connect`, `/mount/enable`;
@@ -443,6 +446,36 @@ The report's `error_bound_ns` is a model, not a measurement: |offset| plus the a
 
   Runs here have had 0 to 3 late or missed periods in 500.
 - **Tests and fuzzing.** Tests cover every refusal of the parser, each limit, retries, timeouts, dropped connections, and each fault. The fuzz target reads any status text.
+
+### Sun keep-out interlock
+
+The interlock (ICS-034) keeps the line of sight out of a 15° cone around the sun's centre. It keeps the mount out of a guard zone, the cone plus a 2° margin, which allows for pointing error, refraction and the sun's motion.
+
+- **The sun's position.** `sun_position` is NREL's Solar Position Algorithm (Reda and Andreas, NREL/TP-560-34302, revised 2008), good to 0.0003°.
+  - It takes UTC from 2000 to 2100, a configured ΔT (69 s), and a standard atmosphere for refraction.
+  - Its tables of periodic terms ([`spa_terms.hpp`](mount/src/spa_terms.hpp)) were generated from pvlib python's copy of the report's tables, under pvlib's BSD-3-Clause licence ([`tools.txt`](mount/src/tools.txt) and the dependency register). NREL's report could not be reached from the development environment.
+  - The tests check the report's worked example to 0.0001°, and eight cases against pvlib's SPA to 0.000001°. Locally, 100,000 random times and sites agreed with pvlib to within 0.000000001°.
+  - The interlock works the sun out again each second.
+- **Commands.** Every command to the mount goes through `SunInterlock`.
+  - A goto whose target is inside the guard zone is refused, sending nothing.
+  - Demanded rates are held to the axis limits, then zeroed if the motion over the lookahead (1 s) would enter the guard zone. The motion counts both the commanded rates and the mount's measured velocity.
+  - A move that comes no nearer the sun is always allowed, so a mount inside the zone can always leave it.
+- **Supervision, each period.**
+  - **Stopping a motion headed in.** PWI4 does not say which way its slews go, so a goto is checked by its target only. The supervisor stops any motion, PWI4's slews included, whose path over the lookahead from the measured velocity would enter the guard zone: zero rates, then `/mount/stop`.
+  - **Escaping.** When the mount is inside the guard zone (the sun moves up to 0.25° a minute), the interlock drives it straight away from the sun at 1°/s, within the limits, until it is 1° outside the zone. Then it stops and waits for a new command. This is the one time the interlock moves the mount on its own.
+  - **Faults.**
+    - A *clock fault*: ics-timingd reports the clock free-running, its error bound passes 1 s, or no new report comes for 30 s.
+    - An *ephemeris fault*: a time outside 2000 to 2100, a sun that is not a number, or PWI4's own `mount.distance_to_sun_degs` differing from ours by more than 2° while PWI4 is connected.
+    - A *blocked escape*: the limits leave no way away.
+
+    On any of these, the interlock sends zero rates and `/mount/stop`. Then it sends `/mount/park`, if the way from here to the park position stays outside the guard zone around the last good sun, grown by how far the sun can have moved since. Otherwise the mount holds where it stopped. The park slew is watched in turn and stopped if it heads in. A fault latches until an operator clears it.
+  - **The park position**, PWI4's, is given in the configuration. It must be outside the guard zone all year: its declination at least 23.5° plus the guard zone from the equator. The interlock refuses to start otherwise. The pole-ward horizon 10° up passes below about 50° latitude.
+- **The clock.** `ClockSource` gives the interlock UTC and the clock's health from ics-timingd; `ics-mountd` will feed it, so `ics::mount` does not depend on gRPC. Until the first good report the interlock refuses every command.
+- **The rate loop** runs through the interlock. A period in which the interlock acted sends no demand. On the interlock's fault the loop returns, leaving the mount to the interlock.
+- **Done when.** Randomized commands never enter the cone, and a fault parks the mount. Here it is tested against a simulated mount and the emulated PWI4; the bench mount is [#165](https://github.com/MatthewK84/ICS/issues/165).
+  - **10,000 trials in simulated time** (`SunTrials`). Gotos and rate demands at random sites and times run at 20 to 50 Hz, many aimed through the sun or at it. The simulated mount has accelerating axes, and its gotos go either way round in azimuth. The closest approach was 15.50°, in a trial that started just inside the guard zone and escaped.
+  - **500 fault trials in simulated time.** Each injects a clock or ephemeris fault. Two thirds parked; the rest held, all outside the cone.
+  - **20 trials end to end** (`SunBench`), through the client to the emulated PWI4 in real time. The closest approach was 20.6°. A clock fault and an ephemeris fault each park the emulated mount.
 
 ## Encoder time-tagger
 

@@ -8,6 +8,7 @@
 #include "ics/common/error.hpp"
 #include "ics/common/units.hpp"
 #include "ics/logging/logger.hpp"
+#include "ics/mount/interlock.hpp"
 #include "ics/mount/limits.hpp"
 #include "ics/mount/pwi4_client.hpp"
 
@@ -56,6 +57,9 @@ enum class Fault : std::uint8_t {
   kLink,
   // No demand, or none fresher than stale_after.
   kStaleDemand,
+  // The sun keep-out interlock faulted (ICS-034); it has stopped or parked
+  // the mount itself.
+  kInterlock,
 };
 
 struct LoopStats {
@@ -67,19 +71,25 @@ struct LoopStats {
   // Axis rates clamped to their maximum, and stopped short of a limit.
   std::uint64_t clamped = 0;
   std::uint64_t stopped_at_limit = 0;
+  // Periods whose demand the sun keep-out interlock did not send: it refused
+  // the rates, or stopped or moved the mount itself.
+  std::uint64_t preempted = 0;
   Fault fault = Fault::kNone;
 };
 
-// Sends the latest rate demand to the mount at a fixed rate (ICS-033). Each
-// period it asks for the mount's status and sends the demand, held to the
-// limits against that status, all within the period. On a fault it sends
-// zero rates and /mount/stop, and returns; it never starts the mount moving
-// again on its own.
+// Sends the latest rate demand to the mount at a fixed rate (ICS-033),
+// through the sun keep-out interlock (ICS-034). Each period it asks for the
+// mount's status, lets the interlock supervise, and sends the demand, held to
+// the limits and gated by the interlock against that status, all within the
+// period. A period in which the interlock acted sends no demand. On a fault
+// it sends zero rates and /mount/stop, and returns; on the interlock's fault
+// it returns, leaving the mount to the interlock. It never starts the mount
+// moving again on its own.
 class RateLoop {
  public:
-  // client and source must outlive the loop.
-  RateLoop(Pwi4Client& client, RateSource& source, const LoopSettings& settings) noexcept
-      : client_(client), source_(source), settings_(settings) {}
+  // interlock and source must outlive the loop.
+  RateLoop(SunInterlock& interlock, RateSource& source, const LoopSettings& settings) noexcept
+      : interlock_(interlock), source_(source), settings_(settings) {}
 
   // Runs until stop is set, then sends zero rates. Error::kInvalidArgument,
   // running nothing, for a rate outside kMinLoopHz to kMaxLoopHz;
@@ -89,14 +99,14 @@ class RateLoop {
   [[nodiscard]] const LoopStats& stats() const noexcept { return stats_; }
 
  private:
-  enum class Outcome : std::uint8_t { kSent, kFailed, kStale };
+  enum class Outcome : std::uint8_t { kSent, kFailed, kStale, kInterlock };
 
   // One period's work, done by deadline.
   [[nodiscard]] Outcome step(Deadline deadline);
   // Stops the mount for a fault, and returns kUnavailable.
   [[nodiscard]] Status halt(Fault fault);
 
-  Pwi4Client& client_;
+  SunInterlock& interlock_;
   RateSource& source_;
   LoopSettings settings_;
   LoopStats stats_;

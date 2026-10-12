@@ -10,9 +10,12 @@
 #include "emulated_pwi4.hpp"
 #include "ics/common/units.hpp"
 #include "ics/logging/logger.hpp"
+#include "ics/frames/geodetic.hpp"
+#include "ics/mount/interlock.hpp"
 #include "ics/mount/limits.hpp"
 #include "ics/mount/pwi4_client.hpp"
 #include "ics/mount/rate_loop.hpp"
+#include "ics/mount/sun.hpp"
 
 namespace ics::mount::testing {
 
@@ -38,6 +41,62 @@ inline Pwi4Settings settings_for(const EmulatedPwi4& pwi4) {
 inline Pwi4Client client_for(const EmulatedPwi4& pwi4) {
   auto client = Pwi4Client::make(settings_for(pwi4));
   return std::move(client.value());
+}
+
+// The interlock's clock for the tests (ICS-034): UTC from start, running on
+// with the steady clock, and a healthy report each time it is asked, unless
+// a test says otherwise.
+class TestClock final : public ClockSource {
+ public:
+  explicit TestClock(const UtcTime start) : start_(start), steady_start_(std::chrono::steady_clock::now()) {}
+  [[nodiscard]] UtcTime now() override { return start_ + (std::chrono::steady_clock::now() - steady_start_) + jump_; }
+  [[nodiscard]] std::optional<ClockHealth> health() override {
+    if (!reporting_) {
+      return std::nullopt;
+    }
+    return ClockHealth{.traceable = traceable_, .error_bound = std::chrono::microseconds(1), .reported = now()};
+  }
+  // From now on: no reports, or reports that the clock is free-running, or
+  // UTC moved on by jump.
+  void stop_reporting() { reporting_ = false; }
+  void free_running() { traceable_ = false; }
+  void jump(const Duration by) { jump_ = by; }
+
+ private:
+  UtcTime start_;
+  std::chrono::steady_clock::time_point steady_start_;
+  Duration jump_{};
+  bool reporting_ = true;
+  bool traceable_ = true;
+};
+
+// A site like a southwestern US range's.
+inline frames::Geodetic bench_site() {
+  return frames::Geodetic::make(Degrees(32.38), Degrees(-106.48), Meters(1200.0)).value();
+}
+
+// 01:00 local time on 22 June 2026 at the bench site: the sun far below the
+// horizon.
+inline UtcTime night() { return utc_from_ns(1782111600000000000); }
+
+// The interlock's settings for the tests: parked due north, 10° up.
+inline InterlockSettings interlock_settings() {
+  InterlockSettings out;
+  out.park = {.altitude = Radians(10 * kDeg), .azimuth = Radians(0.0)};
+  return out;
+}
+
+// An interlock around a client of the emulator, whose sun it places where
+// the interlock will work it out to be.
+inline SunInterlock interlock_for(EmulatedPwi4& pwi4, TestClock& clock, const Pwi4Settings& settings) {
+  pwi4.set_sun(sun_position(clock.now(), bench_site(), SunSettings{}).value());
+  auto client = Pwi4Client::make(settings);
+  auto interlock = SunInterlock::make(std::move(client.value()), clock, bench_site(), interlock_settings());
+  return std::move(interlock.value());
+}
+
+inline SunInterlock interlock_for(EmulatedPwi4& pwi4, TestClock& clock) {
+  return interlock_for(pwi4, clock, settings_for(pwi4));
 }
 
 // A second from now: room for every retry.

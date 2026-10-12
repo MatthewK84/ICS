@@ -3,10 +3,12 @@
 // An emulated PlaneWave Interface 4 for the mount client's tests (ICS-033): a
 // loopback HTTP/1.1 server that keeps its connections open and answers the
 // commands the client sends as PlaneWave documents them, each with status
-// text. It moves two simulated axes: a goto slews at the axis's top speed;
-// a rate is reached at the axis's acceleration; an axis stops at its
-// mechanical limits. It can answer late, answer with an error, or drop the
-// connection, and it keeps what it saw.
+// text. It moves two simulated axes: a goto or a park slews each axis at up
+// to its top speed, which it reaches and sheds at its acceleration; a rate is
+// reached at the axis's acceleration; an axis stops at its mechanical limits.
+// It reports the distance to a sun the test places (ICS-034). It can answer
+// late, answer with an error, or drop the connection, and it keeps what it
+// saw.
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -24,6 +26,7 @@
 #include <cstdint>
 #include <map>
 #include <mutex>
+#include <numbers>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -31,6 +34,10 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+
+#include "ics/common/units.hpp"
+#include "ics/mount/keep_out.hpp"
+#include "ics/mount/limits.hpp"
 
 namespace ics::mount::testing {
 
@@ -56,6 +63,7 @@ struct Seen {
   std::uint64_t stop_rates = 0;
   std::uint64_t stops = 0;
   std::uint64_t gotos = 0;
+  std::uint64_t parks = 0;
   std::uint64_t connects = 0;
   std::uint64_t enables = 0;
   bool connected = false;
@@ -66,6 +74,9 @@ struct Seen {
   std::array<double, 2> max_abs_rate_deg_s{};
   std::array<double, 2> min_position_deg{};
   std::array<double, 2> max_position_deg{};
+  // The closest the line of sight came to the sun, in degrees, sampled at
+  // least every 20 ms.
+  double closest_to_sun_deg = 180.0;
   // How far each axis's speed was from its commanded rate, summed over each
   // status, and how many statuses.
   std::array<double, 2> rate_error_sum_deg_s{};
@@ -113,6 +124,12 @@ class EmulatedPwi4 {
     const std::scoped_lock lock(mutex_);
     fail_ = count;
   }
+  // Answer the next count requests for path with HTTP 500.
+  void fail_path(std::string path, const std::uint32_t count) {
+    const std::scoped_lock lock(mutex_);
+    fail_path_ = std::move(path);
+    fail_path_count_ = count;
+  }
   // Close the connection instead of answering the next count requests.
   void drop_next(const std::uint32_t count) {
     const std::scoped_lock lock(mutex_);
@@ -122,6 +139,23 @@ class EmulatedPwi4 {
   void delay(const std::chrono::milliseconds wait) {
     const std::scoped_lock lock(mutex_);
     delay_ = wait;
+  }
+  // Where the sun is, for mount.distance_to_sun_degs; far below the horizon
+  // until set.
+  void set_sun(const AltAz& sun) {
+    const std::scoped_lock lock(mutex_);
+    sun_ = sun;
+  }
+  // Where /mount/park sends the axes, in degrees.
+  void set_park(const double alt_deg, const double az_deg) {
+    const std::scoped_lock lock(mutex_);
+    park_ = {az_deg, alt_deg};
+  }
+  // Where the axes point now.
+  [[nodiscard]] AltAz pointing() {
+    const std::scoped_lock lock(mutex_);
+    advance();
+    return pointing_now();
   }
   // Answer /status with this text instead of the simulated status.
   void status_text(std::optional<std::string> text) {
@@ -153,6 +187,8 @@ class EmulatedPwi4 {
         fds.push_back({client.fd, POLLIN, 0});
       }
       if (::poll(fds.data(), fds.size(), 20) <= 0) {
+        const std::scoped_lock lock(mutex_);
+        advance();
         continue;
       }
       if ((fds[0].revents & POLLIN) != 0) {
@@ -222,6 +258,10 @@ class EmulatedPwi4 {
     advance();
     const std::size_t question = target.find('?');
     const std::string path = target.substr(0, question);
+    if (fail_path_count_ > 0 && path == fail_path_) {
+      --fail_path_count_;
+      return {.code = 500, .body = "error=emulated\n", .drop = false};
+    }
     const Params params = parse(question == std::string::npos ? std::string() : target.substr(question + 1));
     if (!command(path, params)) {
       return {.code = 404, .body = "error=unknown command\n", .drop = false};
@@ -246,6 +286,11 @@ class EmulatedPwi4 {
       slewing_ = false;
     } else if (path == "/mount/goto_alt_az") {
       goto_alt_az(number(params, "alt_degs"), number(params, "az_degs"));
+    } else if (path == "/mount/park") {
+      ++seen_.parks;
+      targets_ = park_;
+      rates_ = {};
+      slewing_ = true;
     } else if (path == "/mount/offset") {
       offset(params);
     } else {
@@ -286,17 +331,22 @@ class EmulatedPwi4 {
     last_ = now;
     for (std::size_t i = 0; i < 2; ++i) {
       EmulatedAxis& axis = axes_[i];
-      const double wanted = slewing_ ? std::clamp((targets_[i] - axis.position_deg) / std::max(dt, 1e-3),
-                                                  -axis.max_velocity_deg_s, axis.max_velocity_deg_s)
-                                     : rates_[i];
+      const double left = targets_[i] - axis.position_deg;
+      // A slew comes to rest on its target: no faster than it can stop in
+      // what is left, nor than reaches it within this step.
+      const double arrival = std::min({axis.max_velocity_deg_s, std::sqrt(2.0 * axis.acceleration_deg_s2 * std::abs(left)),
+                                       std::abs(left) / std::max(dt, 1e-3)});
+      const double wanted = slewing_ ? std::copysign(arrival, left) : rates_[i];
       const double step = axis.acceleration_deg_s2 * dt;
-      velocity_[i] = slewing_ ? wanted : std::clamp(wanted, velocity_[i] - step, velocity_[i] + step);
+      velocity_[i] = std::clamp(wanted, velocity_[i] - step, velocity_[i] + step);
       axis.position_deg = std::clamp(axis.position_deg + (velocity_[i] * dt), axis.min_deg, axis.max_deg);
       seen_.min_position_deg[i] = std::min(seen_.min_position_deg[i], axis.position_deg);
       seen_.max_position_deg[i] = std::max(seen_.max_position_deg[i], axis.position_deg);
     }
     slewing_ = slewing_ && (std::abs(targets_[0] - axes_[0].position_deg) > 1e-6 ||
                             std::abs(targets_[1] - axes_[1].position_deg) > 1e-6);
+    seen_.closest_to_sun_deg =
+        std::min(seen_.closest_to_sun_deg, separation(pointing_now(), sun_).value() * 180.0 / std::numbers::pi);
   }
 
   void sample_rate_error() {
@@ -307,9 +357,11 @@ class EmulatedPwi4 {
   }
 
   [[nodiscard]] std::string status() const {
+    // PWI4 reports 0 while it is not connected to the mount.
+    const double to_sun = seen_.connected ? separation(pointing_now(), sun_).value() * 180.0 / std::numbers::pi : 0.0;
     std::string out = "pwi4.version=4.1.9 beta 22\nmount.is_connected=" + flag(seen_.connected) +
                       "\nmount.is_slewing=" + flag(slewing_) +
-                      "\nmount.is_tracking=false\nmount.distance_to_sun_degs=95.5\n";
+                      "\nmount.is_tracking=false\nmount.distance_to_sun_degs=" + std::to_string(to_sun) + "\n";
     for (std::size_t i = 0; i < 2; ++i) {
       const std::string prefix = "mount.axis" + std::to_string(i) + ".";
       out += prefix + "is_enabled=" + flag(seen_.enabled[i]) + "\n" + prefix +
@@ -319,6 +371,11 @@ class EmulatedPwi4 {
              "max_mech_position_degs=" + std::to_string(axes_[i].max_deg) + "\n";
     }
     return out;
+  }
+
+  [[nodiscard]] AltAz pointing_now() const {
+    constexpr double kRad = std::numbers::pi / 180.0;
+    return {.altitude = Radians(axes_[1].position_deg * kRad), .azimuth = Radians(axes_[0].position_deg * kRad)};
   }
 
   [[nodiscard]] static std::string flag(const bool value) { return value ? "true" : "false"; }
@@ -356,10 +413,15 @@ class EmulatedPwi4 {
   std::array<double, 2> velocity_{};
   std::array<double, 2> rates_{};
   std::array<double, 2> targets_{};
+  // By axis: azimuth, then altitude, in degrees.
+  std::array<double, 2> park_{0.0, 10.0};
+  AltAz sun_{.altitude = Radians(-1.2), .azimuth = Radians(0.0)};
   bool slewing_ = false;
   std::chrono::steady_clock::time_point last_;
   std::uint32_t fail_ = 0;
   std::uint32_t drop_ = 0;
+  std::string fail_path_;
+  std::uint32_t fail_path_count_ = 0;
   std::chrono::milliseconds delay_{};
   std::optional<std::string> status_override_;
   Seen seen_;

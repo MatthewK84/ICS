@@ -34,6 +34,10 @@ Status RateLoop::run(const std::atomic<bool>& stop) {
     if (outcome == Outcome::kStale) {
       return halt(Fault::kStaleDemand);
     }
+    if (outcome == Outcome::kInterlock) {
+      stats_.fault = Fault::kInterlock;
+      return fail(Error::kUnavailable);
+    }
     failed_in_row = outcome == Outcome::kFailed ? failed_in_row + 1 : 0;
     stats_.failed_periods += outcome == Outcome::kFailed ? 1 : 0;
     if (failed_in_row >= settings_.max_failed_periods) {
@@ -45,7 +49,7 @@ Status RateLoop::run(const std::atomic<bool>& stop) {
     next = now > deadline ? now : deadline;
     std::this_thread::sleep_until(next);
   }
-  static_cast<void>(client_.stop_rates(steady_clock::now() + kHaltTime));
+  static_cast<void>(interlock_.stop_rates(steady_clock::now() + kHaltTime));
   return {};
 }
 
@@ -54,15 +58,27 @@ RateLoop::Outcome RateLoop::step(const Deadline deadline) {
   if (!demand || settings_.clock() - demand->time > settings_.stale_after) {
     return Outcome::kStale;
   }
-  const Result<MountStatus> status = client_.status(deadline);
-  const Result<AppliedRates> applied =
-      status ? client_.set_rates(demand->rates, *status, deadline) : fail(status.error());
-  if (!applied) {
+  const Result<MountStatus> status = interlock_.status(deadline);
+  const Result<Action::Kind> acted =
+      status ? interlock_.supervise(*status, deadline) : fail(status.error());
+  if (!acted) {
     return Outcome::kFailed;
   }
+  if (interlock_.state().fault != SunFault::kNone) {
+    return Outcome::kInterlock;
+  }
+  if (*acted != Action::Kind::kNone) {
+    ++stats_.preempted;
+    return Outcome::kSent;
+  }
+  const Result<SentRates> sent = interlock_.set_rates(demand->rates, *status, deadline);
+  if (!sent) {
+    return Outcome::kFailed;
+  }
+  stats_.preempted += sent->preempted ? 1 : 0;
   for (std::size_t i = 0; i < kAxes; ++i) {
-    stats_.clamped += applied->clamped[i] ? 1 : 0;
-    stats_.stopped_at_limit += applied->stopped_at_limit[i] ? 1 : 0;
+    stats_.clamped += sent->applied.clamped[i] ? 1 : 0;
+    stats_.stopped_at_limit += sent->applied.stopped_at_limit[i] ? 1 : 0;
   }
   return Outcome::kSent;
 }
@@ -72,8 +88,8 @@ Status RateLoop::halt(const Fault fault) {
   static_cast<void>(ics::check(stats_.fault == Fault::kNone));
   stats_.fault = fault;
   const Deadline deadline = steady_clock::now() + kHaltTime;
-  static_cast<void>(client_.stop_rates(deadline));
-  static_cast<void>(client_.stop(deadline));
+  static_cast<void>(interlock_.stop_rates(deadline));
+  static_cast<void>(interlock_.stop(deadline));
   return fail(Error::kUnavailable);
 }
 

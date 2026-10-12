@@ -1295,6 +1295,25 @@ reviewed = 2026-10-05
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
+# --- Solar Position Algorithm tables (cpp/mount/src/tools.txt) --------------
+
+[[project]]
+name = "pvlib python"
+ecosystem = "tool"
+packages = ["pvlib"]
+used_for = "The tables of periodic terms of NREL's Solar Position Algorithm, copied with its licence from pvlib/spa.py into cpp/mount/src/spa_terms.hpp, which the sun keep-out interlock's sun_position uses (ICS-034); and its SPA and the report's worked example from its tests, run locally to check sun_position. NREL's report, which the tables come from, could not be reached from the development environment."
+ships = true
+license = "BSD-3-Clause"
+source = "https://github.com/pvlib/pvlib-python"
+governance = "A NumFOCUS Affiliated Project, begun in 2013 by Sandia National Laboratories as a Python translation of PVLIB for Matlab. A core group of photovoltaic modellers from several institutions reviews changes and publishes releases to PyPI; copyright is shared among its contributors."
+sustainment = "Active, with regular releases; 0.16.1 was published in September 2026. Only data is copied, pinned by version and the sha256 of the PyPI source distribution in cpp/mount/src/tools.txt, so nothing tracks pvlib's releases. The tables could be transcribed again from NREL's report (NREL/TP-560-34302) if that became reachable."
+foreign_influence = "A NumFOCUS Affiliated Project (NumFOCUS is a US non-profit), maintained by a core group of photovoltaic modellers from a variety of institutions, whose jurisdictions were not established from the project's pages; international contributors."
+single_maintainer = false
+maintainers = "The pvlib python maintainers (pvlib-admin@googlegroups.com), a core group named in the project's documentation"
+reviewed = 2026-10-12
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
 # --- Toolchain data (deploy/toolchain/tools.txt) -----------------------------
 
 [[project]]

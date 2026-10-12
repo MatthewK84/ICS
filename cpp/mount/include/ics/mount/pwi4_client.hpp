@@ -88,7 +88,10 @@ class Pwi4Client {
   [[nodiscard]] Status stop_rates(Deadline deadline);
   // /mount/stop.
   [[nodiscard]] Status stop(Deadline deadline);
+  // /mount/park: to PWI4's park position (ICS-034).
+  [[nodiscard]] Status park(Deadline deadline);
 
+  [[nodiscard]] const Pwi4Settings& settings() const noexcept { return settings_; }
   [[nodiscard]] const ClientStats& stats() const noexcept { return stats_; }
 
  private:
