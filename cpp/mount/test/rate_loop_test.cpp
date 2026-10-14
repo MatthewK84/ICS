@@ -20,6 +20,9 @@ using ics::mount::RateLoop;
 using ics::mount::testing::EmulatedPwi4;
 using ics::mount::testing::FixedSource;
 using ics::mount::testing::fresh;
+using ics::mount::testing::interlock_for;
+using ics::mount::testing::night;
+using ics::mount::testing::TestClock;
 using std::chrono::milliseconds;
 
 // Runs the loop until stop_after has passed, or it stops by itself.
@@ -47,10 +50,11 @@ class Fresh final : public ics::mount::RateSource {
 
 TEST(RateLoop, RefusesARateOutsideTwentyToFiftyHertz) {
   EmulatedPwi4 pwi4;
-  auto client = ics::mount::testing::client_for(pwi4);
+  TestClock clock(night());
+  auto interlock = interlock_for(pwi4, clock);
   Fresh source(1, 1);
   for (const double hz : {10.0, 60.0}) {
-    RateLoop loop(client, source, LoopSettings{.rate_hz = hz});
+    RateLoop loop(interlock, source, LoopSettings{.rate_hz = hz});
     std::atomic<bool> stop{false};
     EXPECT_EQ(loop.run(stop).error(), ics::Error::kInvalidArgument);
   }
@@ -59,9 +63,10 @@ TEST(RateLoop, RefusesARateOutsideTwentyToFiftyHertz) {
 
 TEST(RateLoop, SendsTheDemandUntilStoppedThenZeroRates) {
   EmulatedPwi4 pwi4;
-  auto client = ics::mount::testing::client_for(pwi4);
+  TestClock clock(night());
+  auto interlock = interlock_for(pwi4, clock);
   Fresh source(2, -1);
-  RateLoop loop(client, source, LoopSettings{.rate_hz = 50.0});
+  RateLoop loop(interlock, source, LoopSettings{.rate_hz = 50.0});
   ASSERT_TRUE(run_for(loop, milliseconds(300)).has_value());
   EXPECT_GE(loop.stats().periods, 10U);
   EXPECT_EQ(loop.stats().fault, Fault::kNone);
@@ -76,10 +81,11 @@ TEST(RateLoop, CountsWhatTheLimitsChanged) {
   auto axes = ics::mount::testing::default_axes();
   axes[1].position_deg = 12.0;
   EmulatedPwi4 pwi4(axes);
-  auto client = ics::mount::testing::client_for(pwi4);
+  TestClock clock(night());
+  auto interlock = interlock_for(pwi4, clock);
   // Too fast in azimuth, and down.
   Fresh source(25, -30);
-  RateLoop loop(client, source, LoopSettings{.rate_hz = 50.0});
+  RateLoop loop(interlock, source, LoopSettings{.rate_hz = 50.0});
   ASSERT_TRUE(run_for(loop, milliseconds(200)).has_value());
   EXPECT_GE(loop.stats().clamped, loop.stats().periods);
   EXPECT_GE(loop.stats().stopped_at_limit, 1U);
@@ -88,11 +94,12 @@ TEST(RateLoop, CountsWhatTheLimitsChanged) {
 
 TEST(RateLoop, StopsTheMountOnAStaleDemand) {
   EmulatedPwi4 pwi4;
-  auto client = ics::mount::testing::client_for(pwi4);
+  TestClock clock(night());
+  auto interlock = interlock_for(pwi4, clock);
   RateDemand old = fresh(1, 1);
   old.time -= std::chrono::seconds(1);
   FixedSource source(old);
-  RateLoop loop(client, source, LoopSettings{.rate_hz = 20.0});
+  RateLoop loop(interlock, source, LoopSettings{.rate_hz = 20.0});
   EXPECT_EQ(run_for(loop, milliseconds(500)).error(), ics::Error::kUnavailable);
   EXPECT_EQ(loop.stats().fault, Fault::kStaleDemand);
   EXPECT_EQ(loop.stats().periods, 1U);
@@ -103,30 +110,46 @@ TEST(RateLoop, StopsTheMountOnAStaleDemand) {
 
 TEST(RateLoop, StopsTheMountWithoutADemand) {
   EmulatedPwi4 pwi4;
-  auto client = ics::mount::testing::client_for(pwi4);
+  TestClock clock(night());
+  auto interlock = interlock_for(pwi4, clock);
   // Owned through the interface, as ics-mountd will own its source.
   const std::unique_ptr<ics::mount::RateSource> source = std::make_unique<FixedSource>(std::nullopt);
-  RateLoop loop(client, *source, LoopSettings{.rate_hz = 20.0});
+  RateLoop loop(interlock, *source, LoopSettings{.rate_hz = 20.0});
   EXPECT_EQ(run_for(loop, milliseconds(500)).error(), ics::Error::kUnavailable);
   EXPECT_EQ(loop.stats().fault, Fault::kStaleDemand);
 }
 
 TEST(RateLoop, RidesOutAFailedPeriod) {
   EmulatedPwi4 pwi4;
-  auto client = ics::mount::testing::client_for(pwi4);
+  TestClock clock(night());
+  auto interlock = interlock_for(pwi4, clock);
   Fresh source(1, 1);
-  RateLoop loop(client, source, LoopSettings{.rate_hz = 50.0});
+  RateLoop loop(interlock, source, LoopSettings{.rate_hz = 50.0});
   pwi4.fail_next(4);
   ASSERT_TRUE(run_for(loop, milliseconds(300)).has_value());
   EXPECT_GE(loop.stats().failed_periods, 1U);
   EXPECT_EQ(loop.stats().fault, Fault::kNone);
 }
 
+TEST(RateLoop, RidesOutAFailedRateCommand) {
+  EmulatedPwi4 pwi4;
+  TestClock clock(night());
+  auto interlock = interlock_for(pwi4, clock);
+  Fresh source(1, 1);
+  RateLoop loop(interlock, source, LoopSettings{.rate_hz = 50.0});
+  // The status comes back; every attempt at the rates fails.
+  pwi4.fail_path("/mount/offset", 3);
+  ASSERT_TRUE(run_for(loop, milliseconds(300)).has_value());
+  EXPECT_EQ(loop.stats().failed_periods, 1U);
+  EXPECT_EQ(loop.stats().fault, Fault::kNone);
+}
+
 TEST(RateLoop, StopsTheMountWhenTheLinkFails) {
   EmulatedPwi4 pwi4;
-  auto client = ics::mount::testing::client_for(pwi4);
+  TestClock clock(night());
+  auto interlock = interlock_for(pwi4, clock);
   Fresh source(1, 1);
-  RateLoop loop(client, source, LoopSettings{.rate_hz = 50.0});
+  RateLoop loop(interlock, source, LoopSettings{.rate_hz = 50.0});
   // Every answer comes after the period's end.
   pwi4.delay(milliseconds(30));
   EXPECT_EQ(run_for(loop, milliseconds(2000)).error(), ics::Error::kUnavailable);
@@ -146,9 +169,10 @@ class Slow final : public ics::mount::RateSource {
 
 TEST(RateLoop, CountsLatePeriods) {
   EmulatedPwi4 pwi4;
-  auto client = ics::mount::testing::client_for(pwi4);
+  TestClock clock(night());
+  auto interlock = interlock_for(pwi4, clock);
   Slow source;
-  RateLoop loop(client, source, LoopSettings{.rate_hz = 50.0});
+  RateLoop loop(interlock, source, LoopSettings{.rate_hz = 50.0});
   EXPECT_EQ(run_for(loop, milliseconds(1000)).error(), ics::Error::kUnavailable);
   // The third failed period stops the loop before it is counted as late.
   EXPECT_EQ(loop.stats().late_periods, 2U);

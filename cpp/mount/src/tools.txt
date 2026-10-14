@@ -1,0 +1,5 @@
+# Data copied from other projects into ics::mount (ICS-034), one source per
+# line: name, version, sha256, source. pvlib's sha256 is of its source
+# distribution on PyPI, whose pvlib/spa.py holds the SPA tables spa_terms.hpp
+# copies. Every entry needs an entry in docs/dependency-register.toml.
+pvlib 0.16.1 58c435f93be516bcedf53dc3a49b2079e9e00af373f5c052cb7cf8d2b973ce62 https://pypi.org/project/pvlib/0.16.1/

@@ -39,9 +39,10 @@ Bench run_bench(const double rate_hz) {
   // Each attempt may take 40% of a period, which leaves room for a retry.
   ics::mount::Pwi4Settings settings = ics::mount::testing::settings_for(pwi4);
   settings.timeout = std::chrono::milliseconds(std::llround(400.0 / rate_hz));
-  auto client = std::move(ics::mount::Pwi4Client::make(settings).value());
+  ics::mount::testing::TestClock clock(ics::mount::testing::night());
+  auto interlock = ics::mount::testing::interlock_for(pwi4, clock, settings);
   SweepSource source;
-  RateLoop loop(client, source, LoopSettings{.rate_hz = rate_hz});
+  RateLoop loop(interlock, source, LoopSettings{.rate_hz = rate_hz});
   std::atomic<bool> stop{false};
   std::thread stopper([&stop] {
     std::this_thread::sleep_for(kRun);

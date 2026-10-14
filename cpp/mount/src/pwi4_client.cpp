@@ -149,6 +149,8 @@ Status Pwi4Client::stop_rates(const Deadline deadline) {
 
 Status Pwi4Client::stop(const Deadline deadline) { return done(request("/mount/stop", deadline)); }
 
+Status Pwi4Client::park(const Deadline deadline) { return done(request("/mount/park", deadline)); }
+
 Result<std::string> Pwi4Client::request(const std::string& path, const Deadline deadline) {
   ++stats_.requests;
   const std::string url = base_url_ + path;
