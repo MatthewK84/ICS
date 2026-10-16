@@ -10,9 +10,15 @@ Contents:
 - [`pli/`](pli): one segment of the C++ PLI store and its two Parquet files, written by the store's own Parquet writer ([ICS-030](https://github.com/MatthewK84/ICS/issues/30), [`cpp/store`](../cpp/README.md#pli-store)). The C++ test `ArchiveSegment.MatchesTheGoldenFiles` requires the store to write the same bytes; run it with `ICS_WRITE_GOLDEN=1` to write them again after a deliberate change. [`python/tests/test_pli_parquet.py`](../python/tests/test_pli_parquet.py) reads the segment with its own parser and requires pyarrow, an independent Parquet reader, to find the same columns, types, nulls and values in the Parquet files.
 - [`frames/`](frames): geodetic to ECEF, geodetic to range ENU, and EGM96 MSL to ellipsoid height, generated with GeographicLib 2.3 by [`frames/generate.sh`](frames/generate.sh) from the case lists in [`frames/inputs/`](frames/inputs). The C++ frames module, [`cpp/frames`](../cpp/frames), matches every vector within 1 mm in [`cpp/frames/test/golden_test.cpp`](../cpp/frames/test/golden_test.cpp) ([ICS-014](https://github.com/MatthewK84/ICS/issues/14), [ICS-017](https://github.com/MatthewK84/ICS/issues/17)); see [`docs/frames-and-time.md`](../docs/frames-and-time.md#golden-vectors).
 
+- [`pointing/`](pointing): the pointing model ([ICS-035](https://github.com/MatthewK84/ICS/issues/35)), written by [`python/ics_golden/pointing.py`](../python/ics_golden/pointing.py).
+  - `model.json` is a parameter file whose made-up model uses every term.
+  - `vectors.csv` gives, across azimuth and from 5° to 85° of elevation, the encoder angles and the sky direction the model gives for them.
+
+  The C++ encoder module ([ICS-036](https://github.com/MatthewK84/ICS/issues/36)) must load the model, then give each sky direction from its encoder angles, and each encoder angle pair from its sky direction, within 1e-12 rad. [`python/tests/test_pointing_io.py`](../python/tests/test_pointing_io.py) requires the files to be what the reference writes.
+
 Planned contents:
 
-- Golden outputs from each Python reference model in `python/ics_models` (for example [ICS-044](https://github.com/MatthewK84/ICS/issues/44) to [ICS-049](https://github.com/MatthewK84/ICS/issues/49)).
+- Golden outputs from the other Python reference models in `python/ics_models` (for example [ICS-044](https://github.com/MatthewK84/ICS/issues/44) to [ICS-049](https://github.com/MatthewK84/ICS/issues/49)).
 
 Rules: golden files change only through the reference that produces them, and every change is reviewed with that reference.
 

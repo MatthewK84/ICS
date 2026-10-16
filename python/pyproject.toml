@@ -5,15 +5,23 @@ name = "ics-python"
 version = "0.1.0"
 description = "ICS reference models, synthetic data and analysis"
 requires-python = "==3.12.*"
-# The protobuf runtime must be at least as new as the protoc that generated
-# gen/ (proto/tools.txt, 35.0 = protobuf 7.35); upgrade them together.
-dependencies = ["protobuf==7.35.1"]
+dependencies = [
+  # Validates run records (ICS-013) and the parameter files the models write,
+  # such as the pointing model (ICS-035), before they are written.
+  "jsonschema==4.26.0",
+  # Arrays and least squares for the reference models (ICS-035).
+  "numpy==2.5.3",
+  # The protobuf runtime must be at least as new as the protoc that generated
+  # gen/ (proto/tools.txt, 35.0 = protobuf 7.35); upgrade them together.
+  "protobuf==7.35.1",
+  # ERFA, the open copy of the IAU's SOFA library: star positions for the
+  # pointing model (ICS-035).
+  "pyerfa==2.0.1.5",
+]
 
 [dependency-groups]
 dev = [
   "hypothesis==6.168.2",
-  # Validates run records against schemas/run-record.schema.json (ICS-013).
-  "jsonschema==4.26.0",
   "mypy==2.3.1",
   # Reads the Parquet files the C++ PLI store writes, to cross-check its
   # writer (ICS-030).
@@ -74,6 +82,12 @@ ignore_errors = true
 # (ICS-030) uses it.
 [[tool.mypy.overrides]]
 module = ["pyarrow", "pyarrow.*"]
+ignore_missing_imports = true
+
+# pyerfa ships no type information; ics_models.pointing.astrometry (ICS-035)
+# turns everything it returns into floats.
+[[tool.mypy.overrides]]
+module = ["erfa", "erfa.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

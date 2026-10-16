@@ -136,6 +136,17 @@ The encoder time-tagger ([`cpp/tagger`](../cpp/README.md#encoder-time-tagger), I
 - **Holdover.** When an edge is more than 100 µs overdue, samples are extrapolated at the last rate and marked holdover, their bound growing by 2 µs a second. C18's 50 µs then holds for 24 s without PPS. When edges return a whole number of seconds on, the clock locks again at once.
 - **C18.** Time-tag error ≤50 µs against injected PPS. The emulated bench (`TaggerBench.MeetsC18AgainstInjectedPps`) gives a worst locked error of 244 ns and a worst holdover error of 3.4 µs over 20 s without PPS, with every sample within its bound. The board test is [#163](https://github.com/MatthewK84/ICS/issues/163).
 
+## Mount pointing
+
+A station mount's pointing model ([`python/ics_models/pointing`](../python/README.md#pointing-model), ICS-035) maps its encoder angles to where its line of sight truly points.
+
+- **Angles.** Azimuth runs from north through east, and elevation up from the horizon, both in radians. The encoder angles are the mount's own, from each axis's zero, as the time-tagger reports them (ICS-032); the model's index terms carry those zeros.
+- **The line of sight's direction** is the observed one: where something on the line of sight appears from the station.
+  - **Stars.** For a star that is its observed place, worked out by ERFA's `atco13` from its catalog place, UTC, DUT1, the site, and the night's air and wavelength, refraction included. So the model describes the mount alone, and atmospheric refraction stays with the star.
+  - **Nearby targets.** A drone a few kilometres away is refracted far less than a star; the registration module (CPP-23) corrects for that path's own refraction.
+- **Time.** Earth rotation runs on UT1. Each calibration night carries DUT1 (UT1 − UTC) from IERS Bulletin A; without it, a night is refused. Polar motion is left at zero: it tilts the vertical by under 2.5 µrad, which the model's axis-tilt terms absorb.
+- **C17** is the RMS of the on-sky residual, √(Δaz²·cos²el + Δel²), on stars held out of the fit: 10 µrad or less.
+
 ## Golden vectors
 
 [`golden/frames/generate.sh`](../golden/frames/generate.sh) runs GeographicLib 2.3's `CartConvert`, `GeoidEval` and `GeoConvert` over the case lists in [`golden/frames/inputs/`](../golden/frames/inputs), in the ics-cpp image:
