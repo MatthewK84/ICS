@@ -92,6 +92,8 @@ Apply the Power-of-Ten rules identically in all three languages, and enforce eac
 | Tests | GoogleTest, libFuzzer, sanitizers | pytest, hypothesis | Vitest, Playwright |
 | Supply chain | Conan lockfile; Syft SBOM | uv lockfile; Syft SBOM | pnpm lockfile; Syft SBOM |
 
+From ICS-037 on, C++ also follows the [JSF AV C++ Coding Standards](https://www.stroustrup.com/JSF-AV-rules.pdf), checked in CI as [docs/cpp-jsf-av.md](cpp-jsf-av.md) describes.
+
 All three pipelines produce the [DoWI 8430.01](https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodi/843001p.pdf) evidence set: SBOM, signed provenance, static and dynamic analysis, and fuzz results.
 
 ## Phase 0: Foundation and contracts (months 1 to 2)

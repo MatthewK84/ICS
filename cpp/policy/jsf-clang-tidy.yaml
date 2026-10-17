@@ -1,0 +1,123 @@
+# The JSF AV clang-tidy profile (ICS-037; see docs/cpp-jsf-av.md). It holds
+# the C++ under cpp/policy/jsf-paths.txt to the Power-of-Ten profile in
+# cpp/.clang-tidy and to the JSF AV rules clang-tidy can check, each named
+# below. .github/scripts/cpp_jsf.py passes it to clang-tidy with --config,
+# so the CI clang-tidy cache hashes its contents; it is not a .clang-tidy file
+# and replaces none (cpp/policy/check-policy.sh allows only two of those).
+#
+#   AV 1, 110      readability-function-size (50 lines, 7 parameters, 19 branches);
+#                  AV 3's cyclomatic complexity is the gate's own clang-query count
+#   AV 14          readability-uppercase-literal-suffix
+#   AV 20          cert-err52-cpp
+#   AV 29 to 31    cppcoreguidelines-macro-usage
+#   AV 39          misc-definitions-in-headers
+#   AV 37, 40      misc-include-cleaner
+#   AV 48          misc-confusable-identifiers
+#   AV 51, 52      readability-identifier-naming (namespaces lower_case: deviation D-4)
+#   AV 59          readability-braces-around-statements
+#   AV 68, 76      cppcoreguidelines-special-member-functions
+#   AV 69          readability-make-member-function-const
+#   AV 71.1        clang-analyzer-optin.cplusplus.VirtualCall
+#   AV 74          cppcoreguidelines-prefer-member-initializer
+#   AV 78          cppcoreguidelines-virtual-class-destructor
+#   AV 81          bugprone-unhandled-self-assignment
+#   AV 82          misc-unconventional-assign-operator
+#   AV 95          google-default-arguments
+#   AV 97, 215     cppcoreguidelines-avoid-c-arrays, -pro-bounds-array-to-pointer-decay,
+#                  -pro-bounds-pointer-arithmetic
+#   AV 108         cppcoreguidelines-pro-type-vararg
+#   AV 115         bugprone-unused-return-value
+#   AV 119         misc-no-recursion
+#   AV 137         misc-use-anonymous-namespace
+#   AV 142         cppcoreguidelines-init-variables
+#   AV 151         readability-magic-numbers
+#   AV 152         readability-isolate-declaration
+#   AV 153         cppcoreguidelines-pro-type-union-access
+#   AV 160         bugprone-assignment-in-if-condition
+#   AV 164         hicpp-signed-bitwise
+#   AV 166         bugprone-sizeof-expression
+#   AV 174         clang-analyzer-core.NullDereference
+#   AV 175         modernize-use-nullptr (deviation D-2: nullptr, not 0)
+#   AV 177         google-explicit-constructor
+#   AV 180, 184    cppcoreguidelines-narrowing-conversions
+#   AV 182         cppcoreguidelines-pro-type-reinterpret-cast
+#   AV 183         cppcoreguidelines-pro-type-const-cast
+#   AV 185         cppcoreguidelines-pro-type-cstyle-cast
+#   AV 187         clang-analyzer-deadcode.DeadStores
+#   AV 189         cppcoreguidelines-avoid-goto
+#   AV 192, 196    hicpp-multiway-paths-covered
+#   AV 194         bugprone-switch-missing-default-case
+#   AV 197         cert-flp30-c
+#   AV 203         clang-analyzer-core.DivideZero
+#   AV 206         cppcoreguidelines-no-malloc, -owning-memory
+#   AV 207         cppcoreguidelines-avoid-non-const-global-variables
+Checks: >
+  -*,
+  bugprone-assignment-in-if-condition,
+  bugprone-signed-char-misuse,
+  bugprone-sizeof-expression,
+  bugprone-switch-missing-default-case,
+  bugprone-unhandled-self-assignment,
+  bugprone-unused-return-value,
+  cert-err52-cpp,
+  cert-flp30-c,
+  clang-analyzer-core.DivideZero,
+  clang-analyzer-core.NullDereference,
+  clang-analyzer-deadcode.DeadStores,
+  clang-analyzer-optin.cplusplus.VirtualCall,
+  cppcoreguidelines-avoid-c-arrays,
+  cppcoreguidelines-avoid-goto,
+  cppcoreguidelines-avoid-non-const-global-variables,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-macro-usage,
+  cppcoreguidelines-narrowing-conversions,
+  cppcoreguidelines-no-malloc,
+  cppcoreguidelines-owning-memory,
+  cppcoreguidelines-prefer-member-initializer,
+  cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  cppcoreguidelines-pro-type-const-cast,
+  cppcoreguidelines-pro-type-cstyle-cast,
+  cppcoreguidelines-pro-type-reinterpret-cast,
+  cppcoreguidelines-pro-type-union-access,
+  cppcoreguidelines-pro-type-vararg,
+  cppcoreguidelines-special-member-functions,
+  cppcoreguidelines-virtual-class-destructor,
+  google-default-arguments,
+  google-explicit-constructor,
+  hicpp-multiway-paths-covered,
+  hicpp-signed-bitwise,
+  misc-confusable-identifiers,
+  misc-definitions-in-headers,
+  misc-include-cleaner,
+  misc-no-recursion,
+  misc-unconventional-assign-operator,
+  misc-use-anonymous-namespace,
+  modernize-use-nullptr,
+  readability-braces-around-statements,
+  readability-function-size,
+  readability-identifier-naming,
+  readability-isolate-declaration,
+  readability-magic-numbers,
+  readability-make-member-function-const,
+  readability-misleading-indentation,
+  readability-uppercase-literal-suffix
+WarningsAsErrors: '*'
+FormatStyle: none
+CheckOptions:
+  readability-function-size.LineThreshold: 50
+  readability-function-size.BranchThreshold: 19
+  readability-function-size.ParameterThreshold: 7
+  hicpp-multiway-paths-covered.WarnOnMissingElse: true
+  readability-magic-numbers.IgnoredIntegerValues: '1;2'
+  readability-magic-numbers.IgnoredFloatingPointValues: '0.5;1.0;2.0'
+  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.FunctionCase: lower_case
+  readability-identifier-naming.MethodCase: lower_case
+  readability-identifier-naming.VariableCase: lower_case
+  readability-identifier-naming.ParameterCase: lower_case
+  readability-identifier-naming.MemberCase: lower_case
+  readability-identifier-naming.PrivateMemberSuffix: '_'
+  readability-identifier-naming.ConstantCase: lower_case
+  readability-identifier-naming.ConstexprVariableCase: lower_case
+  readability-identifier-naming.EnumConstantCase: lower_case

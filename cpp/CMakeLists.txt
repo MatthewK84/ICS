@@ -3,6 +3,7 @@
 cmake_minimum_required(VERSION 3.25)
 project(ics VERSION 0.1.0 LANGUAGES CXX)
 
+# C++20, not the C++ of 2002 that JSF AV Rule 8 names: JSF deviation D-1 (docs/cpp-jsf-av.md).
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -14,6 +15,7 @@ include(cmake/Reproducible.cmake)
 # a dependency; see proto/CMakeLists.txt.
 add_subdirectory(proto)
 include(cmake/Warnings.cmake)
+include(cmake/Jsf.cmake)
 
 enable_testing()
 include(cmake/Testing.cmake)
