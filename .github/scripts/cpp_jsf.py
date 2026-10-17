@@ -133,7 +133,6 @@ AFTER_CLOSING_BRACE: frozenset[str] = frozenset({";", ",", ")"})
 BLOCK_AFTER: frozenset[str] = frozenset(
     {")", "]", "else", "do", "try", "const", "noexcept", "override", "final", "mutable"}
 )
-TYPE_HEADS: frozenset[str] = frozenset({"namespace", "class", "struct", "enum", "union", "extern"})
 LABEL_HEADS: frozenset[str] = frozenset({"case", "default"})
 LOOP_KEYWORDS: frozenset[str] = frozenset({"for", "while"})
 
@@ -149,7 +148,6 @@ INCLUDE: re.Pattern[str] = re.compile(r'#\s*include\s*(?P<open>[<"])(?P<name>[^>
 DIRECTIVE: re.Pattern[str] = re.compile(r"\s*#\s*(?P<name>\w*)\s*(?P<argument>\S*)")
 STANDARD_HEADER: re.Pattern[str] = re.compile(r"[a-z_]+")
 ICS_MODULE_HEADER: re.Pattern[str] = re.compile(r"ics/[a-z_]+/[a-z0-9_/]+\.hpp")
-MAIN_SIGNATURE: re.Pattern[str] = re.compile(r"\bint\s+main\s*\(\s*(?:const\s+)?int\b")
 CODE_LIKE_COMMENT: re.Pattern[str] = re.compile(r"[;{}]\s*$")
 QUERY_NOTE: re.Pattern[str] = re.compile(
     r'^(?P<path>.+?):(?P<line>\d+):(?P<column>\d+): note: "(?P<binding>[^"]+)" binds here'
