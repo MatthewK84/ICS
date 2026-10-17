@@ -1,0 +1,102 @@
+{
+  "format": "ics-pointing-model",
+  "format_version": 1,
+  "model_id": "golden",
+  "station_id": "golden",
+  "created_utc": "2026-10-16T00:00:00Z",
+  "site": {
+    "latitude_deg": 32.38,
+    "longitude_deg": -106.48,
+    "height_m": 1200.0
+  },
+  "terms": [
+    {
+      "name": "IA",
+      "value_rad": 0.002,
+      "sigma_rad": 0.0
+    },
+    {
+      "name": "IE",
+      "value_rad": -0.001,
+      "sigma_rad": 0.0
+    },
+    {
+      "name": "CA",
+      "value_rad": 0.0003,
+      "sigma_rad": 0.0
+    },
+    {
+      "name": "NPAE",
+      "value_rad": 0.00015,
+      "sigma_rad": 0.0
+    },
+    {
+      "name": "AN",
+      "value_rad": 7.999999999999999e-05,
+      "sigma_rad": 0.0
+    },
+    {
+      "name": "AW",
+      "value_rad": -5.9999999999999995e-05,
+      "sigma_rad": 0.0
+    },
+    {
+      "name": "TF",
+      "value_rad": 9.999999999999999e-05,
+      "sigma_rad": 0.0
+    },
+    {
+      "name": "HASA",
+      "value_rad": 2.4999999999999998e-05,
+      "sigma_rad": 0.0
+    },
+    {
+      "name": "HACA",
+      "value_rad": -1.4999999999999999e-05,
+      "sigma_rad": 0.0
+    },
+    {
+      "name": "HASA2",
+      "value_rad": 9.999999999999999e-06,
+      "sigma_rad": 0.0
+    },
+    {
+      "name": "HACA2",
+      "value_rad": -8e-06,
+      "sigma_rad": 0.0
+    },
+    {
+      "name": "HESA",
+      "value_rad": 1.2e-05,
+      "sigma_rad": 0.0
+    },
+    {
+      "name": "HECA",
+      "value_rad": -1.9999999999999998e-05,
+      "sigma_rad": 0.0
+    },
+    {
+      "name": "HESA2",
+      "value_rad": 6e-06,
+      "sigma_rad": 0.0
+    },
+    {
+      "name": "HECA2",
+      "value_rad": -4e-06,
+      "sigma_rad": 0.0
+    },
+    {
+      "name": "HESE",
+      "value_rad": 2.9999999999999997e-05,
+      "sigma_rad": 0.0
+    }
+  ],
+  "fit": {
+    "stars_used": 1,
+    "stars_rejected": 0,
+    "rms_urad": 0.0,
+    "stars_held_out": 1,
+    "held_out_rms_urad": 0.0
+  },
+  "observations_sha256": "45dc2f6e243d96903a28e4b5d3f394887e3e5cd56a480bfe657902cf95435cb8"
+}

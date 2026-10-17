@@ -1,0 +1,28 @@
+# An example ics-encoder-monitor config (ICS-036); see cpp/README.md. The
+# monitor reads its config from /etc/ics/ics-encoder.toml, and ics-mountd
+# (ICS-041) will read the same [encoder] table. Every setting is required.
+
+[log]
+level = "info"
+service = "ics-encoder-monitor"
+
+[encoder]
+# The station, as named in the range configuration. The pointing model file
+# must be this station's.
+station_id = "station-1"
+# Where the encoder time-tagger (ICS-032) sends its datagrams: this host's
+# IPv4 address on the station network, or "0.0.0.0" for every interface, and
+# the UDP port the tagger is set to send to.
+tagger_address = "0.0.0.0"
+tagger_port = 5020
+# Each axis's encoder: its counts a revolution, and whether its counts fall
+# as the angle grows, azimuth through east and elevation up. The counts' zero
+# must be the same at every power-up; the pointing model's IA and IE carry
+# its offset from north and the horizon.
+azimuth_counts_per_rev = 16_777_216
+azimuth_reversed = false
+elevation_counts_per_rev = 16_777_216
+elevation_reversed = false
+# The station's pointing model, as `python -m ics_models.pointing fit` writes
+# it (ICS-035).
+pointing_model_file = "/etc/ics/pointing-model.json"

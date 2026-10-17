@@ -25,6 +25,7 @@ on:
       - cpp/**
       - golden/proto/**
       - golden/frames/**
+      - golden/pointing/**
       - deploy/toolchain/**
       - deploy/evidence/**
       - .github/scripts/evidence.py
@@ -42,6 +43,7 @@ on:
       - cpp/**
       - golden/proto/**
       - golden/frames/**
+      - golden/pointing/**
       - deploy/toolchain/**
       - deploy/evidence/**
       - .github/scripts/evidence.py

@@ -498,6 +498,55 @@ The interlock (ICS-034) keeps the line of sight out of a 15° cone around the su
   The worst locked error is 244 ns, and every sample is within its bound. A second run uses a crystal 45 ppm slow and 200 ns of jitter.
 - **Tests and fuzzing.** Tests cover every refusal of the decoder and that nothing allocates. The fuzz target decodes any bytes, and re-encodes what it reads to the same bytes.
 
+## Encoder module
+
+[`encoder/`](encoder) is `ics::encoder` (ICS-036, CPP-15): each camera frame's line of sight. It reads the time-tagger's datagrams and keeps the last seconds of axis angles. It interpolates them to a frame's mid-exposure, and applies the station's pointing model, fitted by [`ics_models.pointing`](../python/README.md#pointing-model) (ICS-035). Its users are `ics-mountd` (ICS-041), which receives the tagger's datagrams, and registration (CPP-23), which asks for frames. A run on the real tagger and bench mount is [#165](https://github.com/MatthewK84/ICS/issues/165).
+
+| Header | Provides |
+|---|---|
+| [`pointing_model.hpp`](encoder/include/ics/encoder/pointing_model.hpp) | `PointingModel`, `to_sky` and `to_encoder`: ICS-035's 16 terms, sign for sign; `load_pointing_model`: the parameter file, with its SHA-256 for the run record |
+| [`angles.hpp`](encoder/include/ics/encoder/angles.hpp) | `EncoderConfig` and `angles_from`: a sample's counts as axis angles |
+| [`track.hpp`](encoder/include/ics/encoder/track.hpp) | `AngleTrack`: the newest samples, counting lost batches, and `at`: the angles, rates and bound at any instant they span |
+| [`line_of_sight.hpp`](encoder/include/ics/encoder/line_of_sight.hpp) | `line_of_sight`: a frame's `CameraFrameMeta` to its line of sight at mid-exposure |
+| [`receiver.hpp`](encoder/include/ics/encoder/receiver.hpp) | `DatagramReceiver`: the tagger's UDP datagrams, decoded, counting what is malformed |
+| [`config.hpp`](encoder/include/ics/encoder/config.hpp), [`frame_meta.hpp`](encoder/include/ics/encoder/frame_meta.hpp), [`monitor.hpp`](encoder/include/ics/encoder/monitor.hpp) | The `[encoder]` table; `.meta` files; `ics-encoder-monitor`'s reports and command |
+
+- **The pointing model.** `parse_pointing_model` reads the file with protobuf's JSON parser into a `google.protobuf.Struct`, as the Lattice decoder does. It checks:
+  - format `ics-pointing-model`, version 1;
+  - a `model_id` and `station_id`;
+  - one to 16 terms, each named once, with a finite value and a sigma of 0 or more.
+
+  `load_pointing_model` also records the file's SHA-256 through OpenSSL, for the run record's `parameter_files`. Sky to encoder is ICS-035's fixed-point iteration: ten passes at most, to 1e-13 rad. Both directions match `golden/pointing` to 1e-12 rad.
+- **Angles.** Each axis's counts are linear in angle, from the encoder's own zero: `AxisConfig` sets the counts a revolution and the counting direction. The model's IA and IE carry the zero's offset from north and the horizon, so the zero must be the same at every power-up. The tagger's board reads incremental A/B/Z encoders, so the board port must zero each counter at its index pulse ([#163](https://github.com/MatthewK84/ICS/issues/163)). Azimuth wraps to [0, 2π), so a single-turn encoder reads the same as one that counts on.
+- **The history.** `AngleTrack` keeps 10 s at 1,000 samples a second, in a ring allocated once. It drops samples whose clock is still acquiring, and samples no later than the newest. It counts lost batches from the sequence numbers, and sequence resets, as from a tagger that started again.
+- **Interpolation.** Linear between the samples either side, which at 1 kHz is within 0.13 µrad for accelerations up to 1 rad/s². It is refused outside the history, and when the samples either side are more than 10 ms apart, as across a lost batch. Holdover samples are used.
+- **The bound.** Each line of sight carries one, on the sky: the larger time bound of the two samples times the rate on the sky, plus one count of each axis. The pointing model's own error (C17) and the frame's time error are not in it.
+- **Frames.** Only frames timed by IRIG-B are taken, at mid-exposure (start plus half the duration). A frame the host stamped on arrival is refused: at 0.1 rad/s a millisecond is 100 µrad.
+- **Production connections.** Each input the bench stands in for has a named place for the real one:
+
+  | Input | In operation | On the bench |
+  |---|---|---|
+  | The tagger's datagrams | The board ([#163](https://github.com/MatthewK84/ICS/issues/163)) sends to `tagger_address`:`tagger_port` in the `[encoder]` table | ICS-032's core, against the emulated station, sending to `127.0.0.1` |
+  | The encoders | `azimuth_counts_per_rev`, `elevation_counts_per_rev` and the `_reversed` settings, from the mount's encoders | 2²⁴ counts a revolution; azimuth single-turn, elevation reversed |
+  | The pointing model | `pointing_model_file`, written by `python -m ics_models.pointing fit` from a star night (ICS-093); its `station_id` must match | `golden/pointing/model.json` |
+  | Frame times | `CameraFrameMeta` from `ics-camd`, timed by IRIG-B (ICS-031), in the `.meta` file beside each segment | Frames at random times and exposures, within 1 µs |
+
+  The sample config is [`ics-encoder.toml`](encoder/ics-encoder.toml); `ics-mountd` will read the same `[encoder]` table.
+- **Tool.** [`ics-encoder-monitor`](encoder/tool/main.cpp) `SECONDS` is the operational test of this path against the real tagger.
+  - It reads `/etc/ics/ics-encoder.toml` and loads the pointing model, refusing one for another station.
+  - It listens for 1 to 600 s. Once a second it logs `encoder_status`: datagrams, malformed and lost batches, resets, the newest sample's clock state and bound, its axis angles and line of sight, and how far it lags the host's clock.
+  - Then it logs the line of sight of each frame in the `.meta` files in the working folder, or why it was refused. Run it in the folder `ics-camd` offloads to, for longer than the recording and the offload take.
+  - It exits 0 when it heard the tagger, 1 when the model, the socket or a `.meta` file could not be used, 2 for a bad argument or config file, and 3 when no batch came.
+- **Done when.** 5 µrad or less at 0.1 rad/s on the bench. The bench is emulated (`EncoderBench`), and runs for a minute:
+  - ICS-032's tagger core, against the emulated station's crystal and PPS, with 20 s without PPS;
+  - its datagrams over UDP, one in 97 lost;
+  - a simulated mount slewing both axes at 0.1 rad/s and reversing at up to 1 rad/s², the azimuth through north;
+  - 2²⁴-count encoders;
+  - a frame each batch, at a random time in the last 1.5 s and with a random exposure.
+
+  Each line of sight is compared with the truth: the model applied to the true axis angles at the true mid-exposure. Over 5,543 frames the worst error was 0.58 µrad, in holdover, and every frame was within its bound. The only frames refused were those in a lost batch's gap and those the host timed. A second run uses a slow, noisy crystal.
+- **Tests and fuzzing.** Tests cover every refusal of the loader and the frame query, the 10 ms rule, wraps, lost and repeated batches, the receiver over loopback, the config, and the monitor's reports and exit codes. The fuzz targets read any text as a parameter file and any bytes as a `.meta` file.
+
 ## Power-of-Ten checks
 
 The C++ rules from the coding-standards table in [docs/build-plan.md](../docs/build-plan.md) are enforced by tools, not review (ICS-005):

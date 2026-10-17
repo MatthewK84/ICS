@@ -14,7 +14,7 @@ Contents:
   - `model.json` is a parameter file whose made-up model uses every term.
   - `vectors.csv` gives, across azimuth and from 5° to 85° of elevation, the encoder angles and the sky direction the model gives for them.
 
-  The C++ encoder module ([ICS-036](https://github.com/MatthewK84/ICS/issues/36)) must load the model, then give each sky direction from its encoder angles, and each encoder angle pair from its sky direction, within 1e-12 rad. [`python/tests/test_pointing_io.py`](../python/tests/test_pointing_io.py) requires the files to be what the reference writes.
+  The C++ encoder module ([ICS-036](https://github.com/MatthewK84/ICS/issues/36)) loads the model, then gives each sky direction from its encoder angles, and each encoder angle pair from its sky direction, within 1e-12 rad ([`cpp/encoder/test/pointing_model_test.cpp`](../cpp/encoder/test/pointing_model_test.cpp)). [`python/tests/test_pointing_io.py`](../python/tests/test_pointing_io.py) requires the files to be what the reference writes.
 
 Planned contents:
 
