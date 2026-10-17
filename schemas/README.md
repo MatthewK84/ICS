@@ -8,6 +8,7 @@ The run-record JSON Schema ([ICS-013](https://github.com/MatthewK84/ICS/issues/1
 |---|---|
 | [`run-record.schema.json`](run-record.schema.json) | The schema, JSON Schema Draft 2020-12, `$id` `urn:ics:schema:run-record:v1` |
 | [`samples/`](samples) | 20 synthetic run records that validate against it |
+| [`pointing-model.schema.json`](pointing-model.schema.json) | A station mount's pointing model ([ICS-035](https://github.com/MatthewK84/ICS/issues/35)), JSON Schema Draft 2020-12, `$id` `urn:ics:schema:pointing-model:v1`. [`python/ics_models/pointing`](../python/ics_models/pointing) writes it and checks it before writing; the C++ encoder module ([ICS-036](https://github.com/MatthewK84/ICS/issues/36)) loads it. [`golden/pointing/model.json`](../golden/pointing/model.json) is its sample. |
 
 ## What a run record is
 

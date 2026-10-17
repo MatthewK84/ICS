@@ -9,7 +9,7 @@ Planned layout:
 ```text
 python/
   ics_golden/   golden test vectors shared with C++ and TypeScript (golden/), and the run-record samples (schemas/)
-  ics_models/   pointing, calibration, trajectory, drag, footprint, killclass, uncertainty
+  ics_models/   pointing (ICS-035), and to come: calibration, trajectory, drag, footprint, killclass, uncertainty
   ics_synth/    synthetic engagement generator
   ics_stats/    Pk, timeline analysis, validation scorer
   ics_sitl/     the SITL rig's ground station (ICS-018, deploy/sitl): MAVLink, missions, engagement checks,
@@ -44,6 +44,38 @@ policy/check-policy.sh
 `gen/` holds the protobuf messages generated from [`proto/`](../proto/README.md), imported as `ics.<package>`, for example `from ics.v1 import run_record_pb2`. They are generated and committed, never edited, so ruff and the AST checks skip them, and mypy reads their stubs without reporting on them.
 
 To add or upgrade a dependency, change `pyproject.toml`, run `uv lock`, and record the dependency in the [dependency register](../docs/dependency-register.md).
+
+## Pointing model
+
+[`ics_models/pointing`](ics_models/pointing) is the reference pointing model for a station mount ([ICS-035](https://github.com/MatthewK84/ICS/issues/35), PY-01). It maps the mount's encoder angles to where its line of sight truly points, with TPOINT-style terms fitted to stars observed on a calibration night. Its angles and time follow [docs/frames-and-time.md](../docs/frames-and-time.md#mount-pointing).
+
+| Module | Provides |
+|---|---|
+| `model` | The terms (the basic alt-az set IA, IE, CA, NPAE, AN, AW and TF, and harmonics an operator may add), and the model both ways: `to_sky` and `to_encoder` |
+| `astrometry` | A star's observed place, through ERFA's `atco13` (pyerfa) |
+| `observations` | The night's observation file, as the capture side writes it, and its reduction to sightings |
+| `fit` | Linear least squares, rejecting stars more than 3 times the RMS off (at most 5 passes); the held-out RMS (C17); the split |
+| `plan` | Which catalog stars to take on a night, spread across azimuth and 20° to 85° of elevation |
+| `parameters` | The versioned parameter file, checked against [`schemas/pointing-model.schema.json`](../schemas/pointing-model.schema.json) |
+| `synth` | Synthetic nights, through a known model with centroid noise |
+
+```sh
+uv run --locked python -m ics_models.pointing plan catalog.csv --site 32.38,-106.48,1200 \
+    --start 2026-10-16T03:00:00Z --end 2026-10-16T09:00:00Z --count 60 --dut1 0.12 --out plan.csv
+uv run --locked python -m ics_models.pointing fit night.csv --station s1 --model-id s1-2026-10-16 --out model.json
+```
+
+- **Observations.** One CSV row per star on the boresight, with:
+  - the UTC time at mid-exposure and the night's DUT1 (UT1 − UTC, from IERS Bulletin A);
+  - the star's catalog place, as Hipparcos and Gaia give it;
+  - the encoder angles, with the star's offset from the boresight already applied by the capture side;
+  - the night's air and the camera's wavelength, and the site.
+
+  A star below 20° elevation is refused, and so is a night without DUT1.
+- **The fit** holds a quarter of the stars out at random, fits the rest, and writes the model with its RMS on the stars held out, which is C17. It reports each term's value and standard deviation; there is no automatic term selection, so an operator adds a harmonic only when the data need it.
+- **Done when.** On 50 synthetic nights of 60 stars, with 3 µrad of centroid noise per axis, the worst held-out RMS is under C17's 10 µrad. Every term lies within 5σ of the truth, and at least 98% within 3σ. A model missing a term the data need fails C17. The star positions match SOFA's own test case for `atco13` to 1e-12 rad.
+- **On the sky.** The real capture and C17 on stars are the field shakedown's ([ICS-093](https://github.com/MatthewK84/ICS/issues/93)).
+- **Golden vectors** for the C++ port are in [`golden/pointing`](../golden/README.md).
 
 ## Power-of-Ten checks
 

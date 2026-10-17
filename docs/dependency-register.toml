@@ -210,8 +210,8 @@ approved_by = "MatthewK84"
 name = "jsonschema"
 ecosystem = "pypi"
 packages = ["jsonschema"]
-used_for = "Validates run records and the run-record schema itself in the Python tests (ICS-013)"
-ships = false
+used_for = "Validates run records and the run-record schema itself in the Python tests (ICS-013), and, at run time, the pointing model's parameter files before they are written and when they are read (ICS-035)"
+ships = true
 license = "MIT"
 source = "https://github.com/python-jsonschema/jsonschema"
 governance = "Independent open-source project in the python-jsonschema GitHub organization; no corporate owner. Its author reviews and releases changes."
@@ -376,6 +376,40 @@ reviewed = 2026-09-27
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
+
+[[project]]
+name = "NumPy"
+ecosystem = "pypi"
+packages = ["numpy"]
+used_for = "Arrays and linear least squares for the Python reference models, first the pointing model's fit (ICS-035); pyerfa builds on it too"
+ships = true
+license = "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0"
+source = "https://github.com/numpy/numpy"
+governance = "A NumFOCUS fiscally sponsored project, governed by a steering council of its maintainers under a public governance document; changes are reviewed in public on GitHub."
+sustainment = "Very active, with feature releases twice a year and patch releases between; 2.5.3 was published in September 2026. Pinned in python/uv.lock. It is the base of scientific Python; nothing would replace it short of rewriting the least squares by hand."
+foreign_influence = "NumFOCUS (US non-profit) as fiscal sponsor; maintainers and contributors from many countries and institutions."
+single_maintainer = false
+maintainers = "The NumPy steering council and maintainers"
+reviewed = 2026-10-16
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "PyERFA"
+ecosystem = "pypi"
+packages = ["pyerfa"]
+used_for = "Star positions for the pointing model (ICS-035): ERFA's atco13 takes a star's catalog place to where it is seen from the station, and its test case from SOFA checks the wrapper. It carries ERFA's C source, which is built into its wheel."
+ships = true
+license = "BSD-3-Clause"
+source = "https://github.com/liberfa/pyerfa"
+governance = "In the liberfa GitHub organization, split out of the Astropy project's astropy._erfa module; developed by Astropy developers, with changes reviewed on GitHub. ERFA itself is the BSD-licensed copy of the IAU's SOFA library, tracking SOFA's releases."
+sustainment = "Released when ERFA or Python needs it: 2.0.1.5 was published in November 2024 and is current. Pinned in python/uv.lock. Its leap-second table dates from its release; a new leap second would need an upgrade. Astropy depends on it, so it is likely to stay maintained; ERFA's C library, or SOFA's, could be called directly instead."
+foreign_influence = "The Astropy project's developers, an international community; the algorithms are the IAU's (SOFA). The maintainers' jurisdictions were not established from the project's pages."
+single_maintainer = false
+maintainers = "The PyERFA developers, from the Astropy project"
+reviewed = 2026-10-16
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
 [[project]]
 name = "typeshed stubs"
 ecosystem = "pypi"
