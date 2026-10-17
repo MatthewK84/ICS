@@ -15,7 +15,10 @@ ics_add_gtest(common_test
     test/ring_buffer_test.cpp
     test/static_vector_test.cpp
     test/units_test.cpp
+    test/universal_types_test.cpp
   LIBRARIES ics::common)
+# The universal types header and its test are JSF AV code (cpp/policy/jsf-paths.txt).
+ics_jsf_sources(test/universal_types_test.cpp)
 
 # Real-time targets will build without exceptions, so the headers must too.
 # This object library is compiled with -fno-exceptions and never linked.

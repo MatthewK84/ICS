@@ -30,6 +30,7 @@ on:
       - deploy/evidence/**
       - .github/scripts/evidence.py
       - .github/scripts/cpp_coverage.py
+      - .github/scripts/cpp_jsf.py
       - .github/scripts/clang_tidy_cache.py
       - .github/ccache.conf
       - .github/workflows/cpp-toolchain.yml
@@ -48,6 +49,7 @@ on:
       - deploy/evidence/**
       - .github/scripts/evidence.py
       - .github/scripts/cpp_coverage.py
+      - .github/scripts/cpp_jsf.py
       - .github/scripts/clang_tidy_cache.py
       - .github/ccache.conf
       - .github/workflows/cpp-toolchain.yml

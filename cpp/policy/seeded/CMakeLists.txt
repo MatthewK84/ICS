@@ -17,3 +17,6 @@ endforeach()
 # Rejected at run time by the allocation guard. Not registered with CTest.
 add_executable(seed_post_init_allocation EXCLUDE_FROM_ALL post_init_allocation_test.cpp)
 target_link_libraries(seed_post_init_allocation PRIVATE ics_alloc_guard GTest::gtest_main)
+
+# The JSF AV seeds (ICS-037).
+add_subdirectory(jsf)

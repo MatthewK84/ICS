@@ -1,0 +1,7 @@
+# C++ held to the JSF AV C++ Coding Standards (ICS-037; docs/cpp-jsf-av.md).
+# cpp/policy/check-policy.sh runs .github/scripts/cpp_jsf.py over every file
+# under each path below. One path from the repository root per line, a folder
+# or a file. New C++ modules are added here; the existing modules join as the
+# retrofit issue brings each one to JSF.
+cpp/common/include/ics/common/universal_types.h
+cpp/common/test/universal_types_test.cpp

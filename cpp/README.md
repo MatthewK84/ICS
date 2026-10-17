@@ -23,6 +23,7 @@ Rules (enforced in CI by [ICS-005](https://github.com/MatthewK84/ICS/issues/5) a
 - No allocation after initialization on real-time paths.
 - Mount motion, the sun interlock and triggering live only here, never in the web UI.
 - Python parameter files and ONNX models are loaded at startup, and their SHA-256 hashes go into every run record.
+- From ICS-037 on, new C++ also follows the JSF AV C++ Coding Standards; see [JSF AV checks](#jsf-av-checks).
 
 ## Build
 
@@ -576,6 +577,25 @@ Two exceptions are deliberate:
 - The `clang-tsan` preset links Clang's shared TSan runtime (`-shared-libsan`), because the static runtime defines `operator new` and `delete` itself and would clash with the allocation hook. GCC's TSan runtime is already shared.
 
 Not enforced here: "no exceptions on real-time paths" needs `-fno-exceptions` on the real-time targets once they exist; the common headers already build that way. Coverage is gated only for the code listed in [`policy/coverage-gates.txt`](policy/coverage-gates.txt) (see [Test stages](#test-stages)), so other code is not yet measured against the Definition of Done's 90%.
+
+## JSF AV checks
+
+From ICS-037 ([#37](https://github.com/MatthewK84/ICS/issues/37)) on, every new module also follows the [JSF AV C++ Coding Standards](https://www.stroustrup.com/JSF-AV-rules.pdf). [docs/cpp-jsf-av.md](../docs/cpp-jsf-av.md) says how each of its 229 rules is checked, and keeps the deviations register and the review checklist. The modules written before ICS-037 come to these rules under [#170](https://github.com/MatthewK84/ICS/issues/170).
+
+| What | Where |
+|---|---|
+| The JSF files | [`policy/jsf-paths.txt`](policy/jsf-paths.txt), one folder or file a line |
+| Text checks and clang-query matchers, and the clang-tidy run | [`.github/scripts/cpp_jsf.py`](../.github/scripts/cpp_jsf.py) |
+| The clang-tidy profile | [`policy/jsf-clang-tidy.yaml`](policy/jsf-clang-tidy.yaml), passed with `--config`, so it adds no `.clang-tidy` file |
+| The extra compiler warnings | [`cmake/Jsf.cmake`](cmake/Jsf.cmake): `ics_jsf_target(<target>)`, or `ics_jsf_sources(<files>)` for JSF files in an older target |
+| The fixed-size types | [`ics/common/universal_types.h`](common/include/ics/common/universal_types.h): `int8` to `int64`, `uint8` to `uint64` for bit patterns, `float32` and `float64` |
+| The seeds | [`policy/seeded/jsf/`](policy/seeded/jsf): 38 the gate must reject and 2 the compiler must reject, each naming its finding on its first line |
+
+`check-policy.sh clang` runs the gate over the JSF files and then over each seed. Both halves build the compiler seeds. To run the gate alone after building the `clang-debug` preset:
+
+```sh
+python3 .github/scripts/cpp_jsf.py check --root . --build cpp/build/clang-debug --paths cpp/policy/jsf-paths.txt
+```
 
 ## Test stages
 
