@@ -12,6 +12,7 @@ on:
       - python/**
       - golden/proto/**
       - golden/frames/**
+      - golden/cue/**
       - schemas/**
       - .github/workflows/python-toolchain.yml
   push:
@@ -20,6 +21,7 @@ on:
       - python/**
       - golden/proto/**
       - golden/frames/**
+      - golden/cue/**
       - schemas/**
       - .github/workflows/python-toolchain.yml
   workflow_dispatch:

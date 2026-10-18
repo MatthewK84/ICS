@@ -1,0 +1,48 @@
+# The cue extrapolator's settings for one station (ICS-037): a sample with
+# every setting. ics-cue-replay reads /etc/ics/ics-cue.toml, and ics-mountd
+# (ICS-041) will read the same [cue] table. See cpp/cue/include/ics/cue/config.h.
+#
+# For operational testing, set the range origin and this station's surveyed
+# position, and the command latency measured on the mount (ICS-033).
+
+[cue]
+# The range ENU origin, as every ICS module on the range takes it.
+range_origin_latitude_deg = 40.0
+range_origin_longitude_deg = -100.0
+range_origin_height_m = 700.0          # above the WGS 84 ellipsoid
+# This station's mount: a sample site about 250 m south of the crossing point.
+station_latitude_deg = 39.9977477
+station_longitude_deg = -100.0
+station_height_m = 702.0
+# The role the adapters give the target's reports: target, interceptor, debris or other.
+target_role = "target"
+# From sending a mount command to its taking effect.
+command_latency_ns = 50_000_000
+# The white-jerk process noise, m^2/s^5, east and north and up.
+horizontal_jerk_psd = 4.0
+vertical_jerk_psd = 1.0
+# The chi-squared gate on a report's position, 3 degrees of freedom: 16.27 is 99.9%.
+gate = 16.27
+# How late a report may arrive and still be applied, and how far past the last report a cue may be predicted.
+history_ns = 2_000_000_000
+coast_limit_ns = 2_000_000_000
+# The most reports held, 1 to 64.
+capacity = 64
+# The sigmas of a first report: velocity without one, m/s, and acceleration, m/s^2.
+initial_velocity_sigma = 20.0
+initial_acceleration_sigma = 10.0
+# The sigma of every reported velocity, m/s, which no source gives.
+velocity_sigma = 0.2
+# The position sigmas of a record that carries none, by fix type.
+two_dimensional_horizontal_m = 3.0
+two_dimensional_vertical_m = 10.0
+three_dimensional_horizontal_m = 1.5
+three_dimensional_vertical_m = 3.0
+dgnss_horizontal_m = 0.7
+dgnss_vertical_m = 1.5
+rtk_float_horizontal_m = 0.3
+rtk_float_vertical_m = 0.6
+rtk_fixed_horizontal_m = 0.03
+rtk_fixed_vertical_m = 0.05
+other_horizontal_m = 5.0               # anything else, such as an unspecified radar fix
+other_vertical_m = 5.0

@@ -802,7 +802,10 @@ TYPE_NAME: str = "::([A-Z][a-z0-9]*|[A-Z][A-Z0-9]+)(_([a-z0-9]+|[A-Z][A-Z0-9]+))
 UNIVERSAL_NAME: str = "::ics::(u?int(8|16|32|64)|float(32|64))$"
 NOT_FROM_TEST_MACROS: str = 'unless(isExpandedFromMacro("TEST")), unless(isExpandedFromMacro("TEST_F"))'
 
-IN_JSF: str = 'isExpansionInFileMatching("{r}")'
+# In a JSF file. The system-header test comes first: it is cheap, and spares
+# the path's regular expression the many nodes of the libraries' headers,
+# which slowed a module's run from seconds to minutes.
+IN_JSF: str = 'unless(isExpansionInSystemHeader()), isExpansionInFileMatching("{r}")'
 INCREMENTS: str = 'hasAnyOperatorName("++", "--")'
 ARITHMETIC: str = 'hasAnyOperatorName("+", "-", "*", "/", "%", "+=", "-=", "*=", "/=", "%=")'
 LOGICAL: str = 'hasAnyOperatorName("&&", "||")'
@@ -815,6 +818,9 @@ IN_FOR_BODY: str = (
     'hasAncestor(compoundStmt(hasParent(forStmt(hasLoopInit(declStmt(hasSingleDecl(varDecl().bind("counter"))))))))'
 )
 TYPE_OK: str = f'unless(matchesName("{TYPE_NAME}"))'
+# Where an expression statement sits. An assignment whose right side makes a
+# temporary, such as a std::string, sits under an ExprWithCleanups there.
+STATEMENT_HOLDER: str = "stmt(anyOf(compoundStmt(), forStmt(), caseStmt(), defaultStmt()))"
 TYPE_MESSAGE: str = "a type name is a capitalized first word and lowercase words joined by _"
 
 # Each clang-query matcher: the binding it reports under, the AV rule, what is
@@ -851,8 +857,8 @@ QUERIES: tuple[tuple[str, str, str, str], ...] = (
         "av160",
         "AV 160",
         "an assignment used inside an expression",
-        f"binaryOperator({IN_JSF}, isAssignmentOperator(), unless(hasParent(compoundStmt())), "
-        "unless(hasParent(forStmt())), unless(hasParent(caseStmt())), unless(hasParent(defaultStmt())))",
+        f"binaryOperator({IN_JSF}, isAssignmentOperator(), unless(hasParent({STATEMENT_HOLDER})), "
+        f"unless(hasParent(exprWithCleanups(hasParent({STATEMENT_HOLDER})))))",
     ),
     (
         "av201",
@@ -1112,17 +1118,23 @@ def run_tidy(root: Path, build: Path, sources: Sequence[Path], pattern: str) -> 
 
 
 def run_query(root: Path, build: Path, sources: Sequence[Path], pattern: str) -> list[Finding]:
-    """clang-query with every matcher on the sources."""
+    """clang-query with every matcher, on each source in turn.
+
+    One run over many sources holds every one's AST at once, and takes far
+    longer than the runs one at a time: minutes, not seconds, for a module.
+    """
+    outputs: list[str] = []
     with tempfile.TemporaryDirectory() as folder:
         script = Path(folder) / "jsf.query"
         script.write_text(query_script(pattern), encoding="utf-8")
-        result = run_tool([CLANG_QUERY, f"-p={build}", "-f", str(script), *map(str, sources)])
-    errors = [
-        line for line in result.stdout.splitlines() + result.stderr.splitlines() if re.match(r"\d+:\d+: Error", line)
-    ]
-    if result.returncode != 0 or errors:
-        raise JsfError(f"clang-query failed: {' '.join(errors)[:2000]}{result.stderr[-2000:]}")
-    return parse_query(result.stdout, root)
+        for source in sources:
+            result = run_tool([CLANG_QUERY, f"-p={build}", "-f", str(script), str(source)])
+            lines = result.stdout.splitlines() + result.stderr.splitlines()
+            errors = [line for line in lines if re.match(r"\d+:\d+: Error", line)]
+            if result.returncode != 0 or errors:
+                raise JsfError(f"clang-query failed on {source}: {' '.join(errors)[:2000]}{result.stderr[-2000:]}")
+            outputs.append(result.stdout)
+    return parse_query("\n".join(outputs), root)
 
 
 def read_text(path: Path) -> str:

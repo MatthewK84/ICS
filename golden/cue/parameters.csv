@@ -1,0 +1,9 @@
+name,value
+horizontal_jerk_psd,4.0
+vertical_jerk_psd,1.0
+gate,16.27
+history_ns,2000000000
+coast_limit_ns,2000000000
+capacity,64
+initial_velocity_sigma_m_s,20.0
+initial_acceleration_sigma_m_s2,10.0
