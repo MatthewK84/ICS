@@ -4,7 +4,6 @@
 // frames module and the reference put a station in the range frame by
 // different arithmetic, about 1e-9 m apart.
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <string>
@@ -138,7 +137,9 @@ std::string name_of(const ics::cue::Outcome outcome)
   return name;
 }
 
-void expect_close(const float64 actual, const float64 expected, const std::string& what)
+void expect_close(const float64 actual,
+                  const float64 expected,
+                  const std::string& what)
 {
   EXPECT_NEAR(actual, expected, relative * std::max(std::fabs(expected), 1.0)) << what;
 }

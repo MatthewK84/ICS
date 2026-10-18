@@ -1,10 +1,9 @@
 // filter_test.cpp: the cue filter on exact truths, late reports, the gate, the history and its refusals (ICS-037).
-#include <array>
 #include <chrono>
-#include <cmath>
 #include <cstddef>
 #include <limits>
 #include <random>
+#include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -35,6 +34,15 @@ constexpr float64 exact_m = 1.0E-3;
 constexpr float64 same = 1.0E-12;
 constexpr float64 outlier_m = 40.0;
 constexpr int64 seed = 37;
+// Every fifth report, from the fifth, swaps with the one three later.
+constexpr int32 first_swapped = 4;
+constexpr int32 swap_every = 5;
+constexpr int32 swap_by = 3;
+// The outlier, and the two reports that cannot be weighed, follow ten in order.
+constexpr int32 taken_first = 10;
+constexpr int32 unweighable_at = 11;
+constexpr int32 resumed_at = 12;
+constexpr int32 small_capacity = 4;
 constexpr ics::cue::Filter_settings settings{{4.0, 1.0},
                                              16.27,
                                              std::chrono::seconds(2),
@@ -65,7 +73,8 @@ Truth truth(const int64 nanoseconds)
   for (int32 axis = 0; axis < ics::cue::axes; ++axis)
   {
     const std::size_t place = static_cast<std::size_t>(axis);
-    now.position[place] = start[place] + (velocity[place] * seconds) + ((acceleration[place] * seconds * seconds) / 2.0);
+    const float64 drift = (acceleration[place] * seconds * seconds) / 2.0;
+    now.position[place] = start[place] + (velocity[place] * seconds) + drift;
     now.velocity[place] = velocity[place] + (acceleration[place] * seconds);
   }
   return now;
@@ -144,9 +153,9 @@ TEST(CueFilter, LateReportsGiveTheInOrderResult)
   const std::vector<Measurement> flight = flown(reports, true);
   const Cue_filter in_order = filled(flight);
   std::vector<Measurement> arrival = flight;
-  for (int32 number = 4; (number + 3) < length(arrival); number += 5)
+  for (int32 number = first_swapped; (number + swap_by) < length(arrival); number += swap_every)
   {
-    std::swap(arrival[static_cast<std::size_t>(number)], arrival[static_cast<std::size_t>(number + 3)]);
+    std::swap(arrival[static_cast<std::size_t>(number)], arrival[static_cast<std::size_t>(number + swap_by)]);
   }
   Cue_filter shuffled(settings);
   int32 late = 0;
@@ -185,20 +194,20 @@ TEST(CueFilter, GatesAnOutlierAndKeepsGoing)
 {
   const std::vector<Measurement> flight = flown(20, true);
   Cue_filter filter(settings);
-  for (int32 number = 0; number < 10; ++number)
+  for (int32 number = 0; number < taken_first; ++number)
   {
     EXPECT_EQ(filter.add(nth(flight, number)), Outcome::taken);
   }
-  Measurement outlier = nth(flight, 10);
+  Measurement outlier = nth(flight, taken_first);
   outlier.position[0] += outlier_m;
   EXPECT_EQ(filter.add(outlier), Outcome::gated);
-  Measurement unweighable = nth(flight, 11);
+  Measurement unweighable = nth(flight, unweighable_at);
   unweighable.horizontal_sigma_m = std::numeric_limits<float64>::quiet_NaN();
   EXPECT_EQ(filter.add(unweighable), Outcome::gated);
-  Measurement unsteady = nth(flight, 11);
+  Measurement unsteady = nth(flight, unweighable_at);
   unsteady.velocity_sigma_m_s = std::numeric_limits<float64>::quiet_NaN();
   EXPECT_EQ(filter.add(unsteady), Outcome::gated);
-  for (int32 number = 12; number < length(flight); ++number)
+  for (int32 number = resumed_at; number < length(flight); ++number)
   {
     EXPECT_EQ(filter.add(nth(flight, number)), Outcome::taken);
   }
@@ -208,12 +217,12 @@ TEST(CueFilter, RefusesReportsOlderThanTheHistory)
 {
   const std::vector<Measurement> flight = flown(40, false);
   Cue_filter filter(settings);
-  for (int32 number = 10; number < length(flight); ++number)
+  for (int32 number = taken_first; number < length(flight); ++number)
   {
     EXPECT_EQ(filter.add(nth(flight, number)), Outcome::taken);
   }
   EXPECT_EQ(filter.add(nth(flight, 0)), Outcome::too_old);
-  EXPECT_EQ(filter.add(nth(flight, 10)), Outcome::too_old);
+  EXPECT_EQ(filter.add(nth(flight, taken_first)), Outcome::too_old);
 }
 
 TEST(CueFilter, EstimatesOnlyWithinTheHistoryAndTheCoastLimit)
@@ -234,7 +243,7 @@ TEST(CueFilter, EstimatesOnlyWithinTheHistoryAndTheCoastLimit)
 TEST(CueFilter, TheCapacityBoundsTheHistory)
 {
   ics::cue::Filter_settings small = settings;
-  small.capacity = 4;
+  small.capacity = small_capacity;
   Cue_filter filter(small);
   const std::vector<Measurement> flight = flown(10, false);
   for (const Measurement& measured : flight)

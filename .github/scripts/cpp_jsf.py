@@ -818,6 +818,9 @@ IN_FOR_BODY: str = (
     'hasAncestor(compoundStmt(hasParent(forStmt(hasLoopInit(declStmt(hasSingleDecl(varDecl().bind("counter"))))))))'
 )
 TYPE_OK: str = f'unless(matchesName("{TYPE_NAME}"))'
+# Where an expression statement sits. An assignment whose right side makes a
+# temporary, such as a std::string, sits under an ExprWithCleanups there.
+STATEMENT_HOLDER: str = "stmt(anyOf(compoundStmt(), forStmt(), caseStmt(), defaultStmt()))"
 TYPE_MESSAGE: str = "a type name is a capitalized first word and lowercase words joined by _"
 
 # Each clang-query matcher: the binding it reports under, the AV rule, what is
@@ -854,8 +857,8 @@ QUERIES: tuple[tuple[str, str, str, str], ...] = (
         "av160",
         "AV 160",
         "an assignment used inside an expression",
-        f"binaryOperator({IN_JSF}, isAssignmentOperator(), unless(hasParent(compoundStmt())), "
-        "unless(hasParent(forStmt())), unless(hasParent(caseStmt())), unless(hasParent(defaultStmt())))",
+        f"binaryOperator({IN_JSF}, isAssignmentOperator(), unless(hasParent({STATEMENT_HOLDER})), "
+        f"unless(hasParent(exprWithCleanups(hasParent({STATEMENT_HOLDER})))))",
     ),
     (
         "av201",

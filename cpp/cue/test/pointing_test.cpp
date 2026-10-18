@@ -25,8 +25,17 @@ constexpr float64 same_rad = 1.0E-12;
 constexpr float64 rate_rad_s = 1.0E-7;
 constexpr float64 step_s = 0.001;
 constexpr ics::cue::Process_noise still{0.0, 0.0};
+constexpr float64 origin_latitude_deg = 40.0;
+constexpr float64 origin_longitude_deg = -100.0;
+constexpr float64 origin_height_m = 700.0;
+// A target 250 m north, with 3 m of error east, across the line of sight, and 10 m along it.
+constexpr float64 north_m = 250.0;
+constexpr float64 across_m = 3.0;
+constexpr float64 along_m = 10.0;
 
-ics::frames::Geodetic point(const float64 latitude, const float64 longitude, const float64 height)
+ics::frames::Geodetic point(const float64 latitude,
+                            const float64 longitude,
+                            const float64 height)
 {
   const ics::Result<ics::frames::Geodetic> made =
     ics::frames::Geodetic::make(ics::Degrees(latitude), ics::Degrees(longitude), ics::Meters(height));
@@ -36,7 +45,7 @@ ics::frames::Geodetic point(const float64 latitude, const float64 longitude, con
 
 ics::frames::EnuFrame range()
 {
-  return ics::frames::EnuFrame(point(40.0, -100.0, 700.0));
+  return ics::frames::EnuFrame(point(origin_latitude_deg, origin_longitude_deg, origin_height_m));
 }
 
 Estimate estimate_at(const ics::cue::Vector3& position,
@@ -119,10 +128,10 @@ TEST(CuePointing, SigmaIsTheTransverseErrorOverRange)
   const ics::cue::Station station = ics::cue::station_at(range(), point(40.0, -100.0, 700.0));
   const ics::cue::Cue round = cue_of(estimate_at({200.0, 150.0, 30.0}, {}, 2.0), station);
   EXPECT_NEAR(round.sigma_rad, 2.0 / round.range_m, 1.0E-12);
-  Estimate stretched = estimate_at({0.0, 250.0, 0.0}, {}, 1.0);
-  stretched.covariance.put(0, 0, 9.0);
-  stretched.covariance.put(1, 1, 100.0);
-  EXPECT_NEAR(cue_of(stretched, station).sigma_rad, 3.0 / 250.0, 1.0E-9);
+  Estimate stretched = estimate_at({0.0, north_m, 0.0}, {}, 1.0);
+  stretched.covariance.put(0, 0, across_m * across_m);
+  stretched.covariance.put(1, 1, along_m * along_m);
+  EXPECT_NEAR(cue_of(stretched, station).sigma_rad, across_m / north_m, 1.0E-9);
 }
 
 TEST(CuePointing, AnExactPositionHasNoSigma)

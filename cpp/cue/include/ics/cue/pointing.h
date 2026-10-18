@@ -24,7 +24,7 @@ namespace ics::cue
 {
 
 // A 3 by 3 rotation, row by row.
-using Rotation = std::array<float64, axes_length * axes_length>;
+using Rotation = std::array<float64, static_cast<std::size_t>(axes * axes)>;
 
 // A station: its position in the range ENU frame, and the rotation from the range frame's axes into its own.
 struct Station

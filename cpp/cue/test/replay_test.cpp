@@ -11,6 +11,7 @@
 // crossing point each take a cue every 20 ms, for a command sent then; from
 // 3 s on, each cue's direction is compared with the truth at the moment the
 // command takes effect.
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cmath>
@@ -27,7 +28,9 @@
 #include <ics/common/units.hpp>
 #include <ics/common/universal_types.h>
 #include <ics/cue/extrapolator.h>
+#include <ics/cue/filter.h>
 #include <ics/cue/kinematics.h>
+#include <ics/cue/measurement.h>
 #include <ics/cue/pointing.h>
 #include <ics/frames/enu.hpp>
 #include <ics/frames/geodetic.hpp>
@@ -63,6 +66,18 @@ constexpr float64 centimetres = 100.0;
 constexpr float64 budget_rad = 0.002;
 constexpr float64 gravity = 9.80665;
 constexpr int64 seed = 37;
+constexpr float64 per_milliradian = 1000.0;
+constexpr float64 crossing_s = 90.0;
+constexpr float64 manoeuvring_s = 30.0;
+// Where each track starts, in the range frame.
+constexpr Vector3 crossing_start{-200.0, 0.0, 5.0};
+constexpr Vector3 manoeuvring_start{-150.0, -150.0, 35.0};
+// The manoeuvring track starts heading north-east.
+constexpr float64 north_east = std::numbers::pi / 4.0;
+constexpr ics::cue::Fix_sigmas fallback{1.5, 3.0};
+constexpr ics::cue::Filter_settings filter{
+  {4.0, 1.0}, 16.27, std::chrono::seconds(2), std::chrono::seconds(2), ics::cue::max_history, 20.0, 10.0};
+constexpr ics::cue::Noise_defaults defaults{fallback, fallback, fallback, fallback, fallback, fallback, 0.2};
 constexpr std::array<ics::cue::Site, 3> stations{
   {{39.9977477, -100.0, 702.0}, {40.0010812, -99.9969537, 702.0}, {40.0018919, -100.0021096, 702.0}}};
 
@@ -126,7 +141,7 @@ float64 turn_rate(const float64 seconds, const float64 speed)
 Track crossing_track(const float64 duration_s)
 {
   Track track;
-  Sample now{{-200.0, 0.0, 5.0}, crossing_velocity(0.0)};
+  Sample now{crossing_start, crossing_velocity(0.0)};
   const int64 steps = static_cast<int64>(duration_s / step_s);
   for (int64 number = 0; number <= steps; ++number)
   {
@@ -146,9 +161,9 @@ Track crossing_track(const float64 duration_s)
 Track manoeuvring_track(const float64 duration_s)
 {
   const float64 speed = 15.0;
-  float64 heading = std::numbers::pi / 4.0;
+  float64 heading = north_east;
   Track track;
-  Sample now{{-150.0, -150.0, 35.0}, {speed * std::sin(heading), speed * std::cos(heading), 0.0}};
+  Sample now{manoeuvring_start, {speed * std::sin(heading), speed * std::cos(heading), 0.0}};
   const int64 steps = static_cast<int64>(duration_s / step_s);
   for (int64 number = 0; number <= steps; ++number)
   {
@@ -216,7 +231,8 @@ std::vector<PliRecord> pli_records(const Track& track, const ics::frames::EnuFra
     made.set_horizontal_sigma_m(pli_horizontal_sigma_m);
     made.set_vertical_sigma_m(pli_vertical_sigma_m);
     const ics::frames::EnuFrame here(geodetic_of(range, now.position));
-    const ics::frames::Enu axes{ics::Meters(now.velocity[0]), ics::Meters(now.velocity[1]), ics::Meters(now.velocity[2])};
+    const ics::frames::Enu axes{
+      ics::Meters(now.velocity[0]), ics::Meters(now.velocity[1]), ics::Meters(now.velocity[2])};
     const ics::frames::Enu local = here.rotate(range.rotate(axes));
     made.mutable_velocity_enu_mps()->set_east(std::round(local.east.value() * centimetres) / centimetres);
     made.mutable_velocity_enu_mps()->set_north(std::round(local.north.value() * centimetres) / centimetres);
@@ -256,13 +272,7 @@ std::vector<PliRecord> radar_records(const Track& track, const ics::frames::EnuF
 
 ics::cue::Cue_settings settings_for(const ics::cue::Site& station)
 {
-  const ics::cue::Fix_sigmas fallback{1.5, 3.0};
-  return {origin,
-          station,
-          ics::v1::ENTITY_ROLE_TARGET,
-          std::chrono::milliseconds(latency_ns / step_ns),
-          {{4.0, 1.0}, 16.27, std::chrono::seconds(2), std::chrono::seconds(2), ics::cue::max_history, 20.0, 10.0},
-          {fallback, fallback, fallback, fallback, fallback, fallback, 0.2}};
+  return {origin, station, ics::v1::ENTITY_ROLE_TARGET, ics::Duration(latency_ns), filter, defaults};
 }
 
 // The angle between a cue and the true direction from a station.
@@ -316,7 +326,8 @@ Errors fly(const Track& track,
     {
       EXPECT_TRUE(cue.has_value()) << since;
       const ics::frames::Enu seen = station.to_enu(geodetic_of(range, truth_at(track, since + latency_ns).position));
-      const float64 error = cue.has_value() ? error_of(*cue, {seen.east.value(), seen.north.value(), seen.up.value()}) : 1.0;
+      const Vector3 truth{seen.east.value(), seen.north.value(), seen.up.value()};
+      const float64 error = cue.has_value() ? error_of(*cue, truth) : 1.0;
       errors.largest_rad = std::fmax(errors.largest_rad, error);
       squares += error * error;
       ++errors.cues;
@@ -343,7 +354,8 @@ void expect_within_budget(const Track& track, const std::string& name)
   {
     const Errors errors = fly(track, arrivals, site);
     std::cout << name << " from (" << site.latitude_deg << ", " << site.longitude_deg << "): " << errors.cues
-              << " cues, largest " << (errors.largest_rad * 1000.0) << " mrad, RMS " << (errors.rms_rad * 1000.0)
+              << " cues, largest " << (errors.largest_rad * per_milliradian) << " mrad, RMS "
+              << (errors.rms_rad * per_milliradian)
               << " mrad\n";
     EXPECT_LT(errors.largest_rad, budget_rad) << name;
   }
@@ -355,10 +367,10 @@ void expect_within_budget(const Track& track, const std::string& name)
 // test names and expand to code of GoogleTest's own (AV 50, 51 and 209).
 TEST(CueReplay, PointsWithin2MilliradiansOnTheCrossing)
 {
-  expect_within_budget(crossing_track(90.0), "crossing");
+  expect_within_budget(crossing_track(crossing_s), "crossing");
 }
 
 TEST(CueReplay, PointsWithin2MilliradiansThroughTurnsOf1G)
 {
-  expect_within_budget(manoeuvring_track(30.0), "manoeuvring");
+  expect_within_budget(manoeuvring_track(manoeuvring_s), "manoeuvring");
 }

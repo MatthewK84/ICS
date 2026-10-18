@@ -1,9 +1,9 @@
 // replay_tool_test.cpp: ics-cue-replay's work on segment files as ics-plid writes them (ICS-037).
 #include <array>
-#include <chrono>
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <ios>
 #include <limits>
 #include <span>
 #include <sstream>
@@ -15,7 +15,7 @@
 #include <ics/common/error.hpp>
 #include <ics/common/units.hpp>
 #include <ics/common/universal_types.h>
-#include <ics/config/config.hpp>
+#include <ics/config/reader.hpp>
 #include <ics/cue/config.h>
 #include <ics/cue/extrapolator.h>
 #include <ics/cue/replay.h>
@@ -41,6 +41,14 @@ constexpr int64 receipt_lag_ns = 100000000;
 constexpr int64 tick_ns = 20000000;
 constexpr int32 reports = 30;
 constexpr float64 metres_per_degree_east = 85000.0;
+constexpr ics::cue::Site origin{40.0, -100.0, 700.0};
+constexpr float64 start_east_m = -60.0;
+constexpr float64 target_height_m = 735.0;
+constexpr float64 speed_m_s = 5.0;
+// A forged entry: its payload is one byte, a varint field's tag with no value after it.
+constexpr char record_kind = 1;
+constexpr char bad_payload = 8;
+constexpr ics::uint32 low_byte = 0xFFU;
 constexpr std::array<const char*, 1> bare{"ics-cue-replay"};
 
 ics::UtcTime at_ns(const int64 nanoseconds)
@@ -55,10 +63,11 @@ PliRecord report(const int32 number, const ics::v1::EntityRole role)
   made.set_valid_utc_ns(start_ns + (number * period_ns));
   made.set_received_utc_ns(start_ns + (number * period_ns) + receipt_lag_ns);
   made.set_fix_type(PliRecord::FIX_TYPE_THREE_DIMENSIONAL);
-  made.mutable_position()->set_latitude_deg(40.0);
-  made.mutable_position()->set_longitude_deg(-100.0 + ((-60.0 + (0.5 * number)) / metres_per_degree_east));
-  made.mutable_position()->set_height_ellipsoid_m(735.0);
-  made.mutable_velocity_enu_mps()->set_east(5.0);
+  const float64 east_m = start_east_m + (0.5 * number);
+  made.mutable_position()->set_latitude_deg(origin.latitude_deg);
+  made.mutable_position()->set_longitude_deg(origin.longitude_deg + (east_m / metres_per_degree_east));
+  made.mutable_position()->set_height_ellipsoid_m(target_height_m);
+  made.mutable_velocity_enu_mps()->set_east(speed_m_s);
   return made;
 }
 
@@ -83,7 +92,7 @@ void write_flight(const std::filesystem::path& folder)
 // A segment whose one entry passes its checks but holds no record: a forged CRC over a bad payload.
 void write_forged(const std::filesystem::path& folder)
 {
-  const std::array<std::byte, 2> checked{std::byte{1}, std::byte{8}};
+  const std::array<std::byte, 2> checked{std::byte{record_kind}, std::byte{bad_payload}};
   const ics::uint32 crc = ics::store::crc32c(checked);
   std::ofstream file(folder / ics::store::segment_name(at_ns(start_ns - period_ns)), std::ios::binary);
   for (const std::byte magic : ics::store::kSegmentMagic)
@@ -95,11 +104,11 @@ void write_forged(const std::filesystem::path& folder)
   {
     for (const ics::uint32 shift : std::array<ics::uint32, 4>{0U, 8U, 16U, 24U})
     {
-      file.put(static_cast<char>((word >> shift) & 0xFFU));
+      file.put(static_cast<char>((word >> shift) & low_byte));
     }
   }
-  file.put(static_cast<char>(1));
-  file.put(static_cast<char>(8));
+  file.put(record_kind);
+  file.put(bad_payload);
 }
 
 std::vector<std::string> lines_of(const std::string& text)

@@ -21,6 +21,10 @@ constexpr Process_noise noise{4.0, 1.0};
 constexpr float64 same = 1.0E-12;
 constexpr float64 dt_s = 0.7;
 constexpr float64 first_s = 0.3;
+// A positive-definite block: [[4, 2], [2, 3]], then 9.
+constexpr float64 corner = 4.0;
+constexpr float64 middle = 3.0;
+constexpr float64 last = 9.0;
 
 // A start whose state counts up and whose covariance is the identity.
 Estimate counting_start()
@@ -95,17 +99,17 @@ TEST(CueKinematics, ChecksEveryIndex)
 TEST(CueKinematics, InvertsAPositiveDefiniteBlock)
 {
   Matrix spread;
-  spread.put(0, 0, 4.0);
+  spread.put(0, 0, corner);
   spread.put(0, 1, 2.0);
   spread.put(1, 0, 2.0);
-  spread.put(1, 1, 3.0);
-  spread.put(2, 2, 9.0);
-  const ics::Result<Matrix> inverse = ics::cue::inverse_symmetric(spread, 3);
+  spread.put(1, 1, middle);
+  spread.put(2, 2, last);
+  const ics::Result<Matrix> inverse = ics::cue::inverse_symmetric(spread, ics::cue::axes);
   ASSERT_TRUE(inverse.has_value());
   const Matrix product = ics::cue::multiply(spread, *inverse);
-  for (int32 row = 0; row < 3; ++row)
+  for (int32 row = 0; row < ics::cue::axes; ++row)
   {
-    for (int32 column = 0; column < 3; ++column)
+    for (int32 column = 0; column < ics::cue::axes; ++column)
     {
       EXPECT_NEAR(product.at(row, column), (row == column) ? 1.0 : 0.0, same);
     }

@@ -2,7 +2,6 @@
 // JSF deviation D-6: ics::fail, ics::Degrees, ics::Meters and ics::frames come from .hpp headers.
 #include <ics/common/error.hpp>
 #include <ics/common/units.hpp>
-#include <ics/common/universal_types.h>
 #include <ics/cue/extrapolator.h>
 #include <ics/cue/filter.h>
 #include <ics/cue/kinematics.h>

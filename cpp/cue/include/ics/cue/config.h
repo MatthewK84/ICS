@@ -1,6 +1,6 @@
 // config.h: the [cue] table of a station's config (ICS-037), the production
 // input of the cue extrapolator. ics-cue-replay reads it from
-// /etc/ics/ics-cue.toml, and ics-mountd (ICS-041) will read the same table;
+// /etc/ics/ics-cue.toml, and ics-mountd (ICS-041) will read the same table.
 // cpp/cue/ics-cue.toml is a sample with every setting:
 //
 //   [cue]

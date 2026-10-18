@@ -24,7 +24,12 @@ constexpr float64 origin_height_m = 700.0;
 constexpr float64 north_deg = 0.001;
 constexpr float64 valid_ns = 1.7E18;
 constexpr float64 close_m = 1.0E-6;
-constexpr ics::cue::Noise_defaults defaults{{3.0, 9.0}, {1.0, 2.0}, {0.6, 1.1}, {0.3, 0.6}, {0.02, 0.04}, {4.0, 4.5}, 0.25};
+constexpr ics::cue::Noise_defaults defaults{
+  {3.0, 9.0}, {1.0, 2.0}, {0.6, 1.1}, {0.3, 0.6}, {0.02, 0.04}, {4.0, 4.5}, 0.25};
+constexpr float64 own_horizontal_m = 0.05;
+constexpr float64 own_vertical_m = 0.07;
+constexpr float64 north_m_s = 5.0;
+constexpr float64 past_pole_deg = 91.0;
 
 ics::frames::EnuFrame range()
 {
@@ -77,9 +82,9 @@ TEST(CueMeasurement, PutsARecordInTheRangeFrame)
 TEST(CueMeasurement, KeepsARecordsOwnSigmasAndVelocity)
 {
   PliRecord moving = record(PliRecord::FIX_TYPE_RTK_FIXED);
-  moving.set_horizontal_sigma_m(0.05);
-  moving.set_vertical_sigma_m(0.07);
-  moving.mutable_velocity_enu_mps()->set_north(5.0);
+  moving.set_horizontal_sigma_m(own_horizontal_m);
+  moving.set_vertical_sigma_m(own_vertical_m);
+  moving.mutable_velocity_enu_mps()->set_north(north_m_s);
   const ics::Result<ics::cue::Measurement> report = ics::cue::measurement_from(moving, range(), defaults);
   ASSERT_TRUE(report.has_value());
   EXPECT_DOUBLE_EQ(report->horizontal_sigma_m, 0.05);
@@ -95,7 +100,7 @@ TEST(CueMeasurement, RefusesWhatCannotBeUsed)
   EXPECT_EQ(ics::cue::measurement_from(record(PliRecord::FIX_TYPE_NONE), range(), defaults).error(),
             ics::Error::kUnconstrained);
   PliRecord far = record(PliRecord::FIX_TYPE_THREE_DIMENSIONAL);
-  far.mutable_position()->set_latitude_deg(91.0);
+  far.mutable_position()->set_latitude_deg(past_pole_deg);
   EXPECT_EQ(ics::cue::measurement_from(far, range(), defaults).error(), ics::Error::kOutOfRange);
   PliRecord lost = record(PliRecord::FIX_TYPE_THREE_DIMENSIONAL);
   lost.mutable_position()->set_height_ellipsoid_m(std::numeric_limits<float64>::quiet_NaN());

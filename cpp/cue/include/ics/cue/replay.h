@@ -7,7 +7,7 @@
 //   {"time_utc_ns":...,"ok":true,"azimuth_rad":...,"elevation_rad":...,
 //    "azimuth_rate_rad_s":...,"elevation_rate_rad_s":...,"range_m":...,
 //    "sigma_rad":...,"taken":...,"late":...,"gated":...,"too_old":...,
-//    "not_target":...,"unusable":...}
+//    "not_target":...,"unusable":...} on one line
 //
 // A cue that cannot be given has "ok":false and an "error" naming why, such
 // as "unconstrained" past the coast limit. The tool reads its whole input
