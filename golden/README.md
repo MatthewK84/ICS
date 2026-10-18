@@ -23,7 +23,7 @@ Contents:
   - `cues.csv` gives three stations' cues, and a target overhead that has none.
   - `measurements.csv` gives PLI points and velocities in the range frame. The first point is the range origin.
 
-  The C++ cue module matches every outcome, every state and covariance value within 1e-9, and every angle within 1e-10 rad ([`cpp/cue/test/golden_test.cpp`](../cpp/cue/test/golden_test.cpp)). [`python/tests/test_cue_golden.py`](../python/tests/test_cue_golden.py) requires the files to be what the reference writes.
+  The C++ cue module matches every outcome, every state and covariance value within 1e-9, and every angle within 1e-10 rad ([`cpp/cue/test/golden_test.cpp`](../cpp/cue/test/golden_test.cpp)). [`python/tests/test_cue_golden.py`](../python/tests/test_cue_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1. OpenBLAS picks its matrix kernels by CPU, so a number's last bit can differ between machines.
 
 Planned contents:
 
