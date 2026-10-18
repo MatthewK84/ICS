@@ -802,7 +802,10 @@ TYPE_NAME: str = "::([A-Z][a-z0-9]*|[A-Z][A-Z0-9]+)(_([a-z0-9]+|[A-Z][A-Z0-9]+))
 UNIVERSAL_NAME: str = "::ics::(u?int(8|16|32|64)|float(32|64))$"
 NOT_FROM_TEST_MACROS: str = 'unless(isExpandedFromMacro("TEST")), unless(isExpandedFromMacro("TEST_F"))'
 
-IN_JSF: str = 'isExpansionInFileMatching("{r}")'
+# In a JSF file. The system-header test comes first: it is cheap, and spares
+# the path's regular expression the many nodes of the libraries' headers,
+# which slowed a module's run from seconds to minutes.
+IN_JSF: str = 'unless(isExpansionInSystemHeader()), isExpansionInFileMatching("{r}")'
 INCREMENTS: str = 'hasAnyOperatorName("++", "--")'
 ARITHMETIC: str = 'hasAnyOperatorName("+", "-", "*", "/", "%", "+=", "-=", "*=", "/=", "%=")'
 LOGICAL: str = 'hasAnyOperatorName("&&", "||")'
