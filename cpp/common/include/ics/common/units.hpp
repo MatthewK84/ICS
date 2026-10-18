@@ -24,8 +24,11 @@ class Quantity {
 
   // Written out rather than defaulted: Clang 17's coverage miscounts the
   // branches of a defaulted comparison, and the coverage gate needs them.
+  // Through <=>, which gives the same answer as == for every value, NaN and
+  // signed zeros included, so that GCC's -Wfloat-equal, which the JSF AV code
+  // that includes this header turns on (docs/cpp-jsf-av.md), passes.
   [[nodiscard]] friend constexpr bool operator==(const Quantity a, const Quantity b) noexcept {
-    return a.value_ == b.value_;
+    return (a.value_ <=> b.value_) == std::partial_ordering::equivalent;
   }
   [[nodiscard]] friend constexpr std::partial_ordering operator<=>(const Quantity a, const Quantity b) noexcept {
     return a.value_ <=> b.value_;

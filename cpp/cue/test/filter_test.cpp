@@ -195,6 +195,9 @@ TEST(CueFilter, GatesAnOutlierAndKeepsGoing)
   Measurement unweighable = nth(flight, 11);
   unweighable.horizontal_sigma_m = std::numeric_limits<float64>::quiet_NaN();
   EXPECT_EQ(filter.add(unweighable), Outcome::gated);
+  Measurement unsteady = nth(flight, 11);
+  unsteady.velocity_sigma_m_s = std::numeric_limits<float64>::quiet_NaN();
+  EXPECT_EQ(filter.add(unsteady), Outcome::gated);
   for (int32 number = 12; number < length(flight); ++number)
   {
     EXPECT_EQ(filter.add(nth(flight, number)), Outcome::taken);

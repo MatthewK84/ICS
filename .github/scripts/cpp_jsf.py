@@ -1112,17 +1112,23 @@ def run_tidy(root: Path, build: Path, sources: Sequence[Path], pattern: str) -> 
 
 
 def run_query(root: Path, build: Path, sources: Sequence[Path], pattern: str) -> list[Finding]:
-    """clang-query with every matcher on the sources."""
+    """clang-query with every matcher, on each source in turn.
+
+    One run over many sources holds every one's AST at once, and takes far
+    longer than the runs one at a time: minutes, not seconds, for a module.
+    """
+    outputs: list[str] = []
     with tempfile.TemporaryDirectory() as folder:
         script = Path(folder) / "jsf.query"
         script.write_text(query_script(pattern), encoding="utf-8")
-        result = run_tool([CLANG_QUERY, f"-p={build}", "-f", str(script), *map(str, sources)])
-    errors = [
-        line for line in result.stdout.splitlines() + result.stderr.splitlines() if re.match(r"\d+:\d+: Error", line)
-    ]
-    if result.returncode != 0 or errors:
-        raise JsfError(f"clang-query failed: {' '.join(errors)[:2000]}{result.stderr[-2000:]}")
-    return parse_query(result.stdout, root)
+        for source in sources:
+            result = run_tool([CLANG_QUERY, f"-p={build}", "-f", str(script), str(source)])
+            lines = result.stdout.splitlines() + result.stderr.splitlines()
+            errors = [line for line in lines if re.match(r"\d+:\d+: Error", line)]
+            if result.returncode != 0 or errors:
+                raise JsfError(f"clang-query failed on {source}: {' '.join(errors)[:2000]}{result.stderr[-2000:]}")
+            outputs.append(result.stdout)
+    return parse_query("\n".join(outputs), root)
 
 
 def read_text(path: Path) -> str:

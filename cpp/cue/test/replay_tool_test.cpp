@@ -130,6 +130,7 @@ TEST(CueReplayTool, WritesACueEvery20Milliseconds)
   const Temp_folder folder("writes");
   write_flight(folder.path());
   write_forged(folder.path());
+  std::ofstream(folder.path() / "notes.txt") << "not a segment\n";
   std::ostringstream out;
   std::ostringstream errors;
   EXPECT_EQ(ics::cue::run_replay(bare, ICS_CUE_EXAMPLE, folder.path(), out, errors), ics::cue::exit_replayed);
@@ -149,6 +150,15 @@ TEST(CueReplayTool, FailsWithNothingToReplay)
   std::ostringstream out;
   std::ostringstream errors;
   EXPECT_EQ(ics::cue::run_replay(bare, ICS_CUE_EXAMPLE, folder.path(), out, errors), ics::cue::exit_failed);
+  EXPECT_NE(errors.str().find("no PLI records to replay: empty"), std::string::npos) << errors.str();
+}
+
+TEST(CueReplayTool, FailsOnAFolderThatIsNotThere)
+{
+  const Temp_folder folder("missing");
+  std::ostringstream out;
+  std::ostringstream errors;
+  EXPECT_EQ(ics::cue::replay_folder(sample(), folder.path() / "absent", out, errors), ics::cue::exit_failed);
   EXPECT_NE(errors.str().find("no PLI records to replay: empty"), std::string::npos) << errors.str();
 }
 
@@ -194,5 +204,7 @@ TEST(CueReplayTool, ExplainsItsUsage)
   EXPECT_NE(out.str().find("usage: ics-cue-replay"), std::string::npos);
   const std::array<const char*, 2> extra{"ics-cue-replay", "folder"};
   EXPECT_EQ(ics::cue::run_replay(extra, "unused", "unused", out, errors), ics::cue::exit_usage);
+  const std::array<const char*, 3> more{"ics-cue-replay", "--help", "now"};
+  EXPECT_EQ(ics::cue::run_replay(more, "unused", "unused", out, errors), ics::cue::exit_usage);
   EXPECT_NE(errors.str().find("usage: ics-cue-replay"), std::string::npos);
 }

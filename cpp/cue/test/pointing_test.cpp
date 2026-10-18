@@ -125,6 +125,12 @@ TEST(CuePointing, SigmaIsTheTransverseErrorOverRange)
   EXPECT_NEAR(cue_of(stretched, station).sigma_rad, 3.0 / 250.0, 1.0E-9);
 }
 
+TEST(CuePointing, AnExactPositionHasNoSigma)
+{
+  const ics::cue::Station station = ics::cue::station_at(range(), point(40.0, -100.0, 700.0));
+  EXPECT_DOUBLE_EQ(cue_of(estimate_at({200.0, 150.0, 30.0}, {}, 0.0), station).sigma_rad, 0.0);
+}
+
 TEST(CuePointing, RefusesATargetOverheadOrAtTheStation)
 {
   const ics::cue::Station station = ics::cue::station_at(range(), point(40.0, -100.0, 700.0));
