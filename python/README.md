@@ -9,7 +9,7 @@ Planned layout:
 ```text
 python/
   ics_golden/   golden test vectors shared with C++ and TypeScript (golden/), and the run-record samples (schemas/)
-  ics_models/   pointing (ICS-035), and to come: calibration, trajectory, drag, footprint, killclass, uncertainty
+  ics_models/   pointing (ICS-035), cue (ICS-037), and to come: calibration, trajectory, drag, footprint, killclass, uncertainty
   ics_synth/    synthetic engagement generator
   ics_stats/    Pk, timeline analysis, validation scorer
   ics_sitl/     the SITL rig's ground station (ICS-018, deploy/sitl): MAVLink, missions, engagement checks,
@@ -76,6 +76,20 @@ uv run --locked python -m ics_models.pointing fit night.csv --station s1 --model
 - **Done when.** On 50 synthetic nights of 60 stars, with 3 µrad of centroid noise per axis, the worst held-out RMS is under C17's 10 µrad. Every term lies within 5σ of the truth, and at least 98% within 3σ. A model missing a term the data need fails C17. The star positions match SOFA's own test case for `atco13` to 1e-12 rad.
 - **On the sky.** The real capture and C17 on stars are the field shakedown's ([ICS-093](https://github.com/MatthewK84/ICS/issues/93)).
 - **Golden vectors** for the C++ port are in [`golden/pointing`](../golden/README.md).
+
+## Cue extrapolator
+
+[`ics_models/cue`](ics_models/cue) is the reference cue extrapolator for one target ([ICS-037](https://github.com/MatthewK84/ICS/issues/37), CPP-18). The C++ port, `ics::cue` ([`cpp/cue`](../cpp/README.md#cue-extrapolator)), must match it through [`golden/cue`](../golden/README.md).
+
+| Module | Provides |
+|---|---|
+| `kinematics` | The constant-acceleration state in the range ENU frame, and `predict` with white-jerk process noise, exact over any step |
+| `geometry` | WGS 84 points in the range ENU frame, and the turn from its axes into a station's |
+| `filter` | `CueFilter`: `add`, with the chi-squared gate and the re-filtering of a late report from the checkpoint before it; `estimate_at`, within the history and the coast limit |
+| `pointing` | `cue_for`: a station's azimuth, elevation, their rates and the one-sigma pointing uncertainty |
+
+- **Golden vectors.** `python -m ics_golden.cue ../golden/cue` writes them. They cover a manoeuvring target's eight seconds of GNSS PLI and radar in arrival order, with every outcome (taken, late, gated, too old) and the estimate after each report. They also cover queries up to and past the coast limit, three stations' cues, and PLI points in the range frame. [`tests/test_cue_golden.py`](tests/test_cue_golden.py) requires the files to be what the reference writes.
+- **Tests** check prediction composing exactly, a constant-acceleration truth followed exactly, late reports giving the in-order result, the gate, the history and its capacity, the coast limit, positions against `golden/frames`, angles, rates against differences, and the sigma.
 
 ## Power-of-Ten checks
 

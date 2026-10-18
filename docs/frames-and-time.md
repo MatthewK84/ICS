@@ -147,6 +147,7 @@ A station mount's pointing model ([`python/ics_models/pointing`](../python/READM
 - **Time.** Earth rotation runs on UT1. Each calibration night carries DUT1 (UT1 − UTC) from IERS Bulletin A; without it, a night is refused. Polar motion is left at zero: it tilts the vertical by under 2.5 µrad, which the model's axis-tilt terms absorb.
 - **C17** is the RMS of the on-sky residual, √(Δaz²·cos²el + Δel²), on stars held out of the fit: 10 µrad or less.
 - **A frame's line of sight** ([`ics::encoder`](../cpp/README.md#encoder-module), ICS-036) is the model applied to the axis angles at the frame's mid-exposure, interpolated between the tagger's samples. Only frames timed by IRIG-B are taken, and none in a gap of more than 10 ms between samples. Each carries a bound: the samples' time bound times the rate on the sky, plus one count of each axis.
+- **A target's cue** ([`ics::cue`](../cpp/README.md#cue-extrapolator), ICS-037) is filtered in the range ENU frame, and pointed in each station's own ENU axes. At 300 m those turn from the range frame's by about 50 µrad. Azimuth runs from north through east in [0, 2π), and elevation up from the station's horizontal, as above. Reports are fused on UTC, by their valid time, and a cue holds for the moment a mount command sent now takes effect: now plus the mount's command latency. Atmospheric refraction is left out: over a few hundred metres it bends the line of sight by under 10 µrad.
 
 ## Golden vectors
 

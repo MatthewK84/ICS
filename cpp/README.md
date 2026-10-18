@@ -548,6 +548,46 @@ The interlock (ICS-034) keeps the line of sight out of a 15° cone around the su
   Each line of sight is compared with the truth: the model applied to the true axis angles at the true mid-exposure. Over 5,543 frames the worst error was 0.58 µrad, in holdover, and every frame was within its bound. The only frames refused were those in a lost batch's gap and those the host timed. A second run uses a slow, noisy crystal.
 - **Tests and fuzzing.** Tests cover every refusal of the loader and the frame query, the 10 ms rule, wraps, lost and repeated batches, the receiver over loopback, the config, and the monitor's reports and exit codes. The fuzz targets read any text as a parameter file and any bytes as a `.meta` file.
 
+## Cue extrapolator
+
+[`cue/`](cue) is `ics::cue` (ICS-037, CPP-18): where a station points to find the target. It fuses the target's position reports, PLI from its own GNSS (over MAVLink, CoT or Lattice) and radar tracks (over SAPIENT), in a constant-acceleration Kalman filter in the range ENU frame. It gives the station's azimuth, elevation, their rates and a one-sigma pointing uncertainty, predicted to the moment a mount command sent now takes effect. Its users are the rate loop (ICS-033), then the tracker and `ics-mountd` (ICS-038, ICS-041). It is the first module held to the [JSF AV rules](#jsf-av-checks), and [`ics_models.cue`](../python/README.md#cue-extrapolator) is its reference: the C++ matches [`golden/cue`](../golden/README.md) in every outcome, within 1e-9 in every state and covariance value and 1e-10 rad in every angle.
+
+| Header | Provides |
+|---|---|
+| [`kinematics.h`](cue/include/ics/cue/kinematics.h) | `Estimate`, the nine-number state and its covariance; `predict`, with white-jerk process noise; the fixed-size matrix arithmetic and `inverse_symmetric` |
+| [`measurement.h`](cue/include/ics/cue/measurement.h) | `measurement_from`: an `ics.v1.PliRecord` as a position, with sigmas and a velocity when it has one, in the range frame; `Noise_defaults` for a record that carries no sigmas |
+| [`filter.h`](cue/include/ics/cue/filter.h) | `Cue_filter`: `add`, which gates and re-filters, and `estimate_at`, which refuses past the coast limit |
+| [`pointing.h`](cue/include/ics/cue/pointing.h) | `Station`, `Cue` and `cue_for`: an estimate as a station's cue, in its own ENU axes |
+| [`extrapolator.h`](cue/include/ics/cue/extrapolator.h) | `Cue_extrapolator`: `take` each record the station hears, and `cue_at` a command's send time |
+| [`config.h`](cue/include/ics/cue/config.h), [`replay.h`](cue/include/ics/cue/replay.h) | The `[cue]` table; `ics-cue-replay`'s work |
+
+- **The filter.** Each axis is a constant-acceleration model, its acceleration driven by white jerk: one density for east and north, another for up. The sUAS the range flies manoeuvre at up to 1 g, and the cue looks at most about 300 ms ahead, so no IMM or Singer model is needed. A report updates the position, and the velocity when it has one, in Joseph form. The first report starts the estimate at its position and velocity, with no acceleration.
+- **Late reports.** Reports arrive on UTC, aligned by ICS-026, but out of order across sources: radar lags GNSS. The filter keeps the last 2 s of reports in time order, each with its checkpoint, the estimate after it. A late report goes in its place, and every report from there on is applied again from the checkpoint before it, so the estimate is the one in-order reports would give. A report older than the history, or than the checkpoint of the last report dropped, is refused as too old. Everything is in fixed arrays of 64 reports, so nothing is allocated.
+- **The gate.** A report whose position is more than 16.27 from the prediction, by the chi-squared distance with three degrees of freedom (99.9%), is held but not applied, and counted. There is no data association: the operator marks which reports are the target through each adapter's role assignment (`ENTITY_ROLE_TARGET`), and the cue takes only those.
+- **Pointing.** The cue is in the station's own ENU axes, which turn from the range frame's by about 50 µrad at 300 m. Azimuth is clockwise from north in [0, 2π). The pointing uncertainty is the larger axis of the position covariance across the line of sight, over the range. A target within 1 cm of the station's vertical, or within 1 m of the station, has no direction to cue.
+- **Latency.** `cue_at(now)` predicts to now plus the mount's command latency, from the newest report's checkpoint, so the age of the newest report is covered too. It refuses a prediction more than the coast limit, 2 s, past the last report.
+- **Production connections.** Each input the tests stand in for has a named place for the real one:
+
+  | Input | In operation | In the tests |
+  |---|---|---|
+  | The target's PLI | ics-plid's segment files (`.icspli`, ICS-030), from the MAVLink, CoT and Lattice adapters, with the target's role set in each adapter's config | Synthetic `PliRecord`s at 10 Hz, as the MAVLink adapter gives them |
+  | Radar tracks | The SAPIENT adapter (ICS-024), into the same segment files | Synthetic: 2 Hz, 3 m, 300 ms late, a fifth lost |
+  | The station and the range | `station_*` and `range_origin_*` in the `[cue]` table: the mount's surveyed position, and the range ENU origin every module takes | Three stations 250 to 300 m from the crossing point |
+  | The command latency | `command_latency_ns`, measured on the mount (ICS-033) | 50 ms |
+  | Sigmas | A record's own, such as GPS_RAW_INT's accuracies; else the `[cue]` defaults by fix type | 0.5 m and 0.8 m for PLI, 3 m for radar |
+
+  The sample config is [`ics-cue.toml`](cue/ics-cue.toml); `ics-mountd` will read the same `[cue]` table.
+- **Tool.** [`ics-cue-replay`](cue/tool/main.cpp) is the operational test of the cue. It reads `/etc/ics/ics-cue.toml`, then replays the segment files in the working folder in the order their records were received, live or after the run. Every 20 ms it writes the station's cue as a JSON line, with the counts of reports taken, late, gated, too old, not the target and unusable. It exits 0 when it replayed, 1 when the config, the sites or the segments could not be used, and 2 for an argument.
+- **Done when.** Pointing error under 2 mrad on replayed tracks ([`replay_test.cpp`](cue/test/replay_test.cpp)). No SITL record of the crossing is in the repository, so the target flies [`crossing.toml`](../deploy/sitl/engagements/crossing.toml)'s path synthetically, with a full-rate truth table as PX4's onboard log would be. From 3 s on, each 50 Hz cue is compared with the truth at the moment its command takes effect, from three stations:
+
+  | Track | Cues per station | Largest error | RMS |
+  |---|---|---|---|
+  | The crossing: climb to 35 m, then east at 5 m/s, 90 s | 4,348 | 0.10 to 0.17 mrad | 0.03 to 0.04 mrad |
+  | Manoeuvring: 15 m/s, turns of 1 g, 30 s | 1,348 | 0.49 to 1.53 mrad | 0.12 to 0.22 mrad |
+
+  Replaying a flown SITL crossing is [#172](https://github.com/MatthewK84/ICS/issues/172), and the field replay with a real radar is in [#93](https://github.com/MatthewK84/ICS/issues/93).
+- **Tests.** Besides the golden vectors and the replay: exact constant-acceleration truths; late reports giving the in-order estimate; the gate, the history, the capacity and the coast limit; every refusal of a record; the station axes, the angles, their rates against differences and the sigma; the config; and the tool on segment files from ics-plid's own writer. No new parser reads outside data: the segment reader (ICS-030) and the config reader are fuzzed already.
+
 ## Power-of-Ten checks
 
 The C++ rules from the coding-standards table in [docs/build-plan.md](../docs/build-plan.md) are enforced by tools, not review (ICS-005):
