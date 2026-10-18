@@ -127,7 +127,8 @@ TEST(CueExtrapolator, CountsEveryFate)
 TEST(CueExtrapolator, RefusesACueWithNoDirection)
 {
   ics::cue::Cue_settings above = settings();
-  above.station = {origin.latitude_deg, origin.longitude_deg + (start_east_m / metres_per_degree_east), origin.height_m};
+  const float64 under_start = origin.longitude_deg + (start_east_m / metres_per_degree_east);
+  above.station = {origin.latitude_deg, under_start, origin.height_m};
   ics::Result<ics::cue::Cue_extrapolator> made = ics::cue::Cue_extrapolator::make(above);
   ASSERT_TRUE(made.has_value());
   PliRecord hovering = report(0, ics::v1::ENTITY_ROLE_TARGET);
