@@ -17,11 +17,11 @@ Contents:
   The C++ encoder module ([ICS-036](https://github.com/MatthewK84/ICS/issues/36)) loads the model, then gives each sky direction from its encoder angles, and each encoder angle pair from its sky direction, within 1e-12 rad ([`cpp/encoder/test/pointing_model_test.cpp`](../cpp/encoder/test/pointing_model_test.cpp)). [`python/tests/test_pointing_io.py`](../python/tests/test_pointing_io.py) requires the files to be what the reference writes.
 
 - [`cue/`](cue): the cue extrapolator ([ICS-037](https://github.com/MatthewK84/ICS/issues/37)), written by [`python/ics_golden/cue.py`](../python/ics_golden/cue.py).
-  - `parameters.csv` is the filter's settings and the range origin.
+  - `parameters.csv` is the filter's settings.
   - `reports.csv` is eight seconds of a manoeuvring target's PLI and radar in arrival order. Each row gives the report, the filter's outcome and its estimate after the report.
   - `queries.csv` gives estimates after the last report, up to and past the coast limit.
   - `cues.csv` gives three stations' cues, and a target overhead that has none.
-  - `measurements.csv` gives PLI points and velocities in the range frame.
+  - `measurements.csv` gives PLI points and velocities in the range frame. The first point is the range origin.
 
   The C++ cue module matches every outcome, every state and covariance value within 1e-9, and every angle within 1e-10 rad ([`cpp/cue/test/golden_test.cpp`](../cpp/cue/test/golden_test.cpp)). [`python/tests/test_cue_golden.py`](../python/tests/test_cue_golden.py) requires the files to be what the reference writes.
 

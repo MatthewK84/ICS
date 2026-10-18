@@ -2,9 +2,10 @@
 
 Each file is CSV with a header, every number printed to round-trip exactly:
 
-- parameters.csv: the filter's settings and the range origin the other files use;
+- parameters.csv: the filter's settings;
 - measurements.csv: PLI positions and velocities, as WGS 84 points with ENU
-  velocities at the vehicle, and the same in the range ENU frame;
+  velocities at the vehicle, and the same in the range ENU frame. The first
+  point is the range origin the other files use;
 - reports.csv: eight seconds of a manoeuvring target, in arrival order. Each
   row is a report: GNSS PLI at 10 Hz with velocity, arriving 100 ms late, or
   radar at 2 Hz without, arriving 300 ms late, one radar report 50 m off and
@@ -257,7 +258,7 @@ def cues(estimates: list[Estimate]) -> str:
 
 
 def measurements() -> str:
-    """measurements.csv's text: points and their velocities, in the range ENU frame."""
+    """measurements.csv's text: points and their velocities, in the range ENU frame. The first is the origin."""
     header = "latitude_deg,longitude_deg,height_m,velocity_east_m_s,velocity_north_m_s,velocity_up_m_s"
     lines = [header + ",east_m,north_m,up_m,range_velocity_east_m_s,range_velocity_north_m_s,range_velocity_up_m_s\n"]
     velocity = np.array([5.0, -3.0, 1.0])
@@ -270,11 +271,8 @@ def measurements() -> str:
 
 
 def parameters() -> str:
-    """parameters.csv's text."""
+    """parameters.csv's text: the filter's settings. The range origin is measurements.csv's first point."""
     values: list[tuple[str, float | int]] = [
-        ("origin_latitude_deg", ORIGIN.latitude_deg),
-        ("origin_longitude_deg", ORIGIN.longitude_deg),
-        ("origin_height_m", ORIGIN.height_m),
         ("horizontal_jerk_psd", SETTINGS.noise.horizontal),
         ("vertical_jerk_psd", SETTINGS.noise.vertical),
         ("gate", SETTINGS.gate),

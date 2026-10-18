@@ -66,7 +66,7 @@ def transverse_sigma(covariance: Matrix, azimuth: float, elevation: float) -> fl
     second = float(along_elevation @ covariance @ along_elevation)
     cross = float(along_azimuth @ covariance @ along_elevation)
     half_difference = (first - second) / 2.0
-    largest = (first + second) / 2.0 + math.sqrt(half_difference * half_difference + cross * cross)
+    largest = (first + second) / 2.0 + math.hypot(half_difference, cross)
     return math.sqrt(max(largest, 0.0))
 
 

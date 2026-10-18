@@ -76,12 +76,13 @@ ics::cue::Filter_settings settings_of(const Golden_table& parameters)
           parameter(parameters, "initial_acceleration_sigma_m_s2")};
 }
 
-ics::frames::EnuFrame range_of(const Golden_table& parameters)
+// The range ENU frame, whose origin the reference writes as measurements.csv's first point.
+ics::frames::EnuFrame range_of(const Golden_table& measurements, const Row& first)
 {
   const ics::Result<ics::frames::Geodetic> origin =
-    ics::frames::Geodetic::make(ics::Degrees(parameter(parameters, "origin_latitude_deg")),
-                                ics::Degrees(parameter(parameters, "origin_longitude_deg")),
-                                ics::Meters(parameter(parameters, "origin_height_m")));
+    ics::frames::Geodetic::make(ics::Degrees(number_of(field_of(measurements, first, "latitude_deg"))),
+                                ics::Degrees(number_of(field_of(measurements, first, "longitude_deg"))),
+                                ics::Meters(number_of(field_of(measurements, first, "height_m"))));
   EXPECT_TRUE(origin.has_value());
   return ics::frames::EnuFrame(*origin);
 }
@@ -254,7 +255,9 @@ TEST(CueGolden, FiltersEveryReportAsTheReferenceDoes)
 
 TEST(CueGolden, CuesEveryStationAsTheReferenceDoes)
 {
-  const ics::frames::EnuFrame range = range_of(table("parameters.csv"));
+  const Golden_table measurements = table("measurements.csv");
+  ASSERT_FALSE(measurements.rows.empty());
+  const ics::frames::EnuFrame range = range_of(measurements, measurements.rows.front());
   const Golden_table cues = table("cues.csv");
   ASSERT_FALSE(cues.rows.empty());
   for (const Row& row : cues.rows)
@@ -270,9 +273,9 @@ TEST(CueGolden, CuesEveryStationAsTheReferenceDoes)
 
 TEST(CueGolden, PutsReportsInTheRangeFrameAsTheReferenceDoes)
 {
-  const ics::frames::EnuFrame range = range_of(table("parameters.csv"));
   const Golden_table measurements = table("measurements.csv");
   ASSERT_FALSE(measurements.rows.empty());
+  const ics::frames::EnuFrame range = range_of(measurements, measurements.rows.front());
   const ics::cue::Fix_sigmas sigmas{1.0, 2.0};
   const ics::cue::Noise_defaults defaults{sigmas, sigmas, sigmas, sigmas, sigmas, sigmas, 0.5};
   for (const Row& row : measurements.rows)

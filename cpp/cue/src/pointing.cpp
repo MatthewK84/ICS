@@ -107,7 +107,7 @@ float64 transverse_sigma(const Spread& spread,
   const float64 second = between(along_elevation, spread, along_elevation);
   const float64 cross = between(along_azimuth, spread, along_elevation);
   const float64 half_difference = (first - second) / 2.0;
-  const float64 largest = ((first + second) / 2.0) + std::sqrt((half_difference * half_difference) + (cross * cross));
+  const float64 largest = ((first + second) / 2.0) + std::hypot(half_difference, cross);
   return std::sqrt((largest > 0.0) ? largest : 0.0);
 }
 
