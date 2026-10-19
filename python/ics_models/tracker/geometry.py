@@ -63,6 +63,16 @@ def pixel_of_tangent(xi: float, eta: float, camera: CameraGeometry) -> tuple[flo
     return camera.boresight_x + right, camera.boresight_y - up
 
 
+def dot(left: Vector, right: Vector) -> float:
+    """Two 3-vectors' dot product, summed in order.
+
+    numpy's @ runs in OpenBLAS, whose kernels sum in an order that depends on
+    the CPU, so its last bit, which pixel_of_sky magnifies by 1 / plate_scale,
+    would differ between machines.
+    """
+    return float(left[0] * right[0] + left[1] * right[1] + left[2] * right[2])
+
+
 def basis_at(line_of_sight: AltAz) -> tuple[Vector, Vector, Vector]:
     """The line of sight, and the directions of increasing azimuth and elevation there, in east, north, up."""
     sin_a, cos_a = math.sin(line_of_sight.azimuth), math.cos(line_of_sight.azimuth)
@@ -85,11 +95,11 @@ def tangent_of_sky(direction: AltAz, line_of_sight: AltAz) -> tuple[float, float
     """A direction's point on the plane tangent to the sky at the line of sight; it must be in front."""
     sight, along_azimuth, along_elevation = basis_at(line_of_sight)
     target = basis_at(direction)[0]
-    depth = float(target @ sight)
+    depth = dot(target, sight)
     if depth <= 0.0:
         message = f"{direction} is 90 degrees or more from the line of sight {line_of_sight}"
         raise TrackerError(message)
-    return float(target @ along_azimuth) / depth, float(target @ along_elevation) / depth
+    return dot(target, along_azimuth) / depth, dot(target, along_elevation) / depth
 
 
 def sky_of_pixel(x: float, y: float, line_of_sight: AltAz, camera: CameraGeometry) -> AltAz:
