@@ -187,6 +187,40 @@ reviewed = 2026-10-09
 prepared_by = "Claude Code"
 approved_by = "MatthewK84"
 
+[[project]]
+name = "Aravis"
+ecosystem = "conan"
+packages = ["aravis"]
+used_for = "Streams the narrow-field tracking camera over GigE Vision for the closed-loop tracker (cpp/tracker, ICS-038), and provides the fake GigE Vision camera CI tests the binding against. Built shared, without its tools, USB3 Vision, GStreamer plugin or introspection; ICS links it dynamically and ships it unmodified. Pulls in libxml2 (MIT) and the GLib entry below."
+ships = true
+license = "LGPL-2.1-or-later"
+source = "https://github.com/AravisProject/aravis"
+governance = "Maintained by its author, Emmanuel Pacaud, who reviews contributions on GitHub and makes every release. The Conan recipe comes from Conan Center."
+sustainment = "Active since 2009, with several releases a year, and packaged by Debian, Ubuntu and Fedora. 0.8.33 is pinned in cpp/conan.lock. ics::tracker uses it only in aravis_camera.cpp, behind the Tracking_camera interface, so a vendor GenICam SDK could replace it."
+foreign_influence = "No controlling organization: its author maintains it, and their jurisdiction was not established from the project's pages."
+single_maintainer = true
+maintainers = "Emmanuel Pacaud, the author, with occasional contributors"
+reviewed = 2026-10-19
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
+[[project]]
+name = "GLib"
+ecosystem = "conan"
+packages = ["glib"]
+used_for = "The object system and error type of Aravis's API (cpp/tracker, ICS-038). Required directly because Conan Center's Aravis recipe does not pass GLib's libraries on. Built shared, without libelf, libmount or SELinux; linked dynamically and shipped unmodified. Pulls in libffi (MIT), PCRE2 (BSD-3-Clause), zlib and libiconv (LGPL-2.1-or-later)."
+ships = true
+license = "LGPL-2.1-or-later"
+source = "https://gitlab.gnome.org/GNOME/glib"
+governance = "A GNOME project, with a team of maintainers who review merge requests on GNOME's GitLab and a published security process. The Conan recipe comes from Conan Center."
+sustainment = "Very active and part of every GNOME and most Linux desktop systems, with a stable release every six months. 2.78.3 is pinned in cpp/conan.lock. ICS calls it only in aravis_camera.cpp, and only for what Aravis's API needs."
+foreign_influence = "Steward: the GNOME Foundation (US nonprofit), with international contributors."
+single_maintainer = false
+maintainers = "The GLib maintainers of the GNOME project"
+reviewed = 2026-10-19
+prepared_by = "Claude Code"
+approved_by = "MatthewK84"
+
 # --- Python (PyPI) -----------------------------------------------------------
 
 [[project]]

@@ -1,0 +1,37 @@
+# A sample of ics-tracker-monitor's and ics-mountd's [tracker] table
+# (ICS-038). cpp/tracker/include/ics/tracker/config.h describes each setting.
+# This one streams Aravis's fake camera, as the tests do; a station names its
+# own camera and calibration.
+[tracker]
+camera = "Fake_1"
+fake_camera = true
+features = []
+pixel_format = "mono16"
+region_x = 0
+region_y = 0
+region_width = 128
+region_height = 96
+frame_rate_hz = 100.0
+exposure_us = 2000.0
+buffers = 8
+time_stamps = "camera"
+stamp_offset_ns = 0
+boresight_x = 64.0
+boresight_y = 48.0
+plate_scale_urad = 20.0
+roll_deg = 0.0
+mirrored = false
+polarity = "either"
+k_sigma = 5.0
+min_contrast = 50.0
+min_area = 3
+max_area = 400
+acquire_window_px = 64
+track_window_px = 32
+gate_px = 8.0
+confirm_frames = 5
+alpha = 0.5
+beta = 0.1
+coast_limit_ns = 500_000_000
+command_latency_ns = 50_000_000
+gain = 2.0

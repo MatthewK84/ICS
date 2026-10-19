@@ -34,3 +34,4 @@ cpp/camera 0.14
 cpp/strobe 0.14
 cpp/store 0.32
 cpp/retime 0.11
+cpp/tracker 0.03

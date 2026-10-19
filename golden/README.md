@@ -25,6 +25,16 @@ Contents:
 
   The C++ cue module matches every outcome, every state and covariance value within 1e-9, and every angle within 1e-10 rad ([`cpp/cue/test/golden_test.cpp`](../cpp/cue/test/golden_test.cpp)). [`python/tests/test_cue_golden.py`](../python/tests/test_cue_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1. OpenBLAS picks its matrix kernels by CPU, so a number's last bit can differ between machines.
 
+- [`tracker/`](tracker): the closed-loop tracker ([ICS-038](https://github.com/MatthewK84/ICS/issues/38)), written by [`python/ics_golden/tracker.py`](../python/ics_golden/tracker.py).
+  - `frame-00.pgm` to `frame-06.pgm` are 64 × 48 16-bit frames, as plain PGM: a noisy sky with dark and bright targets, by day and by night.
+  - `centroids.csv` gives the target found in windows of those frames, or none.
+  - `windows.csv` gives search windows for centres near and past the frame's edges.
+  - `geometry.csv` gives pixels as tangent-plane offsets and sky directions, and back, for cameras rolled and mirrored.
+  - `estimator.csv` is an alpha-beta track of a weaving target, measured every 10 ms.
+  - `demands.csv` gives rate demands for targets and mounts at random states.
+
+  The C++ tracker matches every outcome and window exactly, and every number within 1e-9 of the larger of it and 1 ([`cpp/tracker/test/golden_test.cpp`](../cpp/tracker/test/golden_test.cpp)). [`python/tests/test_tracker_golden.py`](../python/tests/test_tracker_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
+
 Planned contents:
 
 - Golden outputs from the other Python reference models in `python/ics_models` (for example [ICS-044](https://github.com/MatthewK84/ICS/issues/44) to [ICS-049](https://github.com/MatthewK84/ICS/issues/49)).

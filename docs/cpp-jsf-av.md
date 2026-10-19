@@ -232,7 +232,7 @@ Each rule's text is shortened; the standard has the full text, its rationale and
 | 166 | will | The sizeof operator will not be used on expressions that contain side effects. | T: `bugprone-sizeof-expression`; R |
 | 167 | shall | The implementation of integer division in the chosen compiler shall be determined, documented and taken into account. | Documented below |
 | 168 | shall | The comma operator shall not be used. | C: `-Wcomma` (Clang) |
-| 169 | should | Pointers to pointers should be avoided when possible. | R |
+| 169 | should | Pointers to pointers should be avoided when possible. | R (D-8 for Aravis and GLib) |
 | 170 | shall | More than 2 levels of pointer indirection shall not be used. | Q: three levels of pointer indirection |
 | 171 | shall | Relational operators shall not be applied to pointers, except to pointers of the same type into the same object, function or array. | Q: no relational operators on pointers at all |
 | 173 | shall | The address of an object with automatic storage shall not be assigned to an object which persists after the object has ceased to exist. | R; ASan's stack-use-after-return in CI |
@@ -310,6 +310,7 @@ AV 7 needs no approval for what a rule's own exception allows. Two such cases co
 | D-5 | AV 24, 29, 50, 51, 97, 182, 209 | In test and fuzz code: what GoogleTest's `TEST` and `TEST_F` macros and libFuzzer's `LLVMFuzzerTestOneInput` expand to or require, and `std::abort` to report a fuzz finding | The frameworks fix these names, signatures and expansions | Once in each test or fuzz file, before its first test or its entry point | ICS-037 task card, 2026-10-17 |
 | D-6 | AV 32, 53 | `#include` of the `.hpp` headers of modules written before ICS-037 | JSF code calls those modules (`ics::Result`, logging, config) until [#170](https://github.com/MatthewK84/ICS/issues/170) renames their headers. The gate allows only `ics/<module>/<name>.hpp` | Once in each file, beside its includes | By merging the JSF gate pull request |
 | D-7 | AV 97, 209 | `main`'s signature, `int main(int argc, char* argv[])` | The C++ standard fixes it | Beside `main` | By merging the JSF gate pull request |
+| D-8 | AV 169 | Aravis and GLib's C API, whose calls report errors through a `GError**` out-parameter | Aravis is the GigE Vision library the tracker streams its camera through ([register](dependency-register.toml)), and its API is C. Each object it returns is owned by a `std::unique_ptr` that calls `g_object_unref`; each error is read and cleared where it is returned; no Aravis or GLib macro is used; and frames stream into buffers ICS allocates, so no pointer is cast | `cpp/tracker/src/aravis_camera.cpp` only, beside its includes | ICS-038 task card, 2026-10-19 |
 
 ## Integer division (AV 167)
 
