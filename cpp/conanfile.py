@@ -29,6 +29,18 @@ class IcsConan(ConanFile):
         "grpc/*:php_plugin": False,
         "grpc/*:python_plugin": False,
         "grpc/*:ruby_plugin": False,
+        # The tracking camera's GigE Vision driver (ICS-038), as a shared
+        # library: Aravis and GLib are LGPL-2.1-or-later, which ICS links
+        # dynamically and ships unmodified. Only the library: no tools, no
+        # GStreamer plugin, no introspection. USB3 Vision would need the
+        # system's libudev, which the build images do not install.
+        "aravis/*:shared": True,
+        "aravis/*:tools": False,
+        "aravis/*:usb": False,
+        "aravis/*:gst_plugin": False,
+        "aravis/*:introspection": False,
+        # The profiles leave out GLib's ELF, mount and SELinux support.
+        "glib/*:shared": True,
     }
 
     def requirements(self) -> None:
@@ -59,6 +71,12 @@ class IcsConan(ConanFile):
         self.requires("libcurl/8.22.0")
         # Serves ics-plid's PliQueryService (#146).
         self.requires("grpc/1.84.0")
+        # Streams the tracking camera for ics::tracker (ICS-038). Its fake
+        # camera lets the tests run the real binding without hardware.
+        self.requires("aravis/0.8.33")
+        # The version Aravis takes. ICS releases Aravis's objects and errors
+        # through GLib itself, which Aravis does not pass on to link with.
+        self.requires("glib/2.78.3")
 
     def build_requirements(self) -> None:
         # protoc and grpc_cpp_plugin generate the gRPC service code at build

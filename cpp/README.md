@@ -588,6 +588,42 @@ The interlock (ICS-034) keeps the line of sight out of a 15° cone around the su
   Replaying a flown SITL crossing is [#172](https://github.com/MatthewK84/ICS/issues/172), and the field replay with a real radar is in [#93](https://github.com/MatthewK84/ICS/issues/93).
 - **Tests.** Besides the golden vectors and the replay: exact constant-acceleration truths; late reports giving the in-order estimate; the gate, the history, the capacity and the coast limit; every refusal of a record; the station axes, the angles, their rates against differences and the sigma; the config; and the tool on segment files from ics-plid's own writer. No new parser reads outside data: the segment reader (ICS-030) and the config reader are fuzzed already.
 
+## Tracker
+
+[`tracker/`](tracker) is `ics::tracker` (ICS-038, CPP-19), the closed-loop tracker for one station. It streams the narrow-field tracking camera through [Aravis](https://github.com/AravisProject/aravis) (GigE Vision), finds the target's sub-pixel centroid in a window around where it should be, tracks its sky direction and rate, and gives the rate loop (ICS-033) a demand: the tracker is a `mount::RateSource`. It follows the cue (ICS-037) until it sees the target, takes over once the target is held, coasts through short dropouts, and falls back to the cue to reacquire. It keeps the [JSF AV rules](#jsf-av-checks), and [`ics_models.tracker`](../python/README.md#tracker) is its reference: the C++ matches [`golden/tracker`](../golden/README.md) in every outcome and window, and within 1e-9 in every number.
+
+| Header | Provides |
+|---|---|
+| [`camera.h`](tracker/include/ics/tracker/camera.h) | `Tracking_camera`: `start`, `next`, `release`, `stop`; `Camera_settings`; `Frame`, a view of a buffer allocated before streaming starts |
+| [`aravis_camera.h`](tracker/include/ics/tracker/aravis_camera.h) | `Aravis_camera`, the binding; `frame_of`, a buffer as a frame |
+| [`centroid.h`](tracker/include/ics/tracker/centroid.h) | `window_around`; `Centroider::find`, which allocates nothing per frame |
+| [`geometry.h`](tracker/include/ics/tracker/geometry.h) | `Camera_geometry`; pixels to tangent-plane offsets and sky directions, and back |
+| [`estimator.h`](tracker/include/ics/tracker/estimator.h), [`demand.h`](tracker/include/ics/tracker/demand.h) | `Angle_estimator`, an alpha-beta track of azimuth and elevation; `demand` |
+| [`tracker.h`](tracker/include/ics/tracker/tracker.h) | `Tracker`: `take` each frame on the camera's thread, `latest` on the rate loop's; the modes; `Axis_source`, `Cue_source` and `Time_source` |
+| [`config.h`](tracker/include/ics/tracker/config.h), [`monitor.h`](tracker/include/ics/tracker/monitor.h) | The `[tracker]` table; `ics-tracker-monitor`'s work |
+
+- **The camera.** `Aravis_camera` applies the `features` list first (for example `PtpEnable=true`), then the pixel format (Mono8 or Mono16), region, frame rate and exposure, and streams into buffers ICS allocates before it starts. A frame's time is the camera's time stamp, PTP-locked to ics-timingd, or for a camera without PTP the host's receive time; either is corrected by `stamp_offset_ns`. A buffer the camera could not fill is returned to the stream and counted as dropped. Aravis and GLib are LGPL-2.1-or-later, linked dynamically and shipped unmodified ([register](../docs/dependency-register.toml)); their C API is JSF deviation D-8, confined to `aravis_camera.cpp`.
+- **The centroid.** The background and its noise are the median of the window's border and its MAD × 1.4826. Pixels that differ from it by more than the larger of `k_sigma`·σ and `min_contrast`, darker, brighter or either by `polarity`, form 8-connected blobs, and the contrast-weighted centroid of the blob nearest the prediction is the target, if its area is between `min_area` and `max_area`.
+- **The geometry.** The camera rides the elevation axis, so its image does not turn against the mount's axes. A calibrated boresight pixel, plate scale, roll and mirroring turn a pixel into a tangent-plane offset, and the gnomonic projection about the mount's line of sight, through its pointing model (ICS-036), turns that into a sky direction.
+- **The loop.** Each detection updates an alpha-beta track of azimuth and elevation (stable for 0 < α ≤ 1 and 0 ≤ β < 4 − 2α). The demand is for the moment a command sent now takes effect: the target's rate plus `gain` times the pointing error, with the mount carried on at its own rates to the same time, in the mount's axes. `latest` is shared under a mutex.
+- **The modes.** Cueing searches the acquisition window around the cue, or the boresight with no cue; a detection starts acquiring. Acquiring searches the track window, and `confirm_frames` detections within `gate_px` make it tracking; a miss returns to cueing. Tracking coasts on a miss, and coasting returns to cueing after `coast_limit_ns` without a detection. Cueing demands follow the cue, and with no cue there is none, so the rate loop's staleness check stops the mount.
+- **Production connections.** Each input the tests stand in for has a named place for the real one:
+
+  | Input | In operation | In the tests |
+  |---|---|---|
+  | The camera | `camera` in the `[tracker]` table: the GigE Vision camera's Aravis ID, with `fake_camera = false` and `PtpEnable=true` in `features` | Aravis's fake GigE Vision camera, `Fake_1`; synthetic Mono16 frames |
+  | The mount's axes | `Axis_source`: ics-mountd (ICS-041) answers from the encoder track its receiver fills (ICS-036) | A still mount |
+  | The pointing model | The encoder module's model, from the fitted parameters (ICS-035) | The model with no terms |
+  | The cue | `Cue_source`: ics-mountd answers from its `Cue_extrapolator` (ICS-037) | A scripted cue, or none |
+  | UTC now | `System_time`, the host's clock, which ics-timingd keeps on UTC | A manual clock |
+  | The camera geometry | `boresight_x`, `boresight_y`, `plate_scale_urad`, `roll_deg` and `mirrored`, calibrated on the station | The sample's values |
+  | The command latency | `command_latency_ns`, measured on the mount (ICS-033) | 50 ms |
+
+  The sample config is [`ics-tracker.toml`](tracker/ics-tracker.toml); `ics-mountd` will read the same `[tracker]` table.
+- **Tool.** [`ics-tracker-monitor FRAMES`](tracker/tool/main.cpp) is the operational test of the camera and centroid path before ics-mountd closes the loop. It reads `/etc/ics/ics-tracker.toml` and streams FRAMES frames, searching around the boresight, then around the last detection. Each frame is a JSON line: its number, time, whether the target was found, where in pixels and microradians from the boresight, and its area, peak, background and σ. A frame the camera could not fill is an error line, and the last line is the count dropped. It exits 0 when it streamed, 1 when the config or the camera could not be used, and 2 for an argument.
+- **Done when.** Every part has unit tests, the C++ matches the golden vectors, and the binding and the tool run against Aravis's fake camera in CI. C19, the target held in the central half of the narrow field at 500 m, is measured before release, in the closed-loop simulation and [#172](https://github.com/MatthewK84/ICS/issues/172)'s flown-crossing replay ([#175](https://github.com/MatthewK84/ICS/issues/175)), and flown in [#94](https://github.com/MatthewK84/ICS/issues/94).
+- **Tests.** Besides the golden vectors: the fake camera's frames, settings, refusals, dropped buffers and stop; centroids of known spots at every polarity, the area limits and the nearest blob, with no allocation per frame; every mode change, the gate, coasting and its limit, frames without the mount's axes or out of order, and cues off the frame or behind; the config and its refusals; and the tool. No new parser reads outside data: frames come from the camera as fixed-size pixels, and the config reader is fuzzed already.
+
 ## Power-of-Ten checks
 
 The C++ rules from the coding-standards table in [docs/build-plan.md](../docs/build-plan.md) are enforced by tools, not review (ICS-005):

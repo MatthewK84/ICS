@@ -16,3 +16,11 @@ tools.cmake.cmaketoolchain:generator=Ninja
 # build tools' included, is the 7.35.0 cpp/conanfile.py requires.
 [replace_requires]
 protobuf/*: protobuf/7.35.0
+
+# GLib, for Aravis (ICS-038), in the host and build contexts alike: neither
+# Aravis nor GLib's build-time code generators need its ELF, mount or SELinux
+# support, which would bring elfutils, libmount and libselinux.
+[options]
+glib/*:with_elf=False
+glib/*:with_mount=False
+glib/*:with_selinux=False

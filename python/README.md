@@ -91,6 +91,20 @@ uv run --locked python -m ics_models.pointing fit night.csv --station s1 --model
 - **Golden vectors.** `python -m ics_golden.cue ../golden/cue` writes them. They cover a manoeuvring target's eight seconds of GNSS PLI and radar in arrival order, with every outcome (taken, late, gated, too old) and the estimate after each report. They also cover queries up to and past the coast limit, three stations' cues, and PLI points in the range frame. [`tests/test_cue_golden.py`](tests/test_cue_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1. OpenBLAS picks its matrix kernels by CPU, so a number's last bit can differ between machines.
 - **Tests** check prediction composing exactly, a constant-acceleration truth followed exactly, late reports giving the in-order result, the gate, the history and its capacity, the coast limit, positions against `golden/frames`, angles, rates against differences, and the sigma.
 
+## Tracker
+
+[`ics_models/tracker`](ics_models/tracker) is the reference for the closed-loop tracker's arithmetic ([ICS-038](https://github.com/MatthewK84/ICS/issues/38), CPP-19). The C++ port, `ics::tracker` ([`cpp/tracker`](../cpp/README.md#tracker)), must match it through [`golden/tracker`](../golden/README.md).
+
+| Module | Provides |
+|---|---|
+| `centroid` | `window_around`, a search window kept inside the frame; `find_target`: the background and its noise from the window's border (median, and MAD × 1.4826), a threshold of the larger of k·σ and a minimum contrast, 8-connected blobs, and the contrast-weighted centroid of the blob nearest the prediction |
+| `geometry` | `CameraGeometry` (boresight, plate scale, roll, mirrored); pixels to tangent-plane offsets and back; tangent-plane offsets to sky directions about a line of sight, and back, by the gnomonic projection |
+| `estimator` | `AngleEstimator`, an alpha-beta track of azimuth and elevation, with the azimuth residual wrapped |
+| `demand` | `demand`: the target's rate plus gain times the pointing error, with the mount carried on at its rates to the same time |
+
+- **Golden vectors.** `python -m ics_golden.tracker ../golden/tracker` writes them, from seed 38: seven 64 × 48 frames of a noisy sky with dark and bright targets, and the centroids, windows, geometry, estimator track and demands computed on them. [`tests/test_tracker_golden.py`](tests/test_tracker_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
+- **Tests** check centroids against known spots, polarity, the area limits and the nearest blob; windows at and past every edge; pixel to sky and back for rolled and mirrored cameras and across north; the estimator following a constant-rate truth exactly and its stability bounds; and the demand's signs and wrap.
+
 ## Power-of-Ten checks
 
 The Python rules from the coding-standards table in [docs/build-plan.md](../docs/build-plan.md) are enforced by tools, not review (ICS-006):
