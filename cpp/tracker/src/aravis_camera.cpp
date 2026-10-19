@@ -105,7 +105,12 @@ void configure(ArvCamera* camera,
                GError*& error)
 {
   const ics::tracker::Region& region = settings.region;
-  arv_device_set_features_from_string(arv_camera_get_device(camera), settings.features.c_str(), &error);
+  // Aravis 0.8.33 frees its regex match only when the string holds an
+  // assignment, so a string with none is not passed to it: it would leak.
+  if (settings.features.find_first_not_of(" \t") != std::string::npos)
+  {
+    arv_device_set_features_from_string(arv_camera_get_device(camera), settings.features.c_str(), &error);
+  }
   if (error == nullptr)
   {
     arv_camera_set_pixel_format(camera, code_of(settings.format), &error);
