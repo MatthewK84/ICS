@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="66" viewBox="0 0 150 66" role="img" aria-label="Time-tagger: cpp/tagger">
+<title>Time-tagger: cpp/tagger</title>
+<rect x="0.5" y="0.5" width="149" height="65" rx="9" fill="#ffffff" stroke="#d0d7de"/>
+<rect x="8" y="13" width="3" height="40" rx="1.5" fill="#1a7f64"/>
+<path d="M131 18 L138 11 M133 11 H138 V16" fill="none" stroke="#818b98" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="19" y="30" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="700" fill="#1f2328">Time-tagger</text>
+<text x="19" y="48" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#59636e">cpp/tagger</text>
+</svg>
