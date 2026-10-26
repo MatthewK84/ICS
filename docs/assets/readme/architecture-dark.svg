@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-label="How data moves through ICS">
+<title>How data moves through ICS</title>
+<rect width="1280" height="760" rx="16" fill="#0d1117"/>
+<rect x="0.5" y="0.5" width="1279" height="759" rx="16" fill="none" stroke="#30363d"/>
+<text x="34" y="56" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="26" font-weight="700" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">How data moves through ICS</text>
+<text x="34" y="84" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">Each station records, times and stores everything it sees, points itself at the target, and hands the run to the products that measure the intercept.</text>
+<rect x="34" y="128" width="214" height="3" rx="1.5" fill="#d29922"/>
+<text x="34" y="120" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#d29922" text-anchor="start" letter-spacing="1.4">SOURCES</text>
+<rect x="34" y="150" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="34" y="162" width="4" height="42" rx="2" fill="#d29922"/>
+<text x="52" y="177" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Target PLI</text>
+<text x="52" y="197" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">MAVLink · CoT · Lattice</text>
+<rect x="34" y="230" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="34" y="242" width="4" height="42" rx="2" fill="#d29922"/>
+<text x="52" y="257" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Radar tracks</text>
+<text x="52" y="277" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">SAPIENT (BSI Flex 335)</text>
+<rect x="34" y="310" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="34" y="322" width="4" height="42" rx="2" fill="#d29922"/>
+<text x="52" y="337" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">High-speed cameras</text>
+<text x="52" y="357" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">Phantom · FLIR X6980</text>
+<rect x="34" y="390" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="34" y="402" width="4" height="42" rx="2" fill="#d29922"/>
+<text x="52" y="417" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Tracking camera</text>
+<text x="52" y="437" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">GigE Vision</text>
+<rect x="34" y="470" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="34" y="482" width="4" height="42" rx="2" fill="#d29922"/>
+<text x="52" y="497" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Mount encoders</text>
+<text x="52" y="517" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">with GPS PPS</text>
+<path d="M254 343.0 L279 343.0" stroke="#6e7681" stroke-width="2"/><path d="M-7 -5 L0 0 L-7 5" transform="translate(279 343.0)" fill="none" stroke="#6e7681" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="285" y="128" width="214" height="3" rx="1.5" fill="#4493f8"/>
+<text x="285" y="120" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#4493f8" text-anchor="start" letter-spacing="1.4">INGEST · PHASE 1</text>
+<rect x="285" y="150" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="285" y="162" width="4" height="42" rx="2" fill="#4493f8"/>
+<text x="303" y="177" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Packet capture</text>
+<text x="303" y="197" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">ics-capd</text>
+<rect x="285" y="230" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="285" y="242" width="4" height="42" rx="2" fill="#4493f8"/>
+<text x="303" y="257" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">PLI adapters</text>
+<text x="303" y="277" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">mavlink cot lattice sapient</text>
+<rect x="285" y="310" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="285" y="322" width="4" height="42" rx="2" fill="#4493f8"/>
+<text x="303" y="337" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Time base</text>
+<text x="303" y="357" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">ics-timingd · PTP</text>
+<rect x="285" y="390" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="285" y="402" width="4" height="42" rx="2" fill="#4493f8"/>
+<text x="303" y="417" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Camera service</text>
+<text x="303" y="437" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">ics-camd</text>
+<rect x="285" y="470" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="285" y="482" width="4" height="42" rx="2" fill="#4493f8"/>
+<text x="303" y="497" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Encoder time-tagger</text>
+<text x="303" y="517" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">firmware · ics::tagger</text>
+<path d="M505 343.0 L530 343.0" stroke="#6e7681" stroke-width="2"/><path d="M-7 -5 L0 0 L-7 5" transform="translate(530 343.0)" fill="none" stroke="#6e7681" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="536" y="128" width="214" height="3" rx="1.5" fill="#a371f7"/>
+<text x="536" y="120" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#a371f7" text-anchor="start" letter-spacing="1.4">STORE &amp; ALIGN · PHASE 1</text>
+<rect x="536" y="150" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="536" y="162" width="4" height="42" rx="2" fill="#a371f7"/>
+<text x="554" y="177" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">PLI store</text>
+<text x="554" y="197" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">ics-plid · Parquet</text>
+<rect x="536" y="230" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="536" y="242" width="4" height="42" rx="2" fill="#a371f7"/>
+<text x="554" y="257" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Onboard logs</text>
+<text x="554" y="277" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">ics::flightlog</text>
+<rect x="536" y="310" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="536" y="322" width="4" height="42" rx="2" fill="#a371f7"/>
+<text x="554" y="337" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Time alignment</text>
+<text x="554" y="357" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">ics::timealign</text>
+<rect x="536" y="390" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="536" y="402" width="4" height="42" rx="2" fill="#a371f7"/>
+<text x="554" y="417" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Strobe calibration</text>
+<text x="554" y="437" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">ics::strobe</text>
+<rect x="536" y="470" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="536" y="482" width="4" height="42" rx="2" fill="#a371f7"/>
+<text x="554" y="497" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Line of sight</text>
+<text x="554" y="517" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">ics::encoder</text>
+<path d="M756 343.0 L781 343.0" stroke="#6e7681" stroke-width="2"/><path d="M-7 -5 L0 0 L-7 5" transform="translate(781 343.0)" fill="none" stroke="#6e7681" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="787" y="128" width="214" height="3" rx="1.5" fill="#3fb9a0"/>
+<text x="787" y="120" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#3fb9a0" text-anchor="start" letter-spacing="1.4">STATION CONTROL · PHASE 2</text>
+<rect x="787" y="150" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="787" y="162" width="4" height="42" rx="2" fill="#3fb9a0"/>
+<text x="805" y="177" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Cue extrapolator</text>
+<text x="805" y="197" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">ics::cue</text>
+<rect x="787" y="230" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="787" y="242" width="4" height="42" rx="2" fill="#3fb9a0"/>
+<text x="805" y="257" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Closed-loop tracker</text>
+<text x="805" y="277" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">ics::tracker</text>
+<rect x="787" y="310" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="787" y="322" width="4" height="42" rx="2" fill="#3fb9a0"/>
+<text x="805" y="337" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Rate loop</text>
+<text x="805" y="357" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">ics::mount</text>
+<rect x="787" y="390" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="787" y="402" width="4" height="42" rx="2" fill="#3fb9a0"/>
+<text x="805" y="417" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Sun keep-out</text>
+<text x="805" y="437" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">ics::mount</text>
+<rect x="787" y="470" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="787" y="482" width="4" height="42" rx="2" fill="#3fb9a0"/>
+<text x="805" y="497" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Mount</text>
+<text x="805" y="517" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">PlaneWave PWI4</text>
+<path d="M1007 343.0 L1032 343.0" stroke="#6e7681" stroke-width="2"/><path d="M-7 -5 L0 0 L-7 5" transform="translate(1032 343.0)" fill="none" stroke="#6e7681" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="1038" y="128" width="214" height="3" rx="1.5" fill="#f778ba"/>
+<text x="1038" y="120" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#f778ba" text-anchor="start" letter-spacing="1.4">PRODUCTS · PHASE 4</text>
+<rect x="1038" y="150" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="1038" y="162" width="4" height="42" rx="2" fill="#f778ba"/>
+<text x="1056" y="177" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Registration</text>
+<text x="1056" y="197" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">per-frame line of sight</text>
+<rect x="1038" y="230" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="1038" y="242" width="4" height="42" rx="2" fill="#f778ba"/>
+<text x="1056" y="257" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Detection</text>
+<text x="1056" y="277" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">CUDA · TensorRT</text>
+<rect x="1038" y="310" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="1038" y="322" width="4" height="42" rx="2" fill="#f778ba"/>
+<text x="1056" y="337" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Endgame</text>
+<text x="1056" y="357" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">closest approach</text>
+<rect x="1038" y="390" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="1038" y="402" width="4" height="42" rx="2" fill="#f778ba"/>
+<text x="1056" y="417" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Debris &amp; kill class</text>
+<text x="1056" y="437" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">association · estimation</text>
+<rect x="1038" y="470" width="214" height="66" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="1038" y="482" width="4" height="42" rx="2" fill="#f778ba"/>
+<text x="1056" y="497" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Run record → web UI</text>
+<text x="1056" y="517" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">SHA-256 · read-only</text>
+<rect x="34" y="586" width="1212" height="128" rx="12" fill="#1c2330" stroke="#30363d" stroke-dasharray="6 5"/>
+<text x="56" y="620" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#8b949e" text-anchor="start" letter-spacing="1.4">PYTHON REFERENCE MODELS · PHASE 3</text>
+<text x="56" y="648" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#e6edf3" text-anchor="start" letter-spacing="0.0">Every algorithm is written in Python first.</text>
+<text x="56" y="672" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#9198a1" text-anchor="start" letter-spacing="0.0">Its outputs are committed to golden/, and the C++ port must match them in CI.</text>
+<rect x="760" y="652" width="119.60000000000001" height="28" rx="14" fill="#161b22" stroke="#30363d"/>
+<text x="819.8" y="671" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" font-weight="500" fill="#9198a1" text-anchor="middle" letter-spacing="0.0">pointing model</text>
+<rect x="887.6" y="652" width="38.2" height="28" rx="14" fill="#161b22" stroke="#30363d"/>
+<text x="906.7" y="671" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" font-weight="500" fill="#9198a1" text-anchor="middle" letter-spacing="0.0">cue</text>
+<rect x="933.8000000000001" y="652" width="67.80000000000001" height="28" rx="14" fill="#161b22" stroke="#30363d"/>
+<text x="967.7" y="671" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" font-weight="500" fill="#9198a1" text-anchor="middle" letter-spacing="0.0">tracker</text>
+<rect x="1009.6000000000001" y="652" width="119.60000000000001" height="28" rx="14" fill="#161b22" stroke="#30363d"/>
+<text x="1069.4" y="671" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" font-weight="500" fill="#9198a1" text-anchor="middle" letter-spacing="0.0">synthetic data</text>
+<rect x="1137.2" y="652" width="90.0" height="28" rx="14" fill="#161b22" stroke="#30363d"/>
+<text x="1182.2" y="671" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" font-weight="500" fill="#9198a1" text-anchor="middle" letter-spacing="0.0">statistics</text>
+<text x="760" y="628" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="12.5" font-weight="600" fill="#8b949e" text-anchor="start" letter-spacing="0.0">golden vectors hold each port to parity</text>
+<path d="M894.0 580 L894.0 558" stroke="#8b949e" stroke-width="2" stroke-dasharray="5 5"/><path d="M-5 7 L0 0 L5 7" transform="translate(894.0 558)" fill="none" stroke="#8b949e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1145.0 580 L1145.0 558" stroke="#8b949e" stroke-width="2" stroke-dasharray="5 5"/><path d="M-5 7 L0 0 L5 7" transform="translate(1145.0 558)" fill="none" stroke="#8b949e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
