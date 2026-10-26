@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="ICS: Intercept Characterization System">
+<title>ICS: Intercept Characterization System</title>
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6f8fa"/><stop offset="1" stop-color="#ffffff"/></linearGradient><radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#bf3989" stop-opacity="0.35"/><stop offset="1" stop-color="#bf3989" stop-opacity="0"/></radialGradient></defs>
+<rect width="1280" height="320" rx="16" fill="url(#bg)"/>
+<path d="M40 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M80 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M120 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M160 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M200 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M240 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M280 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M320 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M360 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M400 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M440 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M480 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M520 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M560 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M600 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M640 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M680 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M720 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M760 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M800 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M840 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M880 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M920 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M960 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M1000 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M1040 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M1080 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M1120 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M1160 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M1200 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M1240 0V320" stroke="#eaeef2" stroke-width="1"/>
+<path d="M0 40H1280" stroke="#eaeef2" stroke-width="1"/>
+<path d="M0 80H1280" stroke="#eaeef2" stroke-width="1"/>
+<path d="M0 120H1280" stroke="#eaeef2" stroke-width="1"/>
+<path d="M0 160H1280" stroke="#eaeef2" stroke-width="1"/>
+<path d="M0 200H1280" stroke="#eaeef2" stroke-width="1"/>
+<path d="M0 240H1280" stroke="#eaeef2" stroke-width="1"/>
+<path d="M0 280H1280" stroke="#eaeef2" stroke-width="1"/>
+<rect x="0.5" y="0.5" width="1279" height="319" rx="16" fill="none" stroke="#d0d7de"/>
+<rect x="72" y="52" width="56" height="6" rx="3" fill="#0969da"/>
+<text x="68" y="168" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="104" font-weight="800" fill="#1f2328" text-anchor="start" letter-spacing="6">ICS</text>
+<text x="72" y="214" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="30" font-weight="600" fill="#1f2328" text-anchor="start" letter-spacing="0.0">Intercept Characterization System</text>
+<text x="72" y="252" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="18" font-weight="400" fill="#59636e" text-anchor="start" letter-spacing="0.0">Truth-grade intercept, kill and debris data</text>
+<text x="72" y="278" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="18" font-weight="400" fill="#59636e" text-anchor="start" letter-spacing="0.0">for hit-to-kill counter-sUAS interceptor testing</text>
+<path d="M820 262H1240" stroke="#818b98" stroke-width="1.5"/>
+<path d="M846 150 C 930 112, 1000 104, 1062 118" fill="none" stroke="#9a6700" stroke-width="2.5" stroke-dasharray="7 6"/>
+<path d="M1006 258 C 1022 212, 1040 160, 1062 118" fill="none" stroke="#0969da" stroke-width="2.5"/>
+<path d="M878 262 L1062 118" stroke="#1a7f64" stroke-width="1.25" stroke-dasharray="2 5"/>
+<path d="M1196 262 L1062 118" stroke="#1a7f64" stroke-width="1.25" stroke-dasharray="2 5"/>
+<circle cx="1062" cy="118" r="46" fill="url(#glow)"/>
+<circle cx="1062" cy="118" r="14" fill="none" stroke="#bf3989" stroke-width="1.5"/>
+<circle cx="1062" cy="118" r="5" fill="#bf3989"/>
+<circle cx="1092" cy="112" r="2.6" fill="#bf3989" opacity="0.8"/>
+<circle cx="1104" cy="132" r="2.2" fill="#bf3989" opacity="0.8"/>
+<circle cx="1118" cy="121" r="1.8" fill="#bf3989" opacity="0.8"/>
+<circle cx="1096" cy="150" r="2.0" fill="#bf3989" opacity="0.8"/>
+<circle cx="1128" cy="146" r="1.6" fill="#bf3989" opacity="0.8"/>
+<circle cx="1140" cy="128" r="1.4" fill="#bf3989" opacity="0.8"/>
+<circle cx="1112" cy="168" r="1.6" fill="#bf3989" opacity="0.8"/>
+<circle cx="1150" cy="158" r="1.2" fill="#bf3989" opacity="0.8"/>
+<circle cx="1135" cy="186" r="1.2" fill="#bf3989" opacity="0.8"/>
+<path d="M868 262 L878 244 L888 262 Z" fill="#1a7f64"/>
+<text x="878" y="288" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="600" fill="#59636e" text-anchor="middle" letter-spacing="1.5">STATION A</text>
+<path d="M1186 262 L1196 244 L1206 262 Z" fill="#1a7f64"/>
+<text x="1196" y="288" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="600" fill="#59636e" text-anchor="middle" letter-spacing="1.5">STATION B</text>
+<text x="850" y="176" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" font-weight="600" fill="#9a6700" text-anchor="start" letter-spacing="0.0">target</text>
+<text x="994" y="252" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" font-weight="600" fill="#0969da" text-anchor="end" letter-spacing="0.0">interceptor</text>
+<text x="1040" y="86" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" font-weight="600" fill="#bf3989" text-anchor="middle" letter-spacing="0.0">closest approach</text>
+</svg>
