@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="132" viewBox="0 0 880 132" role="img" aria-label="ICS: Intercept Characterization System">
+<title>ICS: Intercept Characterization System</title>
+<rect x="0.5" y="0.5" width="879" height="131" rx="4" fill="#11161C" stroke="#2D3643"/>
+<text x="24" y="54" font-family="Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="32" font-weight="600" fill="#E3E7ED" text-anchor="start" letter-spacing="1">ICS</text>
+<text x="24" y="82" font-family="Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="500" fill="#E3E7ED" text-anchor="start" letter-spacing="0.0">Intercept Characterization System</text>
+<text x="24" y="106" font-family="Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="400" fill="#A1AAB8" text-anchor="start" letter-spacing="0.0">Truth-grade intercept, kill and debris data for counter-sUAS testing</text>
+<path d="M566 112H856" stroke="#2D3643" stroke-width="1"/>
+<path d="M572 74 C 630 52, 680 44, 724 42" fill="none" stroke="#FF8080" stroke-width="2" stroke-dasharray="6 5"/>
+<path d="M688 110 C 698 88, 710 64, 724 42" fill="none" stroke="#80E0FF" stroke-width="2"/>
+<path d="M596 112 L724 42" stroke="#8992A0" stroke-width="1" stroke-dasharray="2 4"/>
+<path d="M826 112 L724 42" stroke="#8992A0" stroke-width="1" stroke-dasharray="2 4"/>
+<circle cx="724" cy="42" r="8" fill="none" stroke="#E3E7ED" stroke-width="1.5"/>
+<circle cx="724" cy="42" r="2.5" fill="#E3E7ED"/>
+<circle cx="744" cy="42" r="1.8" fill="#FF8080"/>
+<circle cx="752" cy="52" r="1.5" fill="#FF8080"/>
+<circle cx="762" cy="46" r="1.3" fill="#FF8080"/>
+<circle cx="750" cy="64" r="1.4" fill="#FF8080"/>
+<circle cx="768" cy="60" r="1.2" fill="#FF8080"/>
+<circle cx="776" cy="52" r="1.0" fill="#FF8080"/>
+<path d="M590 112 L596 102 L602 112 Z" fill="#A1AAB8"/>
+<text x="596" y="126" font-family="Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600" fill="#8992A0" text-anchor="middle" letter-spacing="0.4">STATION A</text>
+<path d="M820 112 L826 102 L832 112 Z" fill="#A1AAB8"/>
+<text x="826" y="126" font-family="Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600" fill="#8992A0" text-anchor="middle" letter-spacing="0.4">STATION B</text>
+<text x="574" y="92" font-family="'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace" font-size="11" font-weight="500" fill="#FF8080" text-anchor="start" letter-spacing="0.0">target</text>
+<text x="682" y="104" font-family="'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace" font-size="11" font-weight="500" fill="#80E0FF" text-anchor="end" letter-spacing="0.0">interceptor</text>
+<text x="738" y="30" font-family="'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace" font-size="11" font-weight="500" fill="#A1AAB8" text-anchor="start" letter-spacing="0.0">closest approach</text>
+</svg>
