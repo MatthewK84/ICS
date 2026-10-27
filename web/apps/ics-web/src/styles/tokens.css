@@ -1,0 +1,111 @@
+/* Design tokens for the ICS web app, from the operator-grade UI standard
+   (.claude/skills/operator-grade-ui/SKILL.md, section 4; docs/ui-design.md).
+   Every colour, size and spacing value comes from this file: a hex value
+   anywhere else under src/ fails web/policy/check-policy.sh. */
+
+:root {
+  /* Spacing: 4px grid */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Type */
+  --font-ui: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --text-xs: 11px; /* axis labels, metadata, section labels */
+  --text-sm: 12px; /* dense tables, secondary text */
+  --text-md: 13px; /* base UI text */
+  --text-lg: 14px; /* panel titles, Tier 3 base */
+  --text-xl: 16px; /* view title */
+  --text-2xl: 20px; /* metric values; max size in Tier 1-2 */
+  --leading-tight: 1.25;
+  --leading-normal: 1.4;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* Shape and sizing */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --border-width: 1px;
+  --row-h-dense: 24px;
+  --row-h: 28px;
+  --row-h-relaxed: 32px;
+  --control-h: 28px;
+  --topbar-h: 36px;
+
+  /* Motion */
+  --duration-fast: 100ms;
+  --duration-base: 150ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Dark theme: default for Tier 1-2 */
+:root,
+[data-theme="dark"] {
+  --bg-app: #0b0e12;
+  --bg-panel: #11161c;
+  --bg-raised: #171d25; /* toolbars, table headers */
+  --bg-hover: #1e2530;
+  --bg-selected: #1b2a3d;
+  --border-subtle: #222a35;
+  --border: #2d3643;
+  --border-strong: #3d4757;
+
+  --text-primary: #e3e7ed;
+  --text-secondary: #a1aab8;
+  --text-muted: #8992a0; /* 4.5:1 or better on every dark surface */
+  --text-disabled: #4a5260;
+
+  --accent: #4c90f0; /* the only interactive hue: links, primary action, selection */
+  --accent-hover: #6aa4f5;
+  --focus-ring: #8abbff;
+
+  --status-ok: #32a467;
+  --status-caution: #e3a008;
+  --status-critical: #ea696d;
+  --status-stale: #8992a0; /* always paired with dashed border or STALE text */
+
+  /* MIL-STD-2525 affiliation fills: track symbology and affiliation chips only */
+  --aff-friend: #80e0ff;
+  --aff-hostile: #ff8080;
+  --aff-neutral: #aaffaa;
+  --aff-unknown: #ffff80;
+
+  /* Categorical series: charts only, max 6 per view */
+  --cat-1: #6ca6e8;
+  --cat-2: #8f7fd8;
+  --cat-3: #4fb3a9;
+  --cat-4: #c98a5a;
+  --cat-5: #b57ba6;
+  --cat-6: #8a939f;
+}
+
+/* Light theme: default for Tier 3, daylight work, print */
+[data-theme="light"] {
+  --bg-app: #f2f4f7;
+  --bg-panel: #ffffff;
+  --bg-raised: #eef1f4;
+  --bg-hover: #e6eaef;
+  --bg-selected: #dce8f8;
+  --border-subtle: #e1e5ea;
+  --border: #d3d8de;
+  --border-strong: #b8c0ca;
+
+  --text-primary: #1c2127;
+  --text-secondary: #4a5361;
+  --text-muted: #5b6775;
+  --text-disabled: #a7b0bb;
+
+  --accent: #2865bb;
+  --accent-hover: #1f5299;
+  --focus-ring: #4c90f0;
+
+  --status-ok: #1b7547;
+  --status-caution: #8b5d00;
+  --status-critical: #be2e34;
+  --status-stale: #5b6775;
+}

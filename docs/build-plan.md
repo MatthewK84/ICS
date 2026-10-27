@@ -194,9 +194,11 @@ Port each Python reference to C++ and gate every port on parity with its golden 
 
 Build a read-only operator and evaluator interface on ics-api. Serve all map tiles and assets locally; the range network allows no external calls.
 
+Every view follows the [front-end design standard](ui-design.md): an operator statement and density tier per view, design tokens, Blueprint, and none of the banned generic styling, enforced by `web/policy/check-policy.sh`.
+
 | ID | Task | Depends on | Done when |
 |---|---|---|---|
-| UI-01 | Scaffold the app: Vite, React, strict TypeScript, router, design tokens; CAC/PKI authentication at the reverse proxy | FND-05 | Lint, type and axe accessibility checks pass |
+| UI-01 | Scaffold the app: Vite, React, strict TypeScript, router, design tokens; CAC/PKI authentication at the reverse proxy | FND-05 | Lint, type and axe accessibility checks pass; the app shell follows [ui-design.md](ui-design.md), the UI scan passes, and the screenshot loop leaves no checklist item failing |
 | UI-02 | Generate the typed API client from PRO-01 (protobuf-es with Connect gRPC-Web); validate responses with zod at the boundary | CPP-34 | Contract tests pass; no untyped data reaches components |
 | UI-03 | Build range status: stations, time quality, GNSS and holdover, mount pointing, sun cone, trigger state; server-pushed updates | UI-02 | ≤1 s display latency |
 | UI-04 | Build the engagement timeline view with C4 time gates per run | UI-02 | Matches PY-11 output on sample runs |

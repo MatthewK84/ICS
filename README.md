@@ -1,8 +1,5 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/banner-dark.svg">
-    <img alt="ICS: Intercept Characterization System. Two stations triangulate the closest approach of an interceptor and its target." src="docs/assets/readme/banner-light.svg" width="100%">
-  </picture>
+  <img alt="ICS: Intercept Characterization System. Two stations triangulate the closest approach of an interceptor and its target." src="docs/assets/readme/banner.svg" width="100%">
 </p>
 
 <p align="center">

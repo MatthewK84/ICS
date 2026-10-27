@@ -10,6 +10,7 @@ Rules (enforced in CI by [ICS-007](https://github.com/MatthewK84/ICS/issues/7)):
 - Strict TypeScript: no `any`, no non-null assertion, no `var`, no floating promises; functions of 50 lines or fewer.
 - Responses are validated with zod at the API boundary; no untyped data reaches components.
 - The range network allows no external calls: serve every asset and map tile locally.
+- Every view follows the [front-end design standard](../docs/ui-design.md): an operator statement and density tier, colours and sizes only from [`tokens.css`](apps/ics-web/src/styles/tokens.css), Blueprint components, and none of the banned generic styling.
 
 ## Toolchain
 
@@ -26,6 +27,17 @@ pnpm run test                        # Vitest, coverage of at least 80%
 pnpm run build && pnpm run e2e       # Playwright against the production build
 policy/check-policy.sh
 ```
+
+## Design standard
+
+[docs/ui-design.md](../docs/ui-design.md) applies the operator-grade UI standard ([`.claude/skills/operator-grade-ui/SKILL.md`](../.claude/skills/operator-grade-ui/SKILL.md)) to ICS: each view's operator and density tier, the stack, the offline rules and the one deviation. [`policy/check-policy.sh`](policy/check-policy.sh) enforces the standard's banned patterns over every app's `src/`:
+- gradients, blur, large radii and shadows;
+- indigo, violet and purple;
+- colours outside `tokens.css`;
+- emoji;
+- escape hatches.
+
+A seeded violation for each pattern group proves the scan still fires.
 
 ## Power-of-Ten checks
 
