@@ -44,6 +44,13 @@ Contents:
 
   The C++ scheduler matches every flag, place and engagement served exactly, every approach's time within 2 ns, and every other number within 1e-9 of the larger of it and 1 ([`cpp/handoff/test/golden_test.cpp`](../cpp/handoff/test/golden_test.cpp)). [`python/tests/test_handoff_golden.py`](../python/tests/test_handoff_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
 
+- [`trigger/`](trigger): the trigger controller ([ICS-040](https://github.com/MatthewK84/ICS/issues/40)), written by [`python/ics_golden/trigger.py`](../python/ics_golden/trigger.py).
+  - `parameters.csv` is the settings the other files were written with.
+  - `approaches.csv` gives the refined closest approach of a target and an interceptor at random states with accelerations, gentle and violent, or none: parked or receding.
+  - `shots.csv` gives the PPS edge, the delay and the late flag of pulses asked for at random times around now, and whether the arming window is open.
+
+  The C++ controller matches every flag, edge and delay exactly, every approach's time within 2 ns, and every miss within 1e-9 of the larger of it and 1 ([`cpp/trigger/test/golden_test.cpp`](../cpp/trigger/test/golden_test.cpp)). [`python/tests/test_trigger_golden.py`](../python/tests/test_trigger_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
+
 Planned contents:
 
 - Golden outputs from the other Python reference models in `python/ics_models` (for example [ICS-044](https://github.com/MatthewK84/ICS/issues/44) to [ICS-049](https://github.com/MatthewK84/ICS/issues/49)).

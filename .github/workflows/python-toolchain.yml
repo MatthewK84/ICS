@@ -15,6 +15,7 @@ on:
       - golden/cue/**
       - golden/tracker/**
       - golden/handoff/**
+      - golden/trigger/**
       - schemas/**
       - .github/workflows/python-toolchain.yml
   push:
@@ -26,6 +27,7 @@ on:
       - golden/cue/**
       - golden/tracker/**
       - golden/handoff/**
+      - golden/trigger/**
       - schemas/**
       - .github/workflows/python-toolchain.yml
   workflow_dispatch:

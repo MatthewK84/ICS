@@ -29,6 +29,7 @@ on:
       - golden/cue/**
       - golden/tracker/**
       - golden/handoff/**
+      - golden/trigger/**
       - deploy/toolchain/**
       - deploy/evidence/**
       - .github/scripts/evidence.py
@@ -51,6 +52,7 @@ on:
       - golden/cue/**
       - golden/tracker/**
       - golden/handoff/**
+      - golden/trigger/**
       - deploy/toolchain/**
       - deploy/evidence/**
       - .github/scripts/evidence.py
