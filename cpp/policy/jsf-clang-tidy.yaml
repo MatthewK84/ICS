@@ -113,6 +113,8 @@ CheckOptions:
   readability-magic-numbers.IgnoredFloatingPointValues: '0.5;1.0;2.0'
   readability-identifier-naming.NamespaceCase: lower_case
   readability-identifier-naming.FunctionCase: lower_case
+  # Deviation D-5: libFuzzer fixes its entry point's name.
+  readability-identifier-naming.FunctionIgnoredRegexp: '^LLVMFuzzerTestOneInput$'
   readability-identifier-naming.MethodCase: lower_case
   readability-identifier-naming.VariableCase: lower_case
   readability-identifier-naming.ParameterCase: lower_case
