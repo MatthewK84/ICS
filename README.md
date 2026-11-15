@@ -80,6 +80,7 @@ Each card opens the code it names, and the dashed planned cards open their build
 <a href="cpp/encoder/" title="Each camera frame's line of sight from encoder angles"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/map/encoder-dark.svg"><img alt="Line of sight: cpp/encoder" src="docs/assets/readme/map/encoder-light.svg" width="150" height="66"></picture></a>
 <a href="cpp/cue/" title="PLI and radar fused into each station's pointing cue"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/map/cue-dark.svg"><img alt="Cue extrapolator: cpp/cue" src="docs/assets/readme/map/cue-light.svg" width="150" height="66"></picture></a>
 <a href="cpp/tracker/" title="Closed-loop tracking on the narrow-field camera"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/map/tracker-dark.svg"><img alt="Tracker: cpp/tracker" src="docs/assets/readme/map/tracker-light.svg" width="150" height="66"></picture></a>
+<a href="cpp/handoff/" title="One mount across several engagements, in the order they happen"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/map/handoff-dark.svg"><img alt="Hand-off: cpp/handoff" src="docs/assets/readme/map/handoff-light.svg" width="150" height="66"></picture></a>
 <a href="cpp/mount/" title="PWI4 client, rate loop and sun keep-out interlock"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/map/mount-dark.svg"><img alt="Mount control: cpp/mount" src="docs/assets/readme/map/mount-light.svg" width="150" height="66"></picture></a>
 </p>
 
@@ -99,6 +100,7 @@ Each card opens the code it names, and the dashed planned cards open their build
 <a href="python/ics_models/pointing/" title="Reference pointing model and its fit"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/map/py-pointing-dark.svg"><img alt="Pointing model: ics_models/pointing" src="docs/assets/readme/map/py-pointing-light.svg" width="150" height="66"></picture></a>
 <a href="python/ics_models/cue/" title="Reference cue extrapolator"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/map/py-cue-dark.svg"><img alt="Cue model: ics_models/cue" src="docs/assets/readme/map/py-cue-light.svg" width="150" height="66"></picture></a>
 <a href="python/ics_models/tracker/" title="Reference centroid, geometry and estimator"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/map/py-tracker-dark.svg"><img alt="Tracker model: ics_models/tracker" src="docs/assets/readme/map/py-tracker-light.svg" width="150" height="66"></picture></a>
+<a href="python/ics_models/handoff/" title="Reference closest approach, slew and engagement queue"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/map/py-handoff-dark.svg"><img alt="Hand-off model: ics_models/handoff" src="docs/assets/readme/map/py-handoff-light.svg" width="150" height="66"></picture></a>
 <a href="python/ics_sitl/" title="Software-in-the-loop flights for the adapters"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/map/py-sitl-dark.svg"><img alt="SITL harness: python/ics_sitl" src="docs/assets/readme/map/py-sitl-light.svg" width="150" height="66"></picture></a>
 <a href="golden/" title="Files the C++ ports must reproduce"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/map/golden-dark.svg"><img alt="Golden vectors: golden" src="docs/assets/readme/map/golden-light.svg" width="150" height="66"></picture></a>
 </p>
@@ -203,6 +205,7 @@ Each directory's README lists its contents, its rules and the issues that added 
 | [Encoder module](cpp/README.md#encoder-module) | `encoder/` | Each camera frame's line of sight from encoder angles |
 | [Cue extrapolator](cpp/README.md#cue-extrapolator) | `cue/` | PLI and radar fused into each station's pointing cue |
 | [Tracker](cpp/README.md#tracker) | `tracker/` | Closed-loop tracking on the narrow-field camera, through Aravis |
+| [Hand-off scheduler](cpp/README.md#hand-off-scheduler) | `handoff/` | One mount across several engagements: the queue, the slew and the flags |
 
 </details>
 

@@ -35,6 +35,15 @@ Contents:
 
   The C++ tracker matches every outcome and window exactly, and every number within 1e-9 of the larger of it and 1 ([`cpp/tracker/test/golden_test.cpp`](../cpp/tracker/test/golden_test.cpp)). [`python/tests/test_tracker_golden.py`](../python/tests/test_tracker_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
 
+- [`handoff/`](handoff): the hand-off scheduler ([ICS-039](https://github.com/MatthewK84/ICS/issues/39)), written by [`python/ics_golden/handoff.py`](../python/ics_golden/handoff.py).
+  - `parameters.csv` is the settings the other files were written with.
+  - `approaches.csv` gives the closest approach of a target and an interceptor at random states, or none: parked, receding, or past the horizon.
+  - `slews.csv` gives slew demands for targets and mounts at random states, with small, middling and large errors.
+  - `reaches.csv` gives the time a mount takes between two directions.
+  - `queue.csv` is a scripted run of four engagements, with a row for each engagement at each update: the sighting given, and the slot, the order and the engagement served after it.
+
+  The C++ scheduler matches every flag, place and engagement served exactly, every approach's time within 2 ns, and every other number within 1e-9 of the larger of it and 1 ([`cpp/handoff/test/golden_test.cpp`](../cpp/handoff/test/golden_test.cpp)). [`python/tests/test_handoff_golden.py`](../python/tests/test_handoff_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
+
 Planned contents:
 
 - Golden outputs from the other Python reference models in `python/ics_models` (for example [ICS-044](https://github.com/MatthewK84/ICS/issues/44) to [ICS-049](https://github.com/MatthewK84/ICS/issues/49)).

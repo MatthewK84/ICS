@@ -152,6 +152,8 @@ Build the path-independent services first. Phase 1 covers timing, PLI and camera
 | CPP-21 | Build trigger: closest-approach predictor, arming state machine, BNC 577 SCPI control, UTC event log | CPP-11, CPP-14 | Fires within 1 ms of predicted time in replay |
 | CPP-22 | Deliver ics-mountd for each station | CPP-15 to CPP-20 | Three stations track one target from one cue |
 
+The M-2 replay (CPP-20) is milestone M2's replay of two engagements whose closest approaches are 3.0 s apart. It passes when every station is tracking the second target within 3 s of the first closest approach ([hand-off scheduler](../cpp/README.md#hand-off-scheduler)).
+
 ## Phase 3: Python models (months 2 to 10)
 
 Build the reference models, calibrations and analysis tools that the C++ code ports and the Evaluator relies on. Run this phase in parallel with Phases 1 and 2; each model publishes golden files before its C++ port starts.

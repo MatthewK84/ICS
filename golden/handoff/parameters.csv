@@ -1,0 +1,12 @@
+name,value
+launch_speed_m_s,3.0
+horizon_ns,60000000000
+rate_rad_s,0.17453292519943295
+acceleration_rad_s2,0.5
+gain,6.0
+min_gap_ns,3000000000
+dwell_ns,500000000
+margin_ns,500000000
+settle_ns,300000000
+engaged_miss_m,10.0
+engagements,4
