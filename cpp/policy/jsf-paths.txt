@@ -8,3 +8,4 @@ cpp/common/test/universal_types_test.cpp
 cpp/cue
 cpp/tracker
 cpp/handoff
+cpp/trigger

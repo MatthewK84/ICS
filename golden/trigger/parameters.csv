@@ -1,0 +1,7 @@
+name,value
+launch_speed_m_s,3.0
+horizon_ns,60000000000
+period_ns,1000000000
+offset_ns,1500
+command_margin_ns,200000000
+guard_ns,50000000

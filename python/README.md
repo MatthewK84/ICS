@@ -9,8 +9,8 @@ Planned layout:
 ```text
 python/
   ics_golden/   golden test vectors shared with C++ and TypeScript (golden/), and the run-record samples (schemas/)
-  ics_models/   pointing (ICS-035), cue (ICS-037), tracker (ICS-038), handoff (ICS-039), and to come: calibration,
-                trajectory, drag, footprint, killclass, uncertainty
+  ics_models/   pointing (ICS-035), cue (ICS-037), tracker (ICS-038), handoff (ICS-039), trigger (ICS-040), and to
+                come: calibration, trajectory, drag, footprint, killclass, uncertainty
   ics_synth/    synthetic engagement generator
   ics_stats/    Pk, timeline analysis, validation scorer
   ics_sitl/     the SITL rig's ground station (ICS-018, deploy/sitl): MAVLink, missions, engagement checks,
@@ -118,6 +118,18 @@ uv run --locked python -m ics_models.pointing fit night.csv --station s1 --model
 
 - **Golden vectors.** `python -m ics_golden.handoff ../golden/handoff` writes them, from seed 39: approaches and slews at random states, slew times, and a scripted run of four engagements with a row for each engagement at each update. [`tests/test_handoff_golden.py`](tests/test_handoff_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
 - **Tests** check approaches head-on, offset, parked, receding and past the horizon. They check the slew's two laws meeting with one slope, its rate limit, the short way across north, and a simulated mount arriving on time without overshoot. They check the queue's order, margin, dwell, fly-bys, approaches held and dropped, and both flags.
+
+## Trigger controller
+
+[`ics_models/trigger`](ics_models/trigger) is the reference for the trigger controller's arithmetic ([ICS-040](https://github.com/MatthewK84/ICS/issues/40), CPP-21). The C++ port, `ics::trigger` ([`cpp/trigger`](../cpp/README.md#trigger-controller)), must match it through [`golden/trigger`](../golden/README.md).
+
+| Module | Provides |
+|---|---|
+| `approach` | `refined_approach`: when an interceptor is closest to its target and by how much it misses, with both taken to keep their acceleration. It takes eight Newton steps from the hand-off's `closest_approach`, and keeps that answer if the steps leave the time between now and the horizon |
+| `shot` | `shot_for`: the PPS edge a pulse is timed from and its delay from that edge, or the next edge that can still be armed for when it is too late; `window_open`, when the pulse generator may be armed for it |
+
+- **Golden vectors.** `python -m ics_golden.trigger ../golden/trigger` writes them, from seed 40: approaches at random states with gentle and violent accelerations, and shots for pulses asked for around now. [`tests/test_trigger_golden.py`](tests/test_trigger_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
+- **Tests** check approaches for vehicles that keep their velocity, speed up and turn away, and for steps that find no minimum or leave the horizon. They check edges with an offset, pulses on time and too late for their edge, both ends of the arming window, and periods too short for their margins.
 
 ## Power-of-Ten checks
 

@@ -36,3 +36,4 @@ cpp/store 0.32
 cpp/retime 0.11
 cpp/tracker 0.03
 cpp/handoff 0.13
+cpp/trigger 0.05

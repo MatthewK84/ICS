@@ -1,0 +1,52 @@
+# A sample config for the trigger controller (ICS-040): the [cue] table of
+# cpp/cue/ics-cue.toml (ICS-037), and the [trigger] table. ics-trigd will read
+# both from the station's config.
+
+[cue]
+range_origin_latitude_deg = 40.0
+range_origin_longitude_deg = -100.0
+range_origin_height_m = 700.0          # above the WGS 84 ellipsoid
+station_latitude_deg = 39.9977477
+station_longitude_deg = -100.0
+station_height_m = 702.0
+target_role = "target"
+command_latency_ns = 50_000_000
+horizontal_jerk_psd = 4.0
+vertical_jerk_psd = 1.0
+gate = 16.27
+history_ns = 2_000_000_000
+coast_limit_ns = 2_000_000_000
+capacity = 64
+initial_velocity_sigma = 20.0
+initial_acceleration_sigma = 10.0
+velocity_sigma = 0.2
+two_dimensional_horizontal_m = 3.0
+two_dimensional_vertical_m = 10.0
+three_dimensional_horizontal_m = 1.5
+three_dimensional_vertical_m = 3.0
+dgnss_horizontal_m = 0.7
+dgnss_vertical_m = 1.5
+rtk_float_horizontal_m = 0.3
+rtk_float_vertical_m = 0.6
+rtk_fixed_horizontal_m = 0.03
+rtk_fixed_vertical_m = 0.05
+other_horizontal_m = 5.0               # anything else, such as an unspecified radar fix
+other_vertical_m = 5.0
+
+[trigger]
+address = "192.168.1.57"               # the 577's IPv4 address
+port = 2101                            # its raw TCP port
+reply_timeout_ns = 100_000_000         # the longest wait for a reply
+channels = ["A", "B"]                  # the 577's channels the cameras are on, A to H
+width_ns = 100_000                     # each pulse's width
+trigger_level = 2.5                    # volts the PPS must cross to trigger the 577
+pps_offset_ns = 0                      # how long after the whole second the PPS reaches the 577
+lead_ns = 0                            # how long before the closest approach the pulse goes out
+command_margin_ns = 200_000_000        # how long before an edge the 577 must be armed for it
+guard_ns = 50_000_000                  # how long after an edge the 577 may be armed for the next
+recommit_ns = 200_000                  # a delay this far from the one programmed is programmed again
+predict_period_ns = 100_000_000        # the least time between events that report a prediction
+arm_timeout_ns = 120_000_000_000       # how long a sequence waits for its pulse
+max_clock_bound_ns = 100_000           # the largest clock error bound a pulse is timed by
+launch_speed = 3.0                     # m/s: a slower interceptor has not launched
+horizon_ns = 60_000_000_000            # an approach further ahead than this is not predicted

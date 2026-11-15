@@ -668,6 +668,55 @@ The interlock (ICS-034) keeps the line of sight out of a 15° cone around the su
   Each target is in the central half of the field at its own closest approach. The approaches are predicted within 6 ms and 0.2 m of the truth. A second replay, with the engagements 2.0 s apart, is flagged `too_close`. No flown record has two engagements: each of the SITL rig's engagements ([`deploy/sitl`](../deploy/sitl/README.md)) flies one. The hand-off on a real mount is the field shakedown's ([#93](https://github.com/MatthewK84/ICS/issues/93)).
 - **Tests.** Besides the golden vectors and the replay: approaches found, parked, receding and past the horizon; the slew's two laws, its limit, the short way across north and its time; the queue's order, margin, dwell, fly-bys, held and dropped approaches and both flags; the scheduler's refusals, its reports, cues and demands, a target overhead, a mount whose axes are unknown, three threads at once, and no allocation once made; and the config. No new parser reads outside data: reports come as `PliRecord`s already decoded, and the config reader is fuzzed already.
 
+## Trigger controller
+
+[`trigger/`](trigger) is `ics::trigger` (ICS-040, CPP-21), which fires a station's cameras at an engagement's closest approach. On the engage command it predicts the closest approach of a target and its interceptor from their PLI, and times one pulse from the station's PPS so that a Berkeley Nucleonics 577 pulse generator gives it then. Every step is logged as an `ics.v1.TriggerEvent` with its UTC time. It keeps the [JSF AV rules](#jsf-av-checks), and [`ics_models.trigger`](../python/README.md#trigger-controller) is its reference: the C++ matches [`golden/trigger`](../golden/README.md) in every edge, delay and flag, and within 1e-9 in every miss.
+
+| Header | Provides |
+|---|---|
+| [`approach.h`](trigger/include/ics/trigger/approach.h) | `refined_approach`: when an interceptor is closest to its target, with both taken to keep their acceleration |
+| [`shot.h`](trigger/include/ics/trigger/shot.h) | `shot_for`: the PPS edge a pulse is timed from and its delay from that edge; `window_open`, when the 577 may be armed for it |
+| [`controller.h`](trigger/include/ics/trigger/controller.h) | `Controller`: `engage`, `take` each report, `step`, `disarm` |
+| [`generator.h`](trigger/include/ics/trigger/generator.h) | `Pulse_generator`, and `Bnc577`, the 577's driver |
+| [`scpi.h`](trigger/include/ics/trigger/scpi.h) | `parse_reply` for the 577's reply lines, and `Scpi_link`, a link that asks one command and reads one line |
+| [`link.h`](trigger/include/ics/trigger/link.h) | `Tcp_link`: the 577's raw TCP port |
+| [`events.h`](trigger/include/ics/trigger/events.h) | `Event_file`, the trigger event log, and `read_events` |
+| [`config.h`](trigger/include/ics/trigger/config.h) | The `[trigger]` table |
+
+- **How the pulse is timed.** The host does not time the pulse. The station's PPS triggers the 577, and each channel gives one pulse a programmed delay after that edge. So a pulse wanted at a time is the last edge at or before it, plus the time from that edge. The 577 sets a delay in 250 ps steps, and its manual gives the error as 1 ns plus 0.0001 of the delay: up to 100 µs on a delay of nearly a second.
+- **The prediction.** The hand-off's closest approach (ICS-039) takes both vehicles to keep their velocity. This one takes them to keep their acceleration, as the cue filter (ICS-037) estimates it: it starts from the hand-off's answer and takes eight Newton steps on the separation. If those leave the time between now and `horizon_ns`, the first answer stands. There is none while the interceptor is slower than `launch_speed`, while the two are not closing, or further ahead than `horizon_ns`.
+- **A sequence** runs from the engage command to its pulse:
+  - *Armed.* The command names a target and an interceptor, as `PliRecord.entity_id` gives them. Their reports go through cue filters, and each step predicts the closest approach. The pulse is wanted `lead_ns` before it.
+  - *Committed.* The 577 may be armed for an edge from `guard_ns` after the edge before it until `command_margin_ns` before its own. In that window the controller programs the delay and arms the 577. Until the window closes, a prediction that moves the pulse by more than `recommit_ns` programs the delay again, and one that moves it to another edge disarms the 577 and waits for that edge's window.
+  - *The shot stands* from `command_margin_ns` before its edge. With the sample's margins, that is 0.2 to 1.2 s before the pulse, and later reports do not move it.
+  - *Fired.* When the pulse's time has passed, the 577 is disarmed and the sequence is over. `FIRED` carries the pulse's time, the channels and the prediction it was timed by.
+- **A late engagement.** If the closest approach is too near for its edge to be armed in time, the pulse goes out on the next edge that can be, with no delay, and `FIRED` says it was late.
+- **What stops a sequence.** The operator's disarm command; a clock that is not locked, or whose error bound is above `max_clock_bound_ns` (ICS-019); and `arm_timeout_ns` without a pulse. Each is a `DISARMED` event that says why. A 577 that refuses a command or does not disarm is a `FAULT`. One sequence runs at a time: an engage command during another is refused.
+- **The 577.** The driver speaks the 577's SCPI over its raw TCP port, 2101: one command a line, ended by a carriage return and a line feed, each answered `ok`, `?1` to `?9`, or a query's value. `set_up` asks `*IDN?` and sets the system timer to single shot, triggered on the PPS's rising edge at `trigger_level`, and each channel in use to a single shot from the edge with the configured width. `program` sets each channel's `:DEL`, `arm` is `:PULSE0:STATE ON`, and `disarm` is `:PULSE0:STATE OFF`. A 577 that does not answer within `reply_timeout_ns` is `kUnavailable`, a refusal is `kInvalidArgument`, and a line that is not a reply is `kMalformed`.
+- **The event log.** Trigger events go to a file of their own, not the PLI store's segments (ICS-030), whose format and readers are unchanged. The file opens with the eight bytes `ICSTRG1\n`. Each event follows as its length and its CRC-32C, four bytes each with the lowest first, and then the `TriggerEvent`. `read_events` gives every sound entry and whether the file is whole, so a crash costs at most the entry being written. Events the file could not keep are counted in `lost_events`.
+- **Production connections.** Each input the tests stand in for has a named place for the real one:
+
+  | Input | In operation | In the tests |
+  |---|---|---|
+  | The engage and disarm commands | `Controller::engage` and `disarm`, which `ics-trigd` will call for the station console | Called at set times |
+  | The reports | ics-plid's records (ICS-030) of every vehicle | Synthetic `PliRecord`s at 10 Hz, 100 ms late, with 0.5 m and 0.8 m of GNSS noise |
+  | The clock's state | ics-timingd's lock and error bound (ICS-019) | Locked within 1 µs, then unlocked or loose |
+  | The 577 | `Tcp_link` to `address` and `port`, and the PPS on its trigger input | An emulated 577 written from the user manual, in process and on a local TCP port |
+  | The range, the filter and the sigmas | The `[cue]` table (ICS-037) | The cue replay's range |
+  | The margins, the lead and the channels | The `[trigger]` table | The sample's, with A and B |
+
+  The sample config is [`ics-trigger.toml`](trigger/ics-trigger.toml).
+- **Done when.** It fires within 1 ms of its prediction in replay ([`replay_test.cpp`](trigger/test/replay_test.cpp)). No record of an engagement with a trigger is in the repository, so two are flown synthetically, as the hand-off's replay flies them. The controller drives the 577's driver over the emulated 577, which the PPS triggers each second. For each engagement the 577 gives one pulse on each channel and no other:
+
+  | Engagement | Pulse from the prediction when the shot stood | Pulse from the true closest approach |
+  |---|---|---|
+  | 1, 5.4 s after launch | 0 ns | 1.1 ms early |
+  | 2, 4.4 s after launch | 0 ns | 3.2 ms early |
+
+  The test requires the first within 1 ms; the controller holds it within `recommit_ns`, 200 µs in the sample. The second is what noisy PLI and a prediction made up to 1.2 s ahead give in this replay, and the test requires it within 20 ms.
+- **Not here yet.** This is the library. The `ics-trigd` service, which will read the config, connect to ics-plid and ics-timingd and carry the console's engage command, is a follow-up. The driver follows the 577's user manual, and no 577 has been connected: its single-shot behaviour on an external trigger, its replies and the PPS's level need a bench check before a live run. `FIRED` means the 577 took the shot and its time passed; the controller does not read a pulse count back.
+- **Tests.** Besides the golden vectors and the replay: approaches head-on, turning, speeding and with no minimum; shots on, before and after edges and both ends of the window; every reply the 577 gives; the driver's set-up, a shot, and a 577 that is silent, garbled or refuses; the TCP link against a 577 that answers, says nothing, hangs up or never ends its line; the event file written, cut, corrupted and unwritable; the controller's sequences, with a prediction that moves on its edge, to another edge and after the shot stands, a late engagement, a bad clock, the timeout, each refusal of the generator, a failing sink and the operator's disarm at each stage; and the config. Two fuzz targets cover the new parsers: `trigger_reply_fuzz` for the 577's replies, and `trigger_events_fuzz` for the event file.
+
 ## Power-of-Ten checks
 
 The C++ rules from the coding-standards table in [docs/build-plan.md](../docs/build-plan.md) are enforced by tools, not review (ICS-005):
