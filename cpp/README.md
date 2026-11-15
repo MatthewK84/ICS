@@ -599,7 +599,7 @@ The interlock (ICS-034) keeps the line of sight out of a 15° cone around the su
 | [`centroid.h`](tracker/include/ics/tracker/centroid.h) | `window_around`; `Centroider::find`, which allocates nothing per frame |
 | [`geometry.h`](tracker/include/ics/tracker/geometry.h) | `Camera_geometry`; pixels to tangent-plane offsets and sky directions, and back |
 | [`estimator.h`](tracker/include/ics/tracker/estimator.h), [`demand.h`](tracker/include/ics/tracker/demand.h) | `Angle_estimator`, an alpha-beta track of azimuth and elevation; `demand` |
-| [`tracker.h`](tracker/include/ics/tracker/tracker.h) | `Tracker`: `take` each frame on the camera's thread, `latest` on the rate loop's; the modes; `Axis_source`, `Cue_source` and `Time_source` |
+| [`tracker.h`](tracker/include/ics/tracker/tracker.h) | `Tracker`: `take` each frame on the camera's thread, `latest` on the rate loop's, and `retarget` when the cue moves to another target (ICS-039); the modes; `Axis_source`, `Cue_source` and `Time_source` |
 | [`config.h`](tracker/include/ics/tracker/config.h), [`monitor.h`](tracker/include/ics/tracker/monitor.h) | The `[tracker]` table; `ics-tracker-monitor`'s work |
 
 - **The camera.** `Aravis_camera` applies the `features` list first (for example `PtpEnable=true`), then the pixel format (Mono8 or Mono16), region, frame rate and exposure, and streams into buffers ICS allocates before it starts. A frame's time is the camera's time stamp, PTP-locked to ics-timingd, or for a camera without PTP the host's receive time; either is corrected by `stamp_offset_ns`. A buffer the camera could not fill is returned to the stream and counted as dropped. Aravis and GLib are LGPL-2.1-or-later, linked dynamically and shipped unmodified ([register](../docs/dependency-register.toml)); their C API is JSF deviation D-8, confined to `aravis_camera.cpp`.
@@ -623,6 +623,50 @@ The interlock (ICS-034) keeps the line of sight out of a 15° cone around the su
 - **Tool.** [`ics-tracker-monitor FRAMES`](tracker/tool/main.cpp) is the operational test of the camera and centroid path before ics-mountd closes the loop. It reads `/etc/ics/ics-tracker.toml` and streams FRAMES frames, searching around the boresight, then around the last detection. Each frame is a JSON line: its number, time, whether the target was found, where in pixels and microradians from the boresight, and its area, peak, background and σ. A frame the camera could not fill is an error line, and the last line is the count dropped. It exits 0 when it streamed, 1 when the config or the camera could not be used, and 2 for an argument.
 - **Done when.** Every part has unit tests, the C++ matches the golden vectors, and the binding and the tool run against Aravis's fake camera in CI. C19, the target held in the central half of the narrow field at 500 m, is measured before release, in the closed-loop simulation and [#172](https://github.com/MatthewK84/ICS/issues/172)'s flown-crossing replay ([#175](https://github.com/MatthewK84/ICS/issues/175)), and flown in [#94](https://github.com/MatthewK84/ICS/issues/94).
 - **Tests.** Besides the golden vectors: the fake camera's frames, settings, refusals, dropped buffers and stop; centroids of known spots at every polarity, the area limits and the nearest blob, with no allocation per frame; every mode change, the gate, coasting and its limit, frames without the mount's axes or out of order, and cues off the frame or behind; the config and its refusals; and the tool. No new parser reads outside data: frames come from the camera as fixed-size pixels, and the config reader is fuzzed already.
+
+## Hand-off scheduler
+
+[`handoff/`](handoff) is `ics::handoff` (ICS-039, CPP-20), which lets one station cover several engagements in a run. A run plan lists the engagements, each a target and the interceptor sent at it. The scheduler predicts each engagement's closest approach, keeps the engagements in the order they will happen, gives its tracker (ICS-038) the cue of the one the station serves, and slews the mount to the next when that one is over. It flags the engagements the station cannot cover. It keeps the [JSF AV rules](#jsf-av-checks), and [`ics_models.handoff`](../python/README.md#hand-off-scheduler) is its reference: the C++ matches [`golden/handoff`](../golden/README.md) in every flag, order and engagement served, and within 1e-9 in every number.
+
+| Header | Provides |
+|---|---|
+| [`approach.h`](handoff/include/ics/handoff/approach.h) | `closest_approach`: when an interceptor is closest to its target, and by how much it misses, from their two estimates |
+| [`slew.h`](handoff/include/ics/handoff/slew.h) | `slew_demand`, the axis rates that take the mount to a new target; `slew_seconds` and `reach_seconds`, how long that takes |
+| [`queue.h`](handoff/include/ics/handoff/queue.h) | `Queue::update`: the engagements in order, the one served, and the flags, as a `Plan` |
+| [`scheduler.h`](handoff/include/ics/handoff/scheduler.h) | `Scheduler`: `take` each report and each frame, `latest` on the rate loop's thread, `status` |
+| [`config.h`](handoff/include/ics/handoff/config.h) | The `[handoff]` table |
+
+- **The run plan.** `targets` and `interceptors` name each engagement's two vehicles, as `PliRecord.entity_id` gives them, in the plan's order: at most 8 engagements. Every report of a named vehicle goes through its own cue filter (ICS-037), so nothing is allocated after the scheduler is made. The entity's role is not used.
+- **The approach.** Both vehicles are taken to keep the velocity they have now, so they are closest after (p · v) / (v · v) seconds, for the interceptor's position p from the target and the closing velocity v. That is coarse, and only orders the queue: the trigger (ICS-040) predicts the moment itself. There is no approach while the interceptor is slower than `launch_speed`, while the two are not closing, or further ahead than `horizon_ns`.
+- **The queue.**
+  - An engagement is done when the approach it held passes within `engaged_miss_m`. A wider pass is a fly-by, and the engagement waits for another approach. An approach within `margin_ns` of now is held if the reports lose it, since two vehicles passing is when a prediction is lost.
+  - Engagements with an approach come first, soonest first. Those without follow in the plan's order.
+  - The station serves the first in the order. It stays on a done engagement for `dwell_ns`, to see what the engagement did. It leaves one that is not done only for an engagement more than `margin_ns` sooner, or for any with an approach when its own has none.
+- **The flags.** An engagement less than `min_gap_ns` (3 s) after the one before it is `too_close`. One the mount cannot reach in the gap, after the dwell, the slew and `settle_ns`, is `out_of_reach`. Both are in `status`, and a done engagement keeps the flags it had.
+- **The slew.** The tracker's own demand closes an error at its gain of 2 a second, which takes 15° about 3 s to bring into the field. A slew closes the error as fast as the mount can stop in: far from the target, the closing rate is the square root of twice `slew_acceleration` times the error left; within `slew_acceleration` over `slew_gain` squared of it, it is `slew_gain` times the error. The demand is the cue's rate plus that closing rate, held within `slew_rate`. Slews go through the rate loop, so the sun interlock (ICS-034) supervises them like any other demand.
+- **The scheduler.** It stands where the tracker stood. The camera's thread gives it each frame, and it brings the queue up to now, gives the frame to its tracker, and makes the slew's demand. The rate loop takes `latest` from it: the slew's demand while the tracker is cueing or acquiring, and the tracker's own once it is tracking or coasting. When the station turns to another engagement, the tracker drops its track (`Tracker::retarget`) and the cue becomes the new target's. When no engagement is left, the tracker keeps the track it has. Three threads use it (reports, frames and the rate loop) under one mutex, which is never held while the tracker is called.
+- **Every station agrees.** Each station hears the same reports and reads the same run plan, so each scheduler comes to the same order by itself. No message passes between stations.
+- **Production connections.** Each input the tests stand in for has a named place for the real one:
+
+  | Input | In operation | In the tests |
+  |---|---|---|
+  | The run plan | `targets` and `interceptors` in the `[handoff]` table, set for each run | Two engagements: `uas-1` and `int-1`, `uas-2` and `int-2` |
+  | The reports | ics-plid's records (ICS-030) of every vehicle, as ics-mountd (ICS-041) hears them | Synthetic `PliRecord`s at 10 Hz, 100 ms late, with 0.5 m and 0.8 m of GNSS noise |
+  | The range, the station, the filter and the command latency | The `[cue]` table (ICS-037) | The cue replay's range and three stations; 50 ms |
+  | The tracker's settings, the camera and the mount's axes | As for the [tracker](#tracker) | A simulated mount of 10°/s and 1 rad/s², and frames painted where it points |
+  | The slew's limits | `slew_rate`, `slew_acceleration` and `slew_gain`, set within what the mount does (ICS-033) | 0.17 rad/s, 0.5 rad/s² and 6 a second |
+
+  The sample config is [`ics-handoff.toml`](handoff/ics-handoff.toml); `ics-mountd` will read the same tables.
+- **Done when.** The M-2 replay hands off within 3 s ([`replay_test.cpp`](handoff/test/replay_test.cpp)). M-2 is milestone M2's replay of two engagements, and no record of two engagements is in the repository, so they are flown synthetically. Two targets 60 to 70 m apart are each hit by an interceptor that launches 5 s before, and the closest approaches are 3.0 s apart. Three stations each run the scheduler, its tracker and a simulated mount. The hand-off is timed from the first closest approach until the tracker is tracking the second target, and includes the 0.5 s dwell:
+
+  | Station | Targets apart | Hand-off |
+  |---|---|---|
+  | 1 | 14.4° | 2.05 s |
+  | 2 | 5.3° | 1.21 s |
+  | 3 | 11.2° | 1.87 s |
+
+  Each target is in the central half of the field at its own closest approach. The approaches are predicted within 6 ms and 0.2 m of the truth. A second replay, with the engagements 2.0 s apart, is flagged `too_close`. No flown record has two engagements: each of the SITL rig's engagements ([`deploy/sitl`](../deploy/sitl/README.md)) flies one. The hand-off on a real mount is the field shakedown's ([#93](https://github.com/MatthewK84/ICS/issues/93)).
+- **Tests.** Besides the golden vectors and the replay: approaches found, parked, receding and past the horizon; the slew's two laws, its limit, the short way across north and its time; the queue's order, margin, dwell, fly-bys, held and dropped approaches and both flags; the scheduler's refusals, its reports, cues and demands, a target overhead, a mount whose axes are unknown, three threads at once, and no allocation once made; and the config. No new parser reads outside data: reports come as `PliRecord`s already decoded, and the config reader is fuzzed already.
 
 ## Power-of-Ten checks
 

@@ -9,7 +9,8 @@ Planned layout:
 ```text
 python/
   ics_golden/   golden test vectors shared with C++ and TypeScript (golden/), and the run-record samples (schemas/)
-  ics_models/   pointing (ICS-035), cue (ICS-037), and to come: calibration, trajectory, drag, footprint, killclass, uncertainty
+  ics_models/   pointing (ICS-035), cue (ICS-037), tracker (ICS-038), handoff (ICS-039), and to come: calibration,
+                trajectory, drag, footprint, killclass, uncertainty
   ics_synth/    synthetic engagement generator
   ics_stats/    Pk, timeline analysis, validation scorer
   ics_sitl/     the SITL rig's ground station (ICS-018, deploy/sitl): MAVLink, missions, engagement checks,
@@ -104,6 +105,19 @@ uv run --locked python -m ics_models.pointing fit night.csv --station s1 --model
 
 - **Golden vectors.** `python -m ics_golden.tracker ../golden/tracker` writes them, from seed 38: seven 64 × 48 frames of a noisy sky with dark and bright targets, and the centroids, windows, geometry, estimator track and demands computed on them. [`tests/test_tracker_golden.py`](tests/test_tracker_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
 - **Tests** check centroids against known spots, polarity, the area limits and the nearest blob; windows at and past every edge; pixel to sky and back for rolled and mirrored cameras and across north; the estimator following a constant-rate truth exactly and its stability bounds; and the demand's signs and wrap.
+
+## Hand-off scheduler
+
+[`ics_models/handoff`](ics_models/handoff) is the reference for the hand-off scheduler's arithmetic ([ICS-039](https://github.com/MatthewK84/ICS/issues/39), CPP-20). The C++ port, `ics::handoff` ([`cpp/handoff`](../cpp/README.md#hand-off-scheduler)), must match it through [`golden/handoff`](../golden/README.md).
+
+| Module | Provides |
+|---|---|
+| `approach` | `closest_approach`: when an interceptor is closest to its target and by how much it misses, with both taken to keep their velocity; none for an interceptor not yet launched, vehicles not closing, or an approach past the horizon |
+| `slew` | `slew_demand`: the cue's rate plus the rate that closes the error as fast as the mount can stop in, held within the axis's rate limit; `slew_seconds` and `reach_seconds`, how long a slew takes |
+| `queue` | `Queue.update`: the engagements done, those not done in order, the one the station serves, and the `too_close` and `out_of_reach` flags |
+
+- **Golden vectors.** `python -m ics_golden.handoff ../golden/handoff` writes them, from seed 39: approaches and slews at random states, slew times, and a scripted run of four engagements with a row for each engagement at each update. [`tests/test_handoff_golden.py`](tests/test_handoff_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
+- **Tests** check approaches head-on, offset, parked, receding and past the horizon. They check the slew's two laws meeting with one slope, its rate limit, the short way across north, and a simulated mount arriving on time without overshoot. They check the queue's order, margin, dwell, fly-bys, approaches held and dropped, and both flags.
 
 ## Power-of-Ten checks
 

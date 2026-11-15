@@ -259,6 +259,14 @@ std::optional<mount::RateDemand> Tracker::latest()
   return demand_;
 }
 
+void Tracker::retarget()
+{
+  const std::lock_guard<std::mutex> lock(mutex_);
+  mode_ = Mode::cueing;
+  confirmations_ = 0;
+  demand_.reset();
+}
+
 Mode Tracker::mode() const
 {
   const std::lock_guard<std::mutex> lock(mutex_);

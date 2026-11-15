@@ -283,6 +283,20 @@ TEST(Tracker, LeavesOutDetectionsOutsideTheGate)
   EXPECT_EQ(world.tracker().mode(), Mode::coasting);
 }
 
+TEST(Tracker, DropsItsTrackAndItsDemandWhenRetargeted)
+{
+  World world;
+  world.cue_target();
+  static_cast<void>(run(world, 0, confirm_frames, true));
+  EXPECT_EQ(world.tracker().mode(), Mode::tracking);
+  world.tracker().retarget();
+  EXPECT_EQ(world.tracker().mode(), Mode::cueing);
+  EXPECT_EQ(world.tracker().latest(), std::nullopt);
+  EXPECT_EQ(world.frame_at(start + (confirm_frames * step), true), Take::detected);
+  EXPECT_EQ(world.tracker().mode(), Mode::acquiring);
+  EXPECT_TRUE(world.tracker().latest().has_value());
+}
+
 TEST(Tracker, CannotUseFramesWithoutTheMountOrOutOfOrder)
 {
   World world;

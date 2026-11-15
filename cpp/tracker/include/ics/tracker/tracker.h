@@ -164,6 +164,9 @@ public:
   [[nodiscard]] Take take(const Frame& frame);
   // The latest demand, for the rate loop's thread.
   [[nodiscard]] std::optional<mount::RateDemand> latest() override;
+  // Drops the track and the demand, and returns to cueing: the cue now puts
+  // another target there (ICS-039). From any thread.
+  void retarget();
   [[nodiscard]] Mode mode() const;
   [[nodiscard]] Tracker_counts counts() const;
 
