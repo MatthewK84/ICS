@@ -1,6 +1,5 @@
 // approach_test.cpp: closest approaches, coarse and refined (ICS-040).
 #include <chrono>
-#include <cmath>
 #include <limits>
 #include <optional>
 
