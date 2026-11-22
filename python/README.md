@@ -11,7 +11,6 @@ python/
   ics_golden/   golden test vectors shared with C++ and TypeScript (golden/), and the run-record samples (schemas/)
   ics_models/   pointing (ICS-035), cue (ICS-037), tracker (ICS-038), handoff (ICS-039), trigger (ICS-040), ballistic (ICS-044, ICS-045),
                 endgame (ICS-046), and to come: calibration, trajectory, drag, footprint, killclass, uncertainty
-  ics_synth/    synthetic engagement generator
   ics_stats/    Pk, timeline analysis, validation scorer
   ics_sitl/     the SITL rig's ground station (ICS-018, deploy/sitl): MAVLink, missions, engagement checks,
                 and cut-log, which cuts onboard logs into test fixtures (ICS-025)

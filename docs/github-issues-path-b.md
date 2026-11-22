@@ -4,7 +4,7 @@ Sep 26, 2026 · @Matthew Kolakowski
 
 ## BLUF
 
-Work the 96 GitHub issues, ICS-001 through ICS-097 (ICS-080 was dropped), in numeric order within each milestone. Direct task effort totals about 622 person-weeks; reviews, management and field support fill the rest of the 16 engineer-years. Path B adds 14 issues that replace the OWLSS algorithms: Python references for detection and association, plus full C++ registration, detection, association and estimation. Each issue lists its plan ID from the [Build plan](build-plan.md), its dependencies, its steps and the test that closes it.
+Work the 95 GitHub issues, ICS-001 through ICS-097 (ICS-047 and ICS-080 were dropped), in numeric order within each milestone. Direct task effort totals about 610 person-weeks; reviews, management and field support fill the rest of the 16 engineer-years. Path B adds 14 issues that replace the OWLSS algorithms: Python references for detection and association, plus full C++ registration, detection, association and estimation. Each issue lists its plan ID from the [Build plan](build-plan.md), its dependencies, its steps and the test that closes it.
 
 ## Repository setup
 
@@ -100,13 +100,12 @@ Write every algorithm first as a reviewed Python reference with golden outputs; 
 | [ICS-044](https://github.com/MatthewK84/ICS/issues/44) | Write the 7-state ballistic reference (PY-04) | 5 | 014 | 1) Implement the point-mass drag model. 2) Fit initial state and ρ/β. 3) Publish golden datasets. | Recovers synthetic truth; golden files merged |
 | [ICS-045](https://github.com/MatthewK84/ICS/issues/45) | Write lift and flutter references (PY-04) | 6 | 044 | 1) Add lift and velocity-dependent drag models. 2) Add model selection by residual. 3) Publish golden files. | Recovers synthetic parameters within tolerance |
 | [ICS-046](https://github.com/MatthewK84/ICS/issues/46) | Write IMM and closest-approach references (PY-04) | 6 | 044 | 1) Implement IMM with constant-velocity, constant-acceleration and turn models. 2) Solve closest approach and contact time. 3) Publish golden files. | Miss distance within 1 mm on synthetic truth |
-| [ICS-047](https://github.com/MatthewK84/ICS/issues/47) | Build the synthetic engagement generator (PY-08) | 12 | 012 | 1) Render sky backgrounds with noise and turbulence. 2) Insert drones, interceptor and debris at known truth. 3) Write cine-compatible frames with truth files. | 200-sequence regression set runs in CI |
-| [ICS-048](https://github.com/MatthewK84/ICS/issues/48) | Write the reference detector, path-b | 6 | 047 | 1) Model the sky background on moving frames. 2) Detect negative- and positive-contrast blobs. 3) Measure sub-pixel centroid and area. 4) Publish golden outputs. | ≥95% recall at ≤1 false detection per frame on synthetic data |
-| [ICS-049](https://github.com/MatthewK84/ICS/issues/49) | Write the reference debris association, path-b | 10 | 047, 048 | 1) Build 2D tracklets. 2) Match across stations by line-of-sight gating. 3) Manage track hypotheses. 4) Publish golden outputs. | ≥90% correct associations on synthetic debris clouds |
+| [ICS-048](https://github.com/MatthewK84/ICS/issues/48) | Write the reference detector, path-b | 6 | — | 1) Model the sky background on moving frames. 2) Detect negative- and positive-contrast blobs. 3) Measure sub-pixel centroid and area. 4) Publish golden outputs. | ≥95% recall at ≤1 false detection per frame on hand-labeled recorded range frames |
+| [ICS-049](https://github.com/MatthewK84/ICS/issues/49) | Write the reference debris association, path-b | 10 | 048, 095 | 1) Build 2D tracklets. 2) Match across stations by line-of-sight gating. 3) Manage track hypotheses. 4) Publish golden outputs. | ≥90% correct associations on labeled recorded debris from the V3 drops |
 | [ICS-050](https://github.com/MatthewK84/ICS/issues/50) | Build drag-table fitting tools (PY-05) | 4 | 044 | 1) Ingest recovery weights and tracks. 2) Fit Cd by material class. 3) Hold out half of every drop set. | Runs on synthetic drops; real fit follows ICS-095 |
 | [ICS-051](https://github.com/MatthewK84/ICS/issues/51) | Write the footprint Monte Carlo reference (PY-06) | 6 | 044 | 1) Ingest wind profiles to 1,000 m. 2) Propagate fragments with sampled uncertainty. 3) Produce 50, 90 and 99% regions. | Coverage test passes on synthetic truth |
 | [ICS-052](https://github.com/MatthewK84/ICS/issues/52) | Study kill-class thresholds (PY-07) | 4 | 044 | 1) Build ROC curves for N, m, T and the residual gate. 2) Recommend thresholds. 3) Freeze them for Section 5.2 sign-off. | Thresholds signed before scoring runs |
-| [ICS-053](https://github.com/MatthewK84/ICS/issues/53) | Train the segmentation model (PY-09) | 10 | 047 | 1) Label range and synthetic imagery. 2) Train and benchmark. 3) Export ONNX with a model card (DoWI 8430.01 §3.6.e). | IoU ≥0.8; model card published |
+| [ICS-053](https://github.com/MatthewK84/ICS/issues/53) | Train the segmentation model (PY-09) | 10 | 095 | 1) Label recorded range imagery. 2) Train and benchmark. 3) Export ONNX with a model card (DoWI 8430.01 §3.6.e). | IoU ≥0.8 on labeled range imagery; model card published |
 | [ICS-054](https://github.com/MatthewK84/ICS/issues/54) | Propagate uncertainty (PY-10) | 5 | 035, 042, 043 | 1) Sample every error source. 2) Predict σ versus slant range. 3) Compare with Section 4.2. | Within 20% of the Section 4.2 table |
 | [ICS-055](https://github.com/MatthewK84/ICS/issues/55) | Build the statistics package (PY-11) | 5 | 013 | 1) Compute Clopper-Pearson Pk. 2) Summarize miss distance and timeline gates. 3) Compute MLCOA versus MDCOA deltas. | Reproduces hand-worked examples |
 | [ICS-056](https://github.com/MatthewK84/ICS/issues/56) | Build the validation scorer (PY-12) | 6 | 055 | 1) Load V0 to V5 data. 2) Compute C1 to C19. 3) Emit the accreditation table. | One command produces the table |
@@ -131,8 +130,8 @@ Port each Python reference to C++ and gate every port on parity with its golden 
 |---|---|---|---|---|---|
 | [ICS-062](https://github.com/MatthewK84/ICS/issues/62) | Build GPU frame ingest, path-b (CPP-24) | 8 | 027 | 1) Decode cine frames into device memory. 2) Apply dark and flat correction. 3) Stream frame batches. | A 1.5 s, 5,000 fps window processes in ≤60 s |
 | [ICS-063](https://github.com/MatthewK84/ICS/issues/63) | Build sky-background detection on moving frames, path-b (CPP-24) | 14 | 048, 062 | 1) Model background per frame. 2) Detect negative and positive contrast. 3) Test parity with ICS-048. | ≥95% recall at ≤1 false detection per frame |
-| [ICS-064](https://github.com/MatthewK84/ICS/issues/64) | Measure blobs, path-b (CPP-24) | 8 | 063 | 1) Label connected components on the GPU. 2) Compute sub-pixel centroids and projected areas. | Centroid error ≤0.3 px on synthetic truth |
-| [ICS-065](https://github.com/MatthewK84/ICS/issues/65) | Build MWIR hot-object detection (CPP-24) | 6 | 062 | 1) Detect hot objects. 2) Reuse blob measurement. | ≥90% recall on the night synthetic set |
+| [ICS-064](https://github.com/MatthewK84/ICS/issues/64) | Measure blobs, path-b (CPP-24) | 8 | 063 | 1) Label connected components on the GPU. 2) Compute sub-pixel centroids and projected areas. | Centroid error ≤0.3 px against star-catalog positions in recorded sky frames |
+| [ICS-065](https://github.com/MatthewK84/ICS/issues/65) | Build MWIR hot-object detection (CPP-24) | 6 | 062 | 1) Detect hot objects. 2) Reuse blob measurement. | ≥90% recall on a labeled recorded night set |
 | [ICS-066](https://github.com/MatthewK84/ICS/issues/66) | Run segmentation through TensorRT (CPP-25) | 5 | 053, 062 | 1) Build a TensorRT engine from ONNX. 2) Run inference per frame. | ONNX parity; ≤5 ms per frame |
 
 ### Endgame
@@ -147,7 +146,7 @@ Port each Python reference to C++ and gate every port on parity with its golden 
 | # | Issue (plan ID) | Weeks | Blocked by | Steps | Done when |
 |---|---|---|---|---|---|
 | [ICS-069](https://github.com/MatthewK84/ICS/issues/69) | Build 2D tracklets, path-b (CPP-27) | 12 | 064 | 1) Gate detections frame to frame. 2) Assign with the Hungarian algorithm. 3) Handle splits and merges. | Parity with ICS-049 |
-| [ICS-070](https://github.com/MatthewK84/ICS/issues/70) | Match tracklets across stations, path-b (CPP-27) | 12 | 061, 069 | 1) Gate by line-of-sight distance. 2) Score candidate pairs. | ≥95% correct matches on synthetic data |
+| [ICS-070](https://github.com/MatthewK84/ICS/issues/70) | Match tracklets across stations, path-b (CPP-27) | 12 | 061, 069, 094 | 1) Gate by line-of-sight distance. 2) Score candidate pairs. | ≥95% correct matches on V2 three-station data |
 | [ICS-071](https://github.com/MatthewK84/ICS/issues/71) | Manage 3D track hypotheses, path-b (CPP-27) | 20 | 070 | 1) Build track-oriented multiple-hypothesis tracking with a bounded hypothesis count. 2) Prune and merge. 3) Emit 3D tracks. | Meets C9 on V3 data |
 | [ICS-072](https://github.com/MatthewK84/ICS/issues/72) | Score and prune tracks, path-b (CPP-27) | 6 | 071 | 1) Compute median residual per track. 2) Apply the 10 cm gate. 3) Tag track quality. | Quality flags match ICS-049 |
 
@@ -187,7 +186,7 @@ Prove the system on the bench, then in the field in validation-event order, then
 
 | # | Issue (plan ID) | Weeks | Blocked by | Steps | Done when |
 |---|---|---|---|---|---|
-| [ICS-092](https://github.com/MatthewK84/ICS/issues/92) | Stand up the HIL bench (INT-02) | 8 | 018, 047, 078 | 1) Replay PLI and synthetic imagery through every service. 2) Run the bench nightly in CI. | Nightly CI produces a full run record |
+| [ICS-092](https://github.com/MatthewK84/ICS/issues/92) | Stand up the HIL bench (INT-02) | 8 | 018, 078 | 1) Replay recorded PLI and recorded imagery through every service. 2) Run the bench nightly in CI. | Nightly CI produces a full run record |
 | [ICS-093](https://github.com/MatthewK84/ICS/issues/93) | Shake down one station in the field: V0 and V1 (INT-03) | 10 | 029, 041 | 1) Emplace and survey one station. 2) Run star calibration and PPS injection. 3) Run strobe timing checks. 4) Test the sun interlock. | C1, C2, C17 and C18 pass |
 | [ICS-094](https://github.com/MatthewK84/ICS/issues/94) | Fly the three-station envelope campaign: V2 (INT-04) | 16 | 093 | 1) Emplace all stations per Section 4.7. 2) Fly the sky-fiducial drone and dumbbell across the envelope, day and night. 3) Score with ICS-056. | C3 to C6, C14 to C16 and C19 pass |
 | [ICS-095](https://github.com/MatthewK84/ICS/issues/95) | Run debris drops and suspended-target strikes: V3 and V4 (INT-05) | 12 | 094 | 1) Drop tagged components from 100, 300 and 1,000 m. 2) Fit the drag table with ICS-050 on half the drops. 3) Run suspended-target strikes. | C7 to C12 pass |
@@ -196,15 +195,15 @@ Prove the system on the bench, then in the field in validation-event order, then
 
 ## Effort totals
 
-Direct task effort totals 622 person-weeks across 96 issues. The 14 `path-b` issues account for 131 person-weeks.
+Direct task effort totals 610 person-weeks across 95 issues. The 14 `path-b` issues account for 131 person-weeks.
 
 | Milestone | Issues | Person-weeks | Main languages |
 |---|---|---|---|
 | M0 Foundation and contracts | 14 | 31 | All |
 | M1 Core services | 17 | 103 | C++ |
 | M2 Station control | 10 | 73 | C++, firmware, Python |
-| M3 Python models | 16 | 101 | Python |
+| M3 Python models | 15 | 89 | Python |
 | M4 Algorithms | 23 | 187 | C++ |
 | M5 Front end | 10 | 57 | TypeScript |
 | M6 Integration and release | 6 | 70 | All |
-| Total | 96 | 622 |  |
+| Total | 95 | 610 |  |

@@ -152,7 +152,7 @@ Each card opens its directory. Contracts are the single source of truth: `proto/
 <a href="golden/" title="Cross-language golden test vectors"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/dirs/dir-golden-dark.svg"><img alt="golden/ Test vectors" src="docs/assets/readme/dirs/dir-golden-light.svg" width="150" height="66"></picture></a>
 <a href="cpp/" title="Real-time and production data paths and services"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/dirs/dir-cpp-dark.svg"><img alt="cpp/ C++20" src="docs/assets/readme/dirs/dir-cpp-light.svg" width="150" height="66"></picture></a>
 <a href="firmware/" title="Encoder time-tagger firmware"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/dirs/dir-firmware-dark.svg"><img alt="firmware/ C" src="docs/assets/readme/dirs/dir-firmware-light.svg" width="150" height="66"></picture></a>
-<a href="python/" title="Reference models, calibration, synthetic data, statistics"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/dirs/dir-python-dark.svg"><img alt="python/ Python" src="docs/assets/readme/dirs/dir-python-light.svg" width="150" height="66"></picture></a>
+<a href="python/" title="Reference models, calibration, statistics"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/dirs/dir-python-dark.svg"><img alt="python/ Python" src="docs/assets/readme/dirs/dir-python-light.svg" width="150" height="66"></picture></a>
 <a href="web/" title="Read-only operator and evaluator interface"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/dirs/dir-web-dark.svg"><img alt="web/ TypeScript" src="docs/assets/readme/dirs/dir-web-light.svg" width="150" height="66"></picture></a>
 <a href="deploy/" title="Containers, CI images, benches, systemd units"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/dirs/dir-deploy-dark.svg"><img alt="deploy/ Configuration" src="docs/assets/readme/dirs/dir-deploy-light.svg" width="150" height="66"></picture></a>
 <a href="docs/" title="Build plan, issue index, standards, repository guides"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/dirs/dir-docs-dark.svg"><img alt="docs/ Markdown" src="docs/assets/readme/dirs/dir-docs-light.svg" width="150" height="66"></picture></a>
@@ -170,7 +170,7 @@ Each card opens its directory. Contracts are the single source of truth: `proto/
 | [`golden/`](golden/) | Cross-language golden test vectors | Data |
 | [`cpp/`](cpp/) | Real-time and production data paths and services | C++20 |
 | [`firmware/`](firmware/) | Encoder time-tagger firmware | C |
-| [`python/`](python/) | Reference models, calibration, synthetic data, statistics | Python |
+| [`python/`](python/) | Reference models, calibration, statistics | Python |
 | [`web/`](web/) | Read-only operator and evaluator interface | TypeScript, React |
 | [`deploy/`](deploy/) | Containers, CI images, benches, systemd units | Configuration |
 | [`docs/`](docs/) | Build plan, issue index, standards, repository guides | Markdown |

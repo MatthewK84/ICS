@@ -56,7 +56,6 @@ ics/
     encoder_tagger/
   python/
     ics_models/   pointing, calibration, trajectory, drag, footprint, killclass, uncertainty
-    ics_synth/    synthetic engagement generator
     ics_stats/    Pk, timeline analysis, validation scorer
   web/            React and TypeScript application
   deploy/         containers, Envoy, systemd units, infrastructure as code
@@ -66,7 +65,7 @@ ics/
 | Language | Owns | Never does |
 |---|---|---|
 | C++ | Every real-time and production data path: timing, PLI, cameras, mounts, trigger, pipeline, records, query API | Model fitting or exploratory analysis |
-| Python | Reference models, calibration fitting, synthetic data, statistics, validation scoring, ML training | Run in the live capture or control path |
+| Python | Reference models, calibration fitting, statistics, validation scoring, ML training | Run in the live capture or control path |
 | TypeScript/React | Operator status, quick-look, 3D and map views, evaluator workflow | Command mounts, cameras or triggers |
 
 **Parameter hand-off.** Python exports versioned, schema-validated parameter files (pointing models, drag tables, kill thresholds) and ONNX models. C++ loads them at startup and records their SHA-256 hashes in every run record.
@@ -167,8 +166,7 @@ Build the reference models, calibrations and analysis tools that the C++ code po
 | PY-05 | Fit the sUAS drag table by material class from V3 drops, with uncertainty | PY-04 | Median mass error ≤25% on the hold-out half (C10) |
 | PY-06 | Write the footprint Monte Carlo reference with winds to 1,000 m | PY-04 | 85 to 95% of recovered pieces inside the 90% region (C11) |
 | PY-07 | Study kill-class thresholds (N, m, T, residual gate) with ROC curves against truth pods; freeze them | PY-04 | Thresholds signed into Section 5.2 before scoring runs |
-| PY-08 | Build the synthetic engagement generator: sky-background sequences with drones, interceptor and debris at known truth | PRO-01 | 200-sequence regression set at three slant ranges in CI |
-| PY-09 | Train the airframe segmentation model; export ONNX with a model card and benchmarks (DoWI §3.6.e) | PY-08 | IoU ≥0.8 on labeled range imagery; card published |
+| PY-09 | Train the airframe segmentation model on labeled range imagery; export ONNX with a model card and benchmarks (DoWI §3.6.e) | INT-05 | IoU ≥0.8 on labeled range imagery; card published |
 | PY-10 | Propagate uncertainty: predicted σ versus slant range from all error sources | PY-01 to PY-03 | Matches the Section 4.2 table within 20% |
 | PY-11 | Build the statistics package: Clopper-Pearson Pk, miss distance, timeline gates, MLCOA versus MDCOA deltas | PRO-02 | Reproduces hand-worked examples; feeds the C&L report |
 | PY-12 | Build the validation scorer: compute C1 to C19 from V0 to V5 data | PY-01 to PY-11 | One command produces the accreditation criteria table |
@@ -181,7 +179,7 @@ Port each Python reference to C++ and gate every port on parity with its golden 
 | ID | Task | Depends on | Done when |
 |---|---|---|---|
 | CPP-23 | Build registration: per-frame moving line of sight from encoder angles, pointing model and boresight; refraction correction (Path A/B) | CPP-15, PY-02, PY-03 | Sky-fiducial error meets C4 and C5 |
-| CPP-24 | Build detection: CUDA negative-contrast detection on sky; MWIR hot-object detection (Path A/B) | CPP-12, PY-08 | ≥95% recall at ≤1 false detection per frame on the synthetic set |
+| CPP-24 | Build detection: CUDA negative-contrast detection on sky; MWIR hot-object detection (Path A/B) | CPP-12 | ≥95% recall at ≤1 false detection per frame on hand-labeled recorded range frames |
 | CPP-25 | Run the PY-09 segmentation model through TensorRT | PY-09 | Parity with ONNX output; ≤5 ms per frame |
 | CPP-26 | Build endgame: IMM two-body tracker seeded by PLI; closest approach and contact time | CPP-23, PY-04 | Parity with PY-04; meets C7, C8 and C16 |
 | CPP-27 | Build association: debris association across frames and stations; OWLSS adapter on Path A, full implementation on Path B | CPP-23, CPP-24 | Meets C9 on V3 data |
@@ -218,7 +216,7 @@ Prove the system on the bench, then in the field in validation-event order, then
 | ID | Task | Depends on | Done when |
 |---|---|---|---|
 | INT-01 | Stand up the SITL rig: PX4 and ArduPilot SITL emitting MAVLink through an emulated TAP | CPP-14 | Nightly CI produces canonical PLI end to end |
-| INT-02 | Stand up the HIL bench: replay PLI and synthetic imagery through every service | INT-01, PY-08 | Nightly CI produces a full run record |
+| INT-02 | Stand up the HIL bench: replay recorded PLI and recorded imagery through every service | INT-01 | Nightly CI produces a full run record |
 | INT-03 | Shake down one station in the field (V0, V1) | CPP-22 | C1, C2, C17 and C18 pass |
 | INT-04 | Fly the three-station envelope campaign (V2) | INT-03 | C3 to C6, C14 to C16 and C19 pass |
 | INT-05 | Run debris drops and suspended-target strikes (V3, V4) | INT-04 | C7 to C12 pass |
@@ -235,7 +233,7 @@ Staff Path A with 7.5 to 8 engineers over 18 to 20 months. Path B needs 10 engin
 | 1. Timing, PLI, camera I/O | 2 to 6 | Systems engineer | Canonical PLI from SITL; one command arms all cameras |
 | 2. Station control | 3 to 8 | Controls engineer | C17 and C18 met on the bench |
 | 3. Python models | 2 to 10 | Modeling engineer | Golden files and calibrations published |
-| 4. Algorithms and products | 6 to 14 | CV and estimation engineers | Parity with Python; synthetic regression green |
+| 4. Algorithms and products | 6 to 14 | CV and estimation engineers | Parity with Python; recorded-data regression green |
 | 5. Front end | 4 to 15 | Front-end engineer | Evaluator workflow accepted |
 | 6. Integration and release | 10 to 20 | Architect, all | Accreditation signed; AO accepts evidence |
 

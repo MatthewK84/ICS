@@ -986,34 +986,12 @@
       "done_when": "Miss distance within 1 mm on synthetic truth"
     },
     {
-      "id": "ICS-047",
-      "title": "Build the synthetic engagement generator",
-      "plan_id": "PY-08",
-      "milestone": "M3 Python models",
-      "weeks": 12,
-      "blocked_by": [
-        "ICS-012"
-      ],
-      "labels": [
-        "lang:python",
-        "area:validation"
-      ],
-      "steps": [
-        "Render sky backgrounds with noise and turbulence.",
-        "Insert drones, interceptor and debris at known truth.",
-        "Write cine-compatible frames with truth files."
-      ],
-      "done_when": "200-sequence regression set runs in CI"
-    },
-    {
       "id": "ICS-048",
       "title": "Write the reference detector",
       "plan_id": null,
       "milestone": "M3 Python models",
       "weeks": 6,
-      "blocked_by": [
-        "ICS-047"
-      ],
+      "blocked_by": [],
       "labels": [
         "lang:python",
         "area:detection",
@@ -1025,7 +1003,7 @@
         "Measure sub-pixel centroid and area.",
         "Publish golden outputs."
       ],
-      "done_when": "≥95% recall at ≤1 false detection per frame on synthetic data"
+      "done_when": "≥95% recall at ≤1 false detection per frame on hand-labeled recorded range frames"
     },
     {
       "id": "ICS-049",
@@ -1034,8 +1012,8 @@
       "milestone": "M3 Python models",
       "weeks": 10,
       "blocked_by": [
-        "ICS-047",
-        "ICS-048"
+        "ICS-048",
+        "ICS-095"
       ],
       "labels": [
         "lang:python",
@@ -1048,7 +1026,7 @@
         "Manage track hypotheses.",
         "Publish golden outputs."
       ],
-      "done_when": "≥90% correct associations on synthetic debris clouds"
+      "done_when": "≥90% correct associations on labeled recorded debris from the V3 drops"
     },
     {
       "id": "ICS-050",
@@ -1117,18 +1095,18 @@
       "milestone": "M3 Python models",
       "weeks": 10,
       "blocked_by": [
-        "ICS-047"
+        "ICS-095"
       ],
       "labels": [
         "lang:python",
         "area:detection"
       ],
       "steps": [
-        "Label range and synthetic imagery.",
+        "Label recorded range imagery.",
         "Train and benchmark.",
         "Export ONNX with a model card (DoWI 8430.01 §3.6.e)."
       ],
-      "done_when": "IoU ≥0.8; model card published"
+      "done_when": "IoU ≥0.8 on labeled range imagery; model card published"
     },
     {
       "id": "ICS-054",
@@ -1354,7 +1332,7 @@
         "Label connected components on the GPU.",
         "Compute sub-pixel centroids and projected areas."
       ],
-      "done_when": "Centroid error ≤0.3 px on synthetic truth"
+      "done_when": "Centroid error ≤0.3 px against star-catalog positions in recorded sky frames"
     },
     {
       "id": "ICS-065",
@@ -1373,7 +1351,7 @@
         "Detect hot objects.",
         "Reuse blob measurement."
       ],
-      "done_when": "≥90% recall on the night synthetic set"
+      "done_when": "≥90% recall on a labeled recorded night set"
     },
     {
       "id": "ICS-066",
@@ -1465,7 +1443,8 @@
       "weeks": 12,
       "blocked_by": [
         "ICS-061",
-        "ICS-069"
+        "ICS-069",
+        "ICS-094"
       ],
       "labels": [
         "lang:cpp",
@@ -1476,7 +1455,7 @@
         "Gate by line-of-sight distance.",
         "Score candidate pairs."
       ],
-      "done_when": "≥95% correct matches on synthetic data"
+      "done_when": "≥95% correct matches on V2 three-station data"
     },
     {
       "id": "ICS-071",
@@ -1908,7 +1887,6 @@
       "weeks": 8,
       "blocked_by": [
         "ICS-018",
-        "ICS-047",
         "ICS-078"
       ],
       "labels": [
@@ -1916,7 +1894,7 @@
         "area:validation"
       ],
       "steps": [
-        "Replay PLI and synthetic imagery through every service.",
+        "Replay recorded PLI and recorded imagery through every service.",
         "Run the bench nightly in CI."
       ],
       "done_when": "Nightly CI produces a full run record"

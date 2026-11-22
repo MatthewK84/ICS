@@ -44,8 +44,8 @@ class ManifestTests(unittest.TestCase):
 
     def test_repository_manifest_covers_every_planned_task(self) -> None:
         manifest: sm.Manifest = sm.load_manifest(str(MANIFEST_PATH))
-        # ICS-080 was dropped (ICS-013).
-        expected: set[str] = {f"ICS-{number:03d}" for number in range(1, 98)} - {"ICS-080"}
+        # ICS-080 was dropped (ICS-013); ICS-047 was dropped from scope.
+        expected: set[str] = {f"ICS-{number:03d}" for number in range(1, 98)} - {"ICS-047", "ICS-080"}
         self.assertEqual(len(manifest.milestones), 7)
         self.assertEqual(set(manifest.task_milestones), expected)
 
