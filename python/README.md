@@ -160,7 +160,7 @@ uv run --locked python -m ics_models.pointing fit night.csv --station s1 --model
 | `truth` | `flight`: exact synthetic trajectories along straight, accelerating and turning legs |
 
 - **Done when.** Given true states 20 ms before the closest approach, the miss is within 1 mm of the truth's for straight, accelerating and turning bodies, and within 1e-6 m from 4 s out without turns. Tracking the scripted engagement from noise-free positions, the final miss is within 1 mm of the true 0.3 m; from noisy positions (1, 5 and 20 mm), within 3 sigma. The target's most likely model follows its straight leg, its turn and its acceleration.
-- **Golden vectors.** `python -m ics_golden.imm ../golden/imm` writes them, from seed 46. [`tests/test_endgame_golden.py`](tests/test_endgame_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1, or 1e-9 for the tracks and encounters, which carry CPU rounding through 500 updates.
+- **Golden vectors.** `python -m ics_golden.imm ../golden/imm` writes them, from seed 46. [`tests/test_endgame_golden.py`](tests/test_endgame_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
 - **Out of scope.** Seeding from PLI and association are ICS-067's; same-frame relative measurements for the miss are ICS-068's. The turn rates are fixed, not estimated.
 
 ## Power-of-Ten checks
