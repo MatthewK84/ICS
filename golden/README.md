@@ -60,6 +60,16 @@ Contents:
 
   The C++ estimation port (CPP-28, [ICS-073](https://github.com/MatthewK84/ICS/issues/73)) must match the densities and trajectories within 1e-9 of the larger of the value and 1, and the fitted states within 1e-6 relative. [`python/tests/test_ballistic_golden.py`](../python/tests/test_ballistic_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
 
+- [`imm/`](imm): the IMM two-body tracker and closest approach ([ICS-046](https://github.com/MatthewK84/ICS/issues/46)), written by [`python/ics_golden/imm.py`](../python/ics_golden/imm.py).
+  - `parameters.csv` is the settings the other files were written with: the four models (constant velocity, constant acceleration, and turns at ±0.5 rad/s), the switching matrix, the start, and the horizon and contact radius.
+  - `motion.csv` gives each model's transition and process noise for steps of 1 ms, 10 ms and 730 ms, row by row.
+  - `measurements.csv` is a scripted engagement measured every 10 ms with 5 mm of noise on each axis: the target flies straight, turns left, then accelerates; the interceptor accelerates and passes 0.3 m from it 5 s after the start.
+  - `tracks.csv` gives each body's model chances and combined state and covariance (upper triangle, row by row) after every tenth measurement and the last.
+  - `encounters.csv` gives the encounter of the two tracks at the same times, or none.
+  - `approaches.csv` gives encounters for random estimate pairs with diagonal covariances, and for the edge cases: receding, parked, past the horizon, in contact already, a direct hit, a pass while accelerating, one that falls short, and one that recedes then comes back.
+
+  The C++ endgame (CPP-26, [ICS-067](https://github.com/MatthewK84/ICS/issues/67) and [ICS-068](https://github.com/MatthewK84/ICS/issues/68)) must match every flag exactly, every time within 2 ns, and every other number within 1e-9 of the larger of it and 1. [`python/tests/test_endgame_golden.py`](../python/tests/test_endgame_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
+
 Planned contents:
 
 - Golden outputs from the other Python reference models in `python/ics_models` (for example [ICS-045](https://github.com/MatthewK84/ICS/issues/45) to [ICS-049](https://github.com/MatthewK84/ICS/issues/49)).
