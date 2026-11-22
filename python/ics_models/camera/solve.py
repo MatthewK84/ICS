@@ -8,7 +8,6 @@ is the residuals' variance per degree of freedom times the inverse normal
 matrix at the solution.
 """
 
-import math
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -58,15 +57,15 @@ def column_scales(derivatives: Matrix) -> Vector:
 def damped_step(errors: Vector, derivatives: Matrix, damping: float) -> Vector:
     """The step that minimises the damped linearised cost.
 
-    Solved as a least-squares problem in columns scaled to unit length, not
-    through the normal matrix, whose condition number is the square of the
-    Jacobian's: a board's distance and the focal length pull almost together.
+    Solved in columns scaled to unit length, where the normal matrix's
+    diagonal is 1 and Marquardt's damping adds damping to it: a board's
+    distance and the focal length pull almost together, and unscaled
+    columns differ by many orders of magnitude.
     """
     scales = column_scales(derivatives)
-    size = derivatives.shape[1]
-    stacked = np.vstack([derivatives / scales, math.sqrt(damping) * np.eye(size)])
-    target = np.concatenate([-errors, np.zeros(size)])
-    scaled_step = np.linalg.lstsq(stacked, target, rcond=None)[0]
+    scaled = derivatives / scales
+    normal = scaled.T @ scaled + damping * np.eye(derivatives.shape[1])
+    scaled_step = np.linalg.solve(normal, -(scaled.T @ errors))
     step: Vector = scaled_step / scales
     return step
 
