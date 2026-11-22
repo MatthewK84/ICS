@@ -51,10 +51,19 @@ Contents:
 
   The C++ controller matches every flag, edge and delay exactly, every approach's time within 2 ns, and every miss within 1e-9 of the larger of it and 1 ([`cpp/trigger/test/golden_test.cpp`](../cpp/trigger/test/golden_test.cpp)). [`python/tests/test_trigger_golden.py`](../python/tests/test_trigger_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
 
+- [`ballistic/`](ballistic): the 7-state ballistic model ([ICS-044](https://github.com/MatthewK84/ICS/issues/44)), written by [`python/ics_golden/ballistic.py`](../python/ics_golden/ballistic.py).
+  - `parameters.csv` is the settings the other files were written with: the range origin's height, gravity, the RK4 step, and the fit's settings.
+  - `atmosphere.csv` gives ISA density from -500 m to 11 km.
+  - `trajectories.csv` gives six pieces, from no drag to foil-like drag, propagated every 73 ms for about 3 s, so most times fall between RK4 steps.
+  - `measurements.csv` gives those pieces' positions every 10 ms for 2 s, with 2 cm of noise on each axis.
+  - `fits.csv` gives each piece's true state, the fitted state, the fit's iterations, convergence and RMS residual, and the covariance's upper triangle, row by row.
+
+  The C++ estimation port (CPP-28, [ICS-073](https://github.com/MatthewK84/ICS/issues/73)) must match the densities and trajectories within 1e-9 of the larger of the value and 1, and the fitted states within 1e-6 relative. [`python/tests/test_ballistic_golden.py`](../python/tests/test_ballistic_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
+
 Planned contents:
 
-- Golden outputs from the other Python reference models in `python/ics_models` (for example [ICS-044](https://github.com/MatthewK84/ICS/issues/44) to [ICS-049](https://github.com/MatthewK84/ICS/issues/49)).
+- Golden outputs from the other Python reference models in `python/ics_models` (for example [ICS-045](https://github.com/MatthewK84/ICS/issues/45) to [ICS-049](https://github.com/MatthewK84/ICS/issues/49)).
 
 Rules: golden files change only through the reference that produces them, and every change is reviewed with that reference.
 
-Next issue: [ICS-044](https://github.com/MatthewK84/ICS/issues/44), the first Python reference model to publish golden outputs.
+Next issue: [ICS-045](https://github.com/MatthewK84/ICS/issues/45), lift and flutter, which extends the ballistic model.

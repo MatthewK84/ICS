@@ -9,7 +9,7 @@ Planned layout:
 ```text
 python/
   ics_golden/   golden test vectors shared with C++ and TypeScript (golden/), and the run-record samples (schemas/)
-  ics_models/   pointing (ICS-035), cue (ICS-037), tracker (ICS-038), handoff (ICS-039), trigger (ICS-040), and to
+  ics_models/   pointing (ICS-035), cue (ICS-037), tracker (ICS-038), handoff (ICS-039), trigger (ICS-040), ballistic (ICS-044), and to
                 come: calibration, trajectory, drag, footprint, killclass, uncertainty
   ics_synth/    synthetic engagement generator
   ics_stats/    Pk, timeline analysis, validation scorer
@@ -130,6 +130,20 @@ uv run --locked python -m ics_models.pointing fit night.csv --station s1 --model
 
 - **Golden vectors.** `python -m ics_golden.trigger ../golden/trigger` writes them, from seed 40: approaches at random states with gentle and violent accelerations, and shots for pulses asked for around now. [`tests/test_trigger_golden.py`](tests/test_trigger_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
 - **Tests** check approaches for vehicles that keep their velocity, speed up and turn away, and for steps that find no minimum or leave the horizon. They check edges with an offset, pulses on time and too late for their edge, both ends of the arming window, and periods too short for their margins.
+
+## Ballistic model
+
+[`ics_models/ballistic`](ics_models/ballistic) is the reference 7-state ballistic model for debris ([ICS-044](https://github.com/MatthewK84/ICS/issues/44), PY-04). The C++ estimation port (CPP-28, [ICS-073](https://github.com/MatthewK84/ICS/issues/73)) must match it through [`golden/ballistic`](../golden/README.md). The state is position and velocity in the range ENU frame and κ = 1/β = Cd·A/m in m²/kg; ρ is not fitted but comes from the atmosphere at the piece's height.
+
+| Module | Provides |
+|---|---|
+| `atmosphere` | `density`: ISA troposphere air density from -500 m to 11 km above mean sea level |
+| `dynamics` | `Model` (range origin height, gravity, RK4 step); the point-mass drag acceleration a = -g·up - ½·ρ·κ·\|v\|·v, with flat-Earth gravity, no Coriolis and no wind; `propagate` and `trajectory`, fixed-step RK4 in whole-nanosecond steps that land exactly on each time asked for |
+| `fit` | `fit`: the state at the first point and κ from timed 3D points with one σ per axis, by Levenberg-Marquardt with central-difference derivatives, seeded from a quadratic; the covariance (JᵀJ)⁻¹, the RMS 3D residual, the iterations and whether it converged |
+
+- **Done when.** Noise-free points give back the true state and κ within 1e-6 relative for κ from 0 to 1 m²/kg. On 30 noisy trials with 2 cm per axis, the mean normalised squared error is within 5 to 9 (χ² with 7 degrees of freedom) and κ lies within 3σ in at least 28.
+- **Golden vectors.** `python -m ics_golden.ballistic ../golden/ballistic` writes them, from seed 44: density by height, six pieces from no drag to foil-like drag propagated to times between RK4 steps and on them, and the same pieces measured with noise and fitted. [`tests/test_ballistic_golden.py`](tests/test_ballistic_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
+- **Out of scope.** Lift, flutter and model selection are ICS-045; wind is the footprint model's (ICS-047).
 
 ## Power-of-Ten checks
 
