@@ -1,13 +1,16 @@
 <p align="center">
-  <img alt="ICS: Intercept Characterization System. Two stations triangulate the closest approach of an interceptor and its target." src="docs/assets/readme/banner.svg" width="100%">
+  <img alt="ICS: Intercept Characterization System. Two camera stations measure the closest approach of an interceptor and its target." src="docs/img/header.png" width="100%">
 </p>
 
 <p align="center">
   <a href="https://github.com/MatthewK84/ICS/actions/workflows/cpp-toolchain.yml"><img alt="C++ toolchain" src="https://github.com/MatthewK84/ICS/actions/workflows/cpp-toolchain.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/MatthewK84/ICS/actions/workflows/python-toolchain.yml"><img alt="Python toolchain" src="https://github.com/MatthewK84/ICS/actions/workflows/python-toolchain.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/MatthewK84/ICS/actions/workflows/web-toolchain.yml"><img alt="TypeScript toolchain" src="https://github.com/MatthewK84/ICS/actions/workflows/web-toolchain.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/MatthewK84/ICS/actions/workflows/cuda-toolchain.yml"><img alt="CUDA toolchain" src="https://github.com/MatthewK84/ICS/actions/workflows/cuda-toolchain.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/MatthewK84/ICS/actions/workflows/proto.yml"><img alt="Protobuf" src="https://github.com/MatthewK84/ICS/actions/workflows/proto.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/MatthewK84/ICS/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/MatthewK84/ICS/actions/workflows/codeql.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/MatthewK84/ICS/actions/workflows/dependency-register.yml"><img alt="Dependency register" src="https://github.com/MatthewK84/ICS/actions/workflows/dependency-register.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/MatthewK84/ICS/actions/workflows/evidence.yml"><img alt="Evidence" src="https://github.com/MatthewK84/ICS/actions/workflows/evidence.yml/badge.svg?branch=main"></a>
 </p>
 
 <p align="center">
@@ -15,7 +18,9 @@
   <a href="#system-map"><b>System map</b></a> ·
   <a href="#find-your-way"><b>Find your way</b></a> ·
   <a href="#repository-layout"><b>Layout</b></a> ·
+  <a href="#packages"><b>Packages</b></a> ·
   <a href="#quality-gates"><b>Quality gates</b></a> ·
+  <a href="#ci-pipeline"><b>CI pipeline</b></a> ·
   <a href="#quick-start"><b>Quick start</b></a> ·
   <a href="#contributing"><b>Contributing</b></a>
 </p>
@@ -34,7 +39,9 @@ ICS produces truth-grade intercept, kill and debris data for non-explosive hit-t
 
 ## System map
 
-Each card opens the code it names, and the dashed planned cards open their build-plan tasks. Hover over a card for a one-line description. Stages run in the order data moves through a station, and their phases are the [build plan](docs/build-plan.md)'s.
+<p align="center"><img alt="Station data flow: sources, ingest, time and cameras, store and align, station control, and the planned Phase 4 products, on top of the reference models and shared foundations." src="docs/img/dataflow.png" width="100%"></p>
+
+The cards below hold the same stages in more detail. Each card opens the code it names, and the dashed planned cards open their build-plan tasks. Hover over a card for a one-line description. Stages run in the order data moves through a station, and their phases are the [build plan](docs/build-plan.md)'s.
 
 **SOURCES** · what each station hears and sees
 
@@ -131,7 +138,7 @@ Positions are WGS84 and the range ENU frame, heights are EGM96 for mean sea leve
 | Understand the plan, its phases and the coding standards | [docs/build-plan.md](docs/build-plan.md) |
 | See what is built and what comes next | [The issue index](docs/github-issues-path-b.md) and the [milestones](https://github.com/MatthewK84/ICS/milestones) |
 | Change a message or a service contract | [proto/](proto/README.md) |
-| Work on a real-time service, adapter or station control | [cpp/](cpp/README.md) and the [C++ module list](#c-modules) below |
+| Work on a real-time service, adapter or station control | [cpp/](cpp/README.md) and the [package list](#packages) below |
 | Write or change a reference model | [python/](python/README.md) |
 | Add or regenerate golden test vectors | [golden/](golden/README.md) |
 | Work on the operator and evaluator interface | [web/](web/README.md) |
@@ -180,35 +187,113 @@ Each directory's README lists its contents, its rules and the issues that added 
 
 </details>
 
-<details id="c-modules">
-<summary><b>C++ modules</b>: 21 modules, each linked to its section of <a href="cpp/README.md">cpp/README.md</a></summary>
+## Packages
+
+<p align="center"><img alt="Hand-written source by language: C++ about 70%, Python about 19%, then CI YAML, Shell, Protobuf, CMake and TypeScript." src="docs/img/languages.png" width="100%"></p>
+
+Every package below is one of these types: **library**, **daemon** (a long-running station service), **tool** (a command-line program), **firmware**, **reference model**, **test harness** or **contract**. Its status is one of:
+- **Built**: merged, with its tests passing in CI.
+- **Built, on hold**: merged and tested in CI. Its last check needs real hardware, field data or credentials, and the linked follow-up tracks that check.
+- **Planned**: in the build plan, not yet started.
+
+<details open>
+<summary><b>C++20</b> · <code>cpp/</code> · libraries and daemons</summary>
 <br>
 
-| Module | Directory | What it does |
-|---|---|---|
-| [Common library](cpp/README.md#common-library) | `common/` | Results, units, checks and fixed-capacity containers that every real-time component links |
-| [Logging](cpp/README.md#logging) | `logging/` | Structured logging, set up once per service |
-| [Config](cpp/README.md#config) | `config/` | TOML configuration, read against a schema written as code |
-| [Frames](cpp/README.md#frames) | `frames/` | Conversions between WGS84, the range ENU frame and EGM96 heights |
-| [Timing](cpp/README.md#timing) | `timing/`, `services/timingd/` | The station's PTP time quality, served by `ics-timingd` |
-| [Capture](cpp/README.md#capture) | `capture/`, `services/capd/` | Every packet on the station's TAP ports, captured by `ics-capd` |
-| [MAVLink](cpp/README.md#mavlink) | `mavlink/` | PLI adapter for MAVLink |
-| [Cursor on Target](cpp/README.md#cursor-on-target) | `cot/` | PLI adapter for CoT XML |
-| [Lattice](cpp/README.md#lattice) | `lattice/` | PLI adapter for Lattice entity streams |
-| [SAPIENT](cpp/README.md#sapient) | `sapient/` | Radar-track adapter for BSI Flex 335 |
-| [Onboard logs](cpp/README.md#onboard-logs) | `flightlog/` | Import of PX4 ULog and ArduPilot DataFlash logs |
-| [Time alignment](cpp/README.md#time-alignment) | `timealign/` | Each vehicle's clock fitted to UTC after a sortie |
-| [PLI store](cpp/README.md#pli-store) | `store/`, `services/plid/` | Segment log and Parquet store, served by `ics-plid` |
-| [Cameras](cpp/README.md#cameras) | `camera/` | Phantom and FLIR high-speed camera drivers and offload |
-| [Camera service](cpp/README.md#camera-service) | `services/camd/` | `ics-camd`: one command arms and offloads every camera |
-| [Strobe calibration](cpp/README.md#strobe-calibration) | `strobe/` | Each camera's frame-time offset, measured with a strobe |
-| [Mount client](cpp/README.md#mount-client) | `mount/` | PWI4 client, rate loop and sun keep-out interlock |
-| [Encoder time-tagger](cpp/README.md#encoder-time-tagger) | `tagger/` | The time-tagger's core, shared with the firmware |
-| [Encoder module](cpp/README.md#encoder-module) | `encoder/` | Each camera frame's line of sight from encoder angles |
-| [Cue extrapolator](cpp/README.md#cue-extrapolator) | `cue/` | PLI and radar fused into each station's pointing cue |
-| [Tracker](cpp/README.md#tracker) | `tracker/` | Closed-loop tracking on the narrow-field camera, through Aravis |
-| [Hand-off scheduler](cpp/README.md#hand-off-scheduler) | `handoff/` | One mount across several engagements: the queue, the slew and the flags |
-| [Trigger controller](cpp/README.md#trigger-controller) | `trigger/` | The cameras fired at closest approach, through a pulse generator on the PPS |
+| Package | Path | Type | Status | What it does |
+|---|---|---|---|---|
+| [Common library](cpp/README.md#common-library) | `common/` | Library | Built | Results, units, checks and fixed-capacity containers |
+| [Logging](cpp/README.md#logging) | `logging/` | Library | Built | Structured logging, set up once per service |
+| [Config](cpp/README.md#config) | `config/` | Library | Built | TOML configuration read against a schema in code |
+| [Frames](cpp/README.md#frames) | `frames/` | Library | Built | WGS84, the range ENU frame and EGM96 heights |
+| [Contracts](proto/README.md) | `proto/` | Library (generated) | Built | C++ messages and gRPC stubs generated from `proto/` |
+| [Timing](cpp/README.md#timing) | `timing/`, `services/timingd/` | Library + daemon `ics-timingd` | Built | The station's PTP time quality over gRPC |
+| [Capture](cpp/README.md#capture) | `capture/`, `services/capd/` | Library + daemon `ics-capd` | Built | Every packet on the TAP ports, to pcap |
+| [MAVLink](cpp/README.md#mavlink) | `mavlink/` | Library | Built | PLI adapter for MAVLink |
+| [Cursor on Target](cpp/README.md#cursor-on-target) | `cot/` | Library | Built | PLI adapter for CoT XML |
+| [Lattice](cpp/README.md#lattice) | `lattice/` | Library | Built, on hold: [sandbox run](https://github.com/MatthewK84/ICS/issues/23) | PLI adapter for Lattice entity streams |
+| [SAPIENT](cpp/README.md#sapient) | `sapient/` | Library | Built | Radar-track adapter for BSI Flex 335 |
+| [Onboard logs](cpp/README.md#onboard-logs) | `flightlog/` | Library | Built | PX4 ULog and ArduPilot DataFlash import |
+| [Time alignment](cpp/README.md#time-alignment) | `timealign/`, `retime/` | Library | Built | Each vehicle's clock fitted to UTC after a sortie |
+| [PLI store](cpp/README.md#pli-store) | `store/`, `services/plid/` | Library + daemon `ics-plid` | Built, on hold: [live feeds](https://github.com/MatthewK84/ICS/issues/147) | Segment log and Parquet store for every PLI report |
+| [Cameras](cpp/README.md#cameras) | `camera/` | Library | Built, on hold: [Phantom](https://github.com/MatthewK84/ICS/issues/140), [FLIR](https://github.com/MatthewK84/ICS/issues/142) | High-speed camera drivers and offload |
+| [Camera service](cpp/README.md#camera-service) | `services/camd/` | Daemon `ics-camd` | Built, on hold: [Phantom](https://github.com/MatthewK84/ICS/issues/140), [FLIR](https://github.com/MatthewK84/ICS/issues/142) | One command arms and offloads every camera |
+| [Strobe calibration](cpp/README.md#strobe-calibration) | `strobe/` | Library | Built, on hold: [strobe bench](https://github.com/MatthewK84/ICS/issues/144) | Each camera's frame-time offset |
+| [Mount client](cpp/README.md#mount-client) | `mount/` | Library | Built, on hold: [bench mount](https://github.com/MatthewK84/ICS/issues/165) | PWI4 client, rate loop and sun keep-out interlock |
+| [Encoder time-tagger](cpp/README.md#encoder-time-tagger) | `tagger/` | Library (freestanding) | Built, on hold: [board port](https://github.com/MatthewK84/ICS/issues/163) | The tagger core shared with the firmware |
+| [Encoder module](cpp/README.md#encoder-module) | `encoder/` | Library | Built, on hold: [bench mount](https://github.com/MatthewK84/ICS/issues/165) | Each frame's line of sight from encoder angles |
+| [Cue extrapolator](cpp/README.md#cue-extrapolator) | `cue/` | Library | Built, on hold: [flown replay](https://github.com/MatthewK84/ICS/issues/172) | PLI and radar fused into each station's cue |
+| [Tracker](cpp/README.md#tracker) | `tracker/` | Library | Built, on hold: [flown replay](https://github.com/MatthewK84/ICS/issues/175) | Closed-loop tracking on the narrow-field camera |
+| [Hand-off scheduler](cpp/README.md#hand-off-scheduler) | `handoff/` | Library | Built | One mount across several engagements, in order |
+| [Trigger controller](cpp/README.md#trigger-controller) | `trigger/` | Library | Built | Cameras fired at closest approach, timed from the PPS |
+| Station control service | `services/mountd/` | Daemon `ics-mountd` | Planned: [ICS-041](https://github.com/MatthewK84/ICS/issues/41) | Mount control, interlocks and the station console |
+| Algorithms and products | `cpp/` | Libraries | Planned: [Phase 4](docs/build-plan.md#phase-4-algorithms-and-products-c-months-6-to-14) | Line of sight, detection, closest approach, debris and run records |
+
+</details>
+
+<details>
+<summary><b>C++20</b> · command-line tools and bench programs</summary>
+<br>
+
+| Tool | Path | Type | Status | What it does |
+|---|---|---|---|---|
+| `ics-time-watch` | `services/timingd/` | Tool | Built | Writes ics-timingd's reports as JSON lines |
+| `ics-pli-import`, `ics-pli-query` | `services/plid/` | Tool | Built | Imports a sortie's PLI and queries the store |
+| `ics-cam-offload` | `services/camd/` | Tool | Built | Arms and offloads cameras through ics-camd |
+| `ics-strobe-analyzer` | `strobe/` | Tool | Built | Measures frame-time offsets from strobe frames |
+| `ics-encoder-monitor` | `encoder/` | Tool | Built | Operational test of the encoder path on the real tagger |
+| `ics-cue-replay` | `cue/` | Tool | Built | Replays recorded segment files through the cue |
+| `ics-tracker-monitor` | `tracker/` | Tool | Built | Operational test of the closed-loop tracker |
+| `ics-mavlink-replay`, `ics-log-import`, `ics-time-align` | `testing/` | Test harness | Built | Replay and import checks for the PLI path |
+| `ics-capture-send`, `ics-capture-verify` | `testing/capture_bench/` | Test harness | Built | Capture bench sender and checker |
+| `ics-camera-bench`, `ics-strobe-bench` | `testing/` | Test harness | Built | Camera and strobe bench programs |
+| `ics-lattice-probe` | `testing/lattice_probe/` | Test harness | Built | Lattice sandbox connectivity check |
+
+</details>
+
+<details>
+<summary><b>Python 3.12</b> · <code>python/</code> · reference models and tools</summary>
+<br>
+
+<p align="center"><img alt="Python reference, golden writer, golden vectors, C++ port, parity gate in CI." src="docs/img/golden-flow.png" width="100%"></p>
+
+| Package | Path | Type | Status | What it does |
+|---|---|---|---|---|
+| Pointing model | `ics_models/pointing/` | Reference model | Built | TPOINT-style mount pointing model and its fit (ICS-035) |
+| Camera model | `ics_models/camera/` | Reference model | Built | Brown-Conrady intrinsics, distortion and boresight (ICS-042) |
+| Cue model | `ics_models/cue/` | Reference model | Built | Reference for `cpp/cue` (ICS-037) |
+| Tracker model | `ics_models/tracker/` | Reference model | Built | Reference for `cpp/tracker` (ICS-038) |
+| Hand-off model | `ics_models/handoff/` | Reference model | Built | Reference for `cpp/handoff` (ICS-039) |
+| Trigger model | `ics_models/trigger/` | Reference model | Built | Reference for `cpp/trigger` (ICS-040) |
+| Ballistic model | `ics_models/ballistic/` | Reference model | Built | Ballistic, lift and flutter models with model selection (ICS-044, ICS-045) |
+| Endgame model | `ics_models/endgame/` | Reference model | Built | IMM two-body tracker and closest approach (ICS-046) |
+| Golden writer | `ics_golden/` | Tool | Built | Writes the `golden/` vectors each C++ port must match |
+| Power-of-Ten lint | `ics_lint/` | Tool | Built | The repository's own Python rule checks |
+| SITL harness | `ics_sitl/` | Test harness | Built | Software-in-the-loop flights for the PLI adapters |
+| Generated messages | `gen/` | Library (generated) | Built | Python messages generated from `proto/` |
+
+</details>
+
+<details>
+<summary><b>TypeScript</b> · <code>web/</code> · operator and evaluator interface</summary>
+<br>
+
+| Package | Path | Type | Status | What it does |
+|---|---|---|---|---|
+| `ics-web` | `apps/ics-web/` | Web app (React) | Scaffold | The read-only operator and evaluator interface |
+| `eslint-plugin-ics` | `packages/eslint-plugin-ics/` | Tool (lint plugin) | Built | The repository's own TypeScript rule checks |
+
+</details>
+
+<details>
+<summary><b>Firmware, contracts and schemas</b></summary>
+<br>
+
+| Package | Path | Language | Type | Status | What it does |
+|---|---|---|---|---|---|
+| Encoder time-tagger | `firmware/encoder_tagger/` | C++20, freestanding | Firmware | Planned: [board port](https://github.com/MatthewK84/ICS/issues/163) | STM32H7-class port of `cpp/tagger` |
+| Contracts | `proto/` | Protobuf | Contract | Built | Messages and services, the single source of truth |
+| Run-record schema | `schemas/` | JSON Schema | Contract | Built | Run-record schema keyed to C4 IDs |
 
 </details>
 
@@ -227,6 +312,28 @@ Every change reaches `main` through a pull request, and CI enforces each gate be
 | CodeQL | Fails on any finding | [codeql.yml](.github/workflows/codeql.yml) |
 | Dependencies | Every dependency pinned and reviewed for license, sustainment and foreign influence | [Dependency register](docs/dependency-register.md) |
 | Evidence | A signed SBOM and provenance for every merge | [deploy/evidence/](deploy/evidence/README.md) |
+
+## CI pipeline
+
+<p align="center"><img alt="A pull request runs the path-filtered toolchain workflows, then merges to main, where signed SBOM and provenance evidence is produced." src="docs/img/ci-pipeline.png" width="100%"></p>
+
+Badges show the latest run on `main`. Workflows that run only on pull requests or on demand have no `main` status.
+
+| Workflow | Runs on | Status |
+|---|---|---|
+| [C++ toolchain](.github/workflows/cpp-toolchain.yml) | Pull request, push | [![C++ toolchain](https://github.com/MatthewK84/ICS/actions/workflows/cpp-toolchain.yml/badge.svg?branch=main)](https://github.com/MatthewK84/ICS/actions/workflows/cpp-toolchain.yml) |
+| [Python toolchain](.github/workflows/python-toolchain.yml) | Pull request, push | [![Python toolchain](https://github.com/MatthewK84/ICS/actions/workflows/python-toolchain.yml/badge.svg?branch=main)](https://github.com/MatthewK84/ICS/actions/workflows/python-toolchain.yml) |
+| [TypeScript toolchain](.github/workflows/web-toolchain.yml) | Pull request, push | [![TypeScript toolchain](https://github.com/MatthewK84/ICS/actions/workflows/web-toolchain.yml/badge.svg?branch=main)](https://github.com/MatthewK84/ICS/actions/workflows/web-toolchain.yml) |
+| [CUDA toolchain](.github/workflows/cuda-toolchain.yml) | Pull request, push | [![CUDA toolchain](https://github.com/MatthewK84/ICS/actions/workflows/cuda-toolchain.yml/badge.svg?branch=main)](https://github.com/MatthewK84/ICS/actions/workflows/cuda-toolchain.yml) |
+| [Protobuf](.github/workflows/proto.yml) | Pull request, push | [![Protobuf](https://github.com/MatthewK84/ICS/actions/workflows/proto.yml/badge.svg?branch=main)](https://github.com/MatthewK84/ICS/actions/workflows/proto.yml) |
+| [CodeQL](.github/workflows/codeql.yml) | Pull request, push, weekly | [![CodeQL](https://github.com/MatthewK84/ICS/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/MatthewK84/ICS/actions/workflows/codeql.yml) |
+| [Dependency register](.github/workflows/dependency-register.yml) | Pull request, push | [![Dependency register](https://github.com/MatthewK84/ICS/actions/workflows/dependency-register.yml/badge.svg?branch=main)](https://github.com/MatthewK84/ICS/actions/workflows/dependency-register.yml) |
+| [Evidence](.github/workflows/evidence.yml) | Pull request, push | [![Evidence](https://github.com/MatthewK84/ICS/actions/workflows/evidence.yml/badge.svg?branch=main)](https://github.com/MatthewK84/ICS/actions/workflows/evidence.yml) |
+| [Sync milestones](.github/workflows/sync-milestones.yml) | Push to `planning/` | [![Sync milestones](https://github.com/MatthewK84/ICS/actions/workflows/sync-milestones.yml/badge.svg?branch=main)](https://github.com/MatthewK84/ICS/actions/workflows/sync-milestones.yml) |
+| [AI assist](.github/workflows/ai-assist.yml) | Pull request | Required check on every PR |
+| [SITL rig](.github/workflows/sitl.yml), [Capture bench](.github/workflows/capture-bench.yml), [Timing bench](.github/workflows/timing-bench.yml) | Matching pull requests, on demand | No `main` status |
+| [Lattice sandbox](.github/workflows/lattice-sandbox.yml) | On demand | No `main` status |
+| [Build images](.github/workflows/conan-deps.yml) | Called by the toolchain workflows | Reported under each caller |
 
 ## Quick start
 
