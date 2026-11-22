@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ics:schema:camera-model:v1",
+  "title": "ICS camera model",
+  "description": "One station camera's intrinsics, Brown-Conrady distortion and boresight on the mount, fitted by python/ics_models/camera (ICS-042) and loaded by the C++ camera model (ICS-058). The projection, distortion, undistortion and boresight rotation are as python/ics_models/camera/model.py and boresight.py define them, and golden/camera pins them. Pixel (0, 0) is the centre of the image's top-left pixel; angles are in radians. See schemas/README.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "format_version",
+    "model_id",
+    "station_id",
+    "camera",
+    "created_utc",
+    "image",
+    "intrinsics",
+    "boresight",
+    "fit",
+    "targets_sha256",
+    "sightings_sha256"
+  ],
+  "$defs": {
+    "estimate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "sigma"],
+      "properties": {
+        "value": {"description": "The fitted value.", "type": "number"},
+        "sigma": {"description": "Its standard deviation from the fit.", "type": "number", "minimum": 0}
+      }
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "properties": {
+    "format": {"description": "What this file is.", "const": "ics-camera-model"},
+    "format_version": {"description": "The version of this format: 1.", "const": 1},
+    "model_id": {"description": "The model's own name, unique per camera.", "type": "string", "minLength": 1},
+    "station_id": {"description": "The station, as named in the range configuration.", "type": "string", "minLength": 1},
+    "camera": {"description": "Which of the station's cameras.", "enum": ["narrow", "wide", "mwir"]},
+    "created_utc": {
+      "description": "When the model was fitted, ISO 8601 in UTC.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+    },
+    "image": {
+      "description": "The image's size in pixels.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width_px", "height_px"],
+      "properties": {
+        "width_px": {"type": "integer", "minimum": 1},
+        "height_px": {"type": "integer", "minimum": 1}
+      }
+    },
+    "intrinsics": {
+      "description": "Focal lengths and principal point in pixels, and the distortion's radial (k1, k2, k3) and tangential (p1, p2) terms on the normalised image plane.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fx_px", "fy_px", "cx_px", "cy_px", "k1", "k2", "k3", "p1", "p2"],
+      "properties": {
+        "fx_px": {"$ref": "#/$defs/estimate"},
+        "fy_px": {"$ref": "#/$defs/estimate"},
+        "cx_px": {"$ref": "#/$defs/estimate"},
+        "cy_px": {"$ref": "#/$defs/estimate"},
+        "k1": {"$ref": "#/$defs/estimate"},
+        "k2": {"$ref": "#/$defs/estimate"},
+        "k3": {"$ref": "#/$defs/estimate"},
+        "p1": {"$ref": "#/$defs/estimate"},
+        "p2": {"$ref": "#/$defs/estimate"}
+      }
+    },
+    "boresight": {
+      "description": "The camera's rotation off the mount's line of sight, camera = Rz(roll) Ry(yaw) Rx(pitch) M nominal, and whether its optics mirror (M turns the nominal x round).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["yaw_rad", "pitch_rad", "roll_rad", "mirrored"],
+      "properties": {
+        "yaw_rad": {"$ref": "#/$defs/estimate"},
+        "pitch_rad": {"$ref": "#/$defs/estimate"},
+        "roll_rad": {"$ref": "#/$defs/estimate"},
+        "mirrored": {"type": "boolean"}
+      }
+    },
+    "fit": {
+      "description": "How the joint fit went, as RMS pixel distances. C3 is held_out_rms_px and held_out_sighting_rms_px: the reprojection RMS on target points and on sightings the fit never saw. A distortion term not in distortion_terms was held at zero and has sigma 0.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "distortion_terms",
+        "views",
+        "points_used",
+        "rms_px",
+        "points_held_out",
+        "held_out_rms_px",
+        "sightings_used",
+        "sighting_rms_px",
+        "sightings_held_out",
+        "held_out_sighting_rms_px"
+      ],
+      "properties": {
+        "distortion_terms": {
+          "type": "array",
+          "items": {"enum": ["k1", "k2", "k3", "p1", "p2"]},
+          "uniqueItems": true
+        },
+        "views": {"type": "integer", "minimum": 3},
+        "points_used": {"type": "integer", "minimum": 1},
+        "rms_px": {"type": "number", "minimum": 0},
+        "points_held_out": {"type": "integer", "minimum": 1},
+        "held_out_rms_px": {"type": "number", "minimum": 0},
+        "sightings_used": {"type": "integer", "minimum": 1},
+        "sighting_rms_px": {"type": "number", "minimum": 0},
+        "sightings_held_out": {"type": "integer", "minimum": 1},
+        "held_out_sighting_rms_px": {"type": "number", "minimum": 0}
+      }
+    },
+    "targets_sha256": {"description": "The SHA-256 of the target-point file.", "$ref": "#/$defs/sha256"},
+    "sightings_sha256": {"description": "The SHA-256 of the sightings file.", "$ref": "#/$defs/sha256"}
+  }
+}
