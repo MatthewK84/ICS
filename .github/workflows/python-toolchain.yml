@@ -46,6 +46,10 @@ jobs:
     name: Python checks
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    # The golden files are written with OpenBLAS's Haswell kernels; other
+    # kernels round matrix products differently (golden/README.md).
+    env:
+      OPENBLAS_CORETYPE: Haswell
     defaults:
       run:
         working-directory: python

@@ -75,6 +75,6 @@ Planned contents:
 
 - Golden outputs from the other Python reference models in `python/ics_models` (for example [ICS-046](https://github.com/MatthewK84/ICS/issues/46) to [ICS-049](https://github.com/MatthewK84/ICS/issues/49)).
 
-Rules: golden files change only through the reference that produces them, and every change is reviewed with that reference.
+Rules: golden files change only through the reference that produces them, and every change is reviewed with that reference. The Python references write and check them with OpenBLAS's Haswell kernels (`OPENBLAS_CORETYPE=Haswell`, which `ics_golden` and the tests' `conftest.py` set unless it is already set, and the Python workflow pins): other kernels round matrix products differently, and an iterative fit can then take another path.
 
 Next issue: [ICS-046](https://github.com/MatthewK84/ICS/issues/46), the IMM tracker and closest approach.
