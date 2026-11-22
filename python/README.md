@@ -9,8 +9,8 @@ Planned layout:
 ```text
 python/
   ics_golden/   golden test vectors shared with C++ and TypeScript (golden/), and the run-record samples (schemas/)
-  ics_models/   pointing (ICS-035), cue (ICS-037), tracker (ICS-038), handoff (ICS-039), trigger (ICS-040), ballistic (ICS-044, ICS-045), and to
-                come: calibration, trajectory, drag, footprint, killclass, uncertainty
+  ics_models/   pointing (ICS-035), cue (ICS-037), tracker (ICS-038), handoff (ICS-039), trigger (ICS-040), ballistic (ICS-044, ICS-045),
+                endgame (ICS-046), and to come: calibration, trajectory, drag, footprint, killclass, uncertainty
   ics_synth/    synthetic engagement generator
   ics_stats/    Pk, timeline analysis, validation scorer
   ics_sitl/     the SITL rig's ground station (ICS-018, deploy/sitl): MAVLink, missions, engagement checks,
@@ -147,6 +147,21 @@ uv run --locked python -m ics_models.pointing fit night.csv --station s1 --model
 - **Golden vectors.** `python -m ics_golden.ballistic ../golden/ballistic` writes them, from seed 44: density by height, six pieces from no drag to foil-like drag propagated to times between RK4 steps and on them, and the same pieces measured with noise and fitted. [`tests/test_ballistic_golden.py`](tests/test_ballistic_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
 - **Lift, flutter and selection (ICS-045).** On the golden pieces, every model fitted to its own pieces finds its parameters within 3σ, and selection chooses the true model for all six. `python -m ics_golden.aero ../golden/aero` writes them, from seed 45; [`tests/test_aero_golden.py`](tests/test_aero_golden.py) checks them as `test_ballistic_golden.py` does.
 - **Out of scope.** Flutter as a periodic tumbling force (a frequency and phase, which need a seed search) is left for later; wind is the footprint model's (ICS-051).
+
+## IMM and closest approach
+
+[`ics_models/endgame`](ics_models/endgame) is the reference IMM two-body tracker and closest-approach solver ([ICS-046](https://github.com/MatthewK84/ICS/issues/46), PY-04). The C++ endgame (CPP-26, [ICS-067](https://github.com/MatthewK84/ICS/issues/67) and [ICS-068](https://github.com/MatthewK84/ICS/issues/68)) must match it through [`golden/imm`](../golden/README.md). Every model shares the cue's nine-number state, position, velocity and acceleration in the range ENU frame, so the IMM mixes them without changing dimension, and every one is a linear Kalman filter.
+
+| Module | Provides |
+|---|---|
+| `motion` | `MotionModel` and `transition` and `process_noise` for constant velocity (white acceleration; acceleration set to 0), constant acceleration (white jerk, as the cue) and a coordinated turn at a fixed rate (horizontal turn, constant velocity up, centripetal acceleration) |
+| `imm` | `ImmSettings` (models, switching matrix, start), `start`, `predict` (interaction and prediction), `update` (Joseph-form filtering, log-likelihoods shifted by the largest) and `combined`, for one body fed timed 3D positions with their covariance |
+| `approach` | `encounter`: the first closest approach of two estimates inside a horizon, by bisection between the turning points of the cubic s·s'; the miss distance, its first-order sigma from the summed covariances, and the time of contact with a radius |
+| `truth` | `flight`: exact synthetic trajectories along straight, accelerating and turning legs |
+
+- **Done when.** Given true states 20 ms before the closest approach, the miss is within 1 mm of the truth's for straight, accelerating and turning bodies, and within 1e-6 m from 4 s out without turns. Tracking the scripted engagement from noise-free positions, the final miss is within 1 mm of the true 0.3 m; from noisy positions (1, 5 and 20 mm), within 3 sigma. The target's most likely model follows its straight leg, its turn and its acceleration.
+- **Golden vectors.** `python -m ics_golden.imm ../golden/imm` writes them, from seed 46. [`tests/test_endgame_golden.py`](tests/test_endgame_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1, or 1e-9 for the tracks and encounters, which carry CPU rounding through 500 updates.
+- **Out of scope.** Seeding from PLI and association are ICS-067's; same-frame relative measurements for the miss are ICS-068's. The turn rates are fixed, not estimated.
 
 ## Power-of-Ten checks
 

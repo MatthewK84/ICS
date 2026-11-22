@@ -17,6 +17,7 @@ on:
       - golden/handoff/**
       - golden/trigger/**
       - golden/ballistic/**
+      - golden/imm/**
       - schemas/**
       - .github/workflows/python-toolchain.yml
   push:
@@ -30,6 +31,7 @@ on:
       - golden/handoff/**
       - golden/trigger/**
       - golden/ballistic/**
+      - golden/imm/**
       - schemas/**
       - .github/workflows/python-toolchain.yml
   workflow_dispatch:
