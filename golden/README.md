@@ -60,10 +60,21 @@ Contents:
 
   The C++ estimation port (CPP-28, [ICS-073](https://github.com/MatthewK84/ICS/issues/73)) must match the densities and trajectories within 1e-9 of the larger of the value and 1, and the fitted states within 1e-6 relative. [`python/tests/test_ballistic_golden.py`](../python/tests/test_ballistic_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1.
 
+- [`aero/`](aero): the lift and flutter models and model selection ([ICS-045](https://github.com/MatthewK84/ICS/issues/45)), written by [`python/ics_golden/aero.py`](../python/ics_golden/aero.py). States are written in named columns, position, velocity, `kappa`, `kappa_slope` (flutter), `lift_kappa` and `side_kappa` (lift), with 0 for a parameter the model lacks.
+  - `parameters.csv` is the settings the other files were written with, the same as `ballistic/`'s.
+  - `truths.csv` gives six pieces, two following each model (ballistic, flutter, lift), and the model each follows.
+  - `trajectories.csv` gives those pieces propagated every 73 ms for about 3 s under their own model.
+  - `measurements.csv` gives their positions every 10 ms for 2 s, with 2 cm of noise on each axis.
+  - `fits.csv` gives every candidate model's fit to every piece: iterations, convergence, RMS residual, BIC, the fitted state and its standard deviations.
+  - `covariances.csv` gives each fit's covariance's upper triangle, by row and column in the model's own state order.
+  - `selection.csv` gives the model chosen for each piece; it is always the one the piece follows.
+
+  The C++ port (CPP-28, [ICS-074](https://github.com/MatthewK84/ICS/issues/74)) must match the trajectories within 1e-9 of the larger of the value and 1, the fitted states within 1e-6 relative, and every choice exactly. [`python/tests/test_aero_golden.py`](../python/tests/test_aero_golden.py) requires the files to be what the reference writes, every number within 1e-12 of the larger of it and 1, and every true-model fit to find its parameters within 3σ.
+
 Planned contents:
 
-- Golden outputs from the other Python reference models in `python/ics_models` (for example [ICS-045](https://github.com/MatthewK84/ICS/issues/45) to [ICS-049](https://github.com/MatthewK84/ICS/issues/49)).
+- Golden outputs from the other Python reference models in `python/ics_models` (for example [ICS-046](https://github.com/MatthewK84/ICS/issues/46) to [ICS-049](https://github.com/MatthewK84/ICS/issues/49)).
 
 Rules: golden files change only through the reference that produces them, and every change is reviewed with that reference.
 
-Next issue: [ICS-045](https://github.com/MatthewK84/ICS/issues/45), lift and flutter, which extends the ballistic model.
+Next issue: [ICS-046](https://github.com/MatthewK84/ICS/issues/46), the IMM tracker and closest approach.

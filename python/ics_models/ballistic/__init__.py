@@ -10,5 +10,8 @@ golden/ballistic:
 - atmosphere: ISA troposphere density by height above mean sea level;
 - dynamics: the acceleration and its fixed-step RK4 propagation;
 - fit: the initial state and κ from timed 3D points, by Levenberg-Marquardt,
-  with their covariance.
+  with their covariance;
+- aero: lift and speed-dependent drag ("flutter") models (ICS-045), which the
+  C++ port (ICS-074) must match through golden/aero;
+- select: the choice among the ballistic, flutter and lift models by BIC.
 """
