@@ -9,7 +9,7 @@ Planned layout:
 ```text
 python/
   ics_golden/   golden test vectors shared with C++ and TypeScript (golden/), and the run-record samples (schemas/)
-  ics_models/   pointing (ICS-035), cue (ICS-037), tracker (ICS-038), handoff (ICS-039), trigger (ICS-040), ballistic (ICS-044, ICS-045),
+  ics_models/   pointing (ICS-035), camera (ICS-042), cue (ICS-037), tracker (ICS-038), handoff (ICS-039), trigger (ICS-040), ballistic (ICS-044, ICS-045),
                 endgame (ICS-046), and to come: calibration, trajectory, drag, footprint, killclass, uncertainty
   ics_synth/    synthetic engagement generator
   ics_stats/    Pk, timeline analysis, validation scorer
@@ -77,6 +77,32 @@ uv run --locked python -m ics_models.pointing fit night.csv --station s1 --model
 - **Done when.** On 50 synthetic nights of 60 stars, with 3 µrad of centroid noise per axis, the worst held-out RMS is under C17's 10 µrad. Every term lies within 5σ of the truth, and at least 98% within 3σ. A model missing a term the data need fails C17. The star positions match SOFA's own test case for `atco13` to 1e-12 rad.
 - **On the sky.** The real capture and C17 on stars are the field shakedown's ([ICS-093](https://github.com/MatthewK84/ICS/issues/93)).
 - **Golden vectors** for the C++ port are in [`golden/pointing`](../golden/README.md).
+
+## Camera model
+
+[`ics_models/camera`](ics_models/camera) is the reference camera model and its calibration ([ICS-042](https://github.com/MatthewK84/ICS/issues/42), PY-02), one model per camera: narrow, wide and MWIR. Each camera is a pinhole with Brown-Conrady distortion and a boresight, which is the camera's small rotation off the mount's line of sight. ICS-058's C++ camera model loads the parameter file.
+
+| Module | Provides |
+|---|---|
+| `model` | The intrinsics (focal lengths and principal point in pixels) and the distortion (radial k1, k2 and k3, tangential p1 and p2), `project`, and `undistort` by Newton steps |
+| `boresight` | `pixel_of_sky` and `sky_of_pixel` from the mount's line of sight: camera = Rz(roll) Ry(yaw) Rx(pitch) M nominal, with the nominal frame as the tracker's geometry has it and M the mirror |
+| `pose` | Board poses, homographies, and Zhang's closed-form seed |
+| `solve` | Levenberg-Marquardt with column scaling, holding any parameter fixed |
+| `fit` | The intrinsics fit to the board, the boresight fit to the sightings, then the joint fit to both, and the held-out RMS (C3) |
+| `observations` | The target-point and sighting files, as the capture side writes them, and the hold-out splits |
+| `parameters` | The versioned parameter file, checked against [`schemas/camera-model.schema.json`](../schemas/camera-model.schema.json) |
+| `synth` | Synthetic calibrations of three made-up cameras |
+
+```sh
+uv run --locked python -m ics_models.camera fit targets.csv sightings.csv --station s1 --camera wide \
+    --width 1280 --height 800 --mirrored --model-id s1-wide-2026-11-22 --out wide.json
+```
+
+- **Inputs.** `targets.csv` has one row per board point found in a view: the view, the point's number, its place on the board in metres, and its pixel. `sightings.csv` has one row per sighting of a known direction, such as a surveyed fiducial or a star's observed place: the mount's line of sight through the pointing model, the direction, and the pixel. Finding the points in images is the capture side's job, and so is reducing star observations to directions.
+- **The fit** holds out a quarter of each view's points and a quarter of the sightings at random. It fits the rest, and writes the RMS on what it held out, which is C3. Sightings are needed as well as the board. A board a few tens of metres from a narrow camera can't fix its focal length, because the fit trades the focal length for the board's distance. The fit then lands every board point but misses directions on the sky by pixels. Directions are at infinity, so they fix the angular scale. `--distortion` names the terms to fit. Across a narrow field, k2, k3 and the tangential terms move a pixel by only hundredths of a pixel, so fit k1 alone there.
+- **Done when.** Each synthetic camera gets 20 calibrations of 12 views and 40 sightings, with 0.2 px of noise per axis. Across all of them, the worst RMS on held-out points and held-out sightings is at most C3's 0.5 px. Every free parameter lies within 5σ of the truth, and at least 98% within 3σ.
+- **On the range.** The real target captures, and C3 on real data, follow once the hardware arrives.
+- **Golden vectors** for the C++ port are in [`golden/camera`](../golden/README.md).
 
 ## Cue extrapolator
 

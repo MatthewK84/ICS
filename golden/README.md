@@ -16,6 +16,14 @@ Contents:
 
   The C++ encoder module ([ICS-036](https://github.com/MatthewK84/ICS/issues/36)) loads the model, then gives each sky direction from its encoder angles, and each encoder angle pair from its sky direction, within 1e-12 rad ([`cpp/encoder/test/pointing_model_test.cpp`](../cpp/encoder/test/pointing_model_test.cpp)). [`python/tests/test_pointing_io.py`](../python/tests/test_pointing_io.py) requires the files to be what the reference writes.
 
+- [`camera/`](camera): the camera model ([ICS-042](https://github.com/MatthewK84/ICS/issues/42)), written by [`python/ics_golden/camera.py`](../python/ics_golden/camera.py).
+  - `narrow.json`, `wide.json` and `mwir.json` are parameter files for three made-up cameras. The wide camera mirrors and has all five distortion terms.
+  - `project.csv` gives points in the camera frame, at three depths across a grid of pixels from corner to corner, and their pixels.
+  - `undistort.csv` gives each grid pixel's normalised image point.
+  - `sky.csv` gives each grid pixel's direction on the sky along four lines of sight.
+
+  The C++ camera model ([ICS-058](https://github.com/MatthewK84/ICS/issues/58)) must give each pixel from its point, each normalised point from its pixel, each direction from its pixel and each pixel from its direction, within 1e-12 of the larger of the number and 1. [`python/tests/test_camera_io.py`](../python/tests/test_camera_io.py) requires the files to be what the reference writes.
+
 - [`cue/`](cue): the cue extrapolator ([ICS-037](https://github.com/MatthewK84/ICS/issues/37)), written by [`python/ics_golden/cue.py`](../python/ics_golden/cue.py).
   - `parameters.csv` is the filter's settings.
   - `reports.csv` is eight seconds of a manoeuvring target's PLI and radar in arrival order. Each row gives the report, the filter's outcome and its estimate after the report.

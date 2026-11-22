@@ -1,0 +1,81 @@
+{
+  "format": "ics-camera-model",
+  "format_version": 1,
+  "model_id": "golden-narrow",
+  "station_id": "golden",
+  "camera": "narrow",
+  "created_utc": "2026-11-22T00:00:00Z",
+  "image": {
+    "width_px": 1280,
+    "height_px": 800
+  },
+  "intrinsics": {
+    "fx_px": {
+      "value": 20000.0,
+      "sigma": 0.0
+    },
+    "fy_px": {
+      "value": 20010.0,
+      "sigma": 0.0
+    },
+    "cx_px": {
+      "value": 645.3,
+      "sigma": 0.0
+    },
+    "cy_px": {
+      "value": 396.8,
+      "sigma": 0.0
+    },
+    "k1": {
+      "value": 0.8,
+      "sigma": 0.0
+    },
+    "k2": {
+      "value": 0.0,
+      "sigma": 0.0
+    },
+    "k3": {
+      "value": 0.0,
+      "sigma": 0.0
+    },
+    "p1": {
+      "value": 0.0,
+      "sigma": 0.0
+    },
+    "p2": {
+      "value": 0.0,
+      "sigma": 0.0
+    }
+  },
+  "boresight": {
+    "yaw_rad": {
+      "value": 0.0015,
+      "sigma": 0.0
+    },
+    "pitch_rad": {
+      "value": -0.0008,
+      "sigma": 0.0
+    },
+    "roll_rad": {
+      "value": 0.002,
+      "sigma": 0.0
+    },
+    "mirrored": false
+  },
+  "fit": {
+    "distortion_terms": [
+      "k1"
+    ],
+    "views": 3,
+    "points_used": 1,
+    "rms_px": 0.0,
+    "points_held_out": 1,
+    "held_out_rms_px": 0.0,
+    "sightings_used": 1,
+    "sighting_rms_px": 0.0,
+    "sightings_held_out": 1,
+    "held_out_sighting_rms_px": 0.0
+  },
+  "targets_sha256": "e82a229e8af3bfb64be1c8f1095157a1ce64e2cb2902b8d13a13574451b28fe4",
+  "sightings_sha256": "e82a229e8af3bfb64be1c8f1095157a1ce64e2cb2902b8d13a13574451b28fe4"
+}
