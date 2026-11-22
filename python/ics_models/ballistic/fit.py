@@ -12,6 +12,9 @@ A fit that has not converged within the iteration limit says so in its result
 rather than raising; inputs it cannot fit at all raise ValueError. A trial
 step whose path leaves the ISA troposphere is refused like one that raises
 the cost.
+
+fit_with fits any FitModel the same way: ICS-045's lift and speed-dependent
+drag models add parameters after κ, seeded from the FitModel's own values.
 """
 
 import math
@@ -21,7 +24,7 @@ from itertools import pairwise
 
 import numpy as np
 
-from ics_models.ballistic.dynamics import STATE_SIZE, Matrix, Model, Vector, propagate
+from ics_models.ballistic.dynamics import DRAG, Law, Matrix, Model, Vector, propagate_with
 
 MIN_POINTS: int = 4
 AXES: int = 3
@@ -33,6 +36,21 @@ DERIVATIVE_STEPS: tuple[float, ...] = (1e-3, 1e-3, 1e-3, 1e-4, 1e-4, 1e-4, 1e-6)
 # plus its floor.
 STEP_FLOORS: tuple[float, ...] = (1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1e-3)
 DAMPING_FACTOR: float = 10.0
+
+
+@dataclass(frozen=True)
+class FitModel:
+    """A model the fit can fit: its law of motion, a derivative step and convergence floor per state element,
+    and the seeds of any parameters after κ."""
+
+    name: str
+    law: Law
+    derivative_steps: tuple[float, ...]
+    step_floors: tuple[float, ...]
+    extra_seeds: tuple[float, ...] = ()
+
+
+BALLISTIC = FitModel(name="ballistic", law=DRAG, derivative_steps=DERIVATIVE_STEPS, step_floors=STEP_FLOORS)
 
 
 @dataclass(frozen=True)
@@ -66,9 +84,12 @@ class Problem:
     times_ns: tuple[int, ...]
     points: Matrix
     settings: FitSettings
+    fit_model: FitModel
 
 
-def checked_problem(times_ns: Sequence[int], points: Matrix, settings: FitSettings) -> Problem:
+def checked_problem(
+    times_ns: Sequence[int], points: Matrix, settings: FitSettings, fit_model: FitModel = BALLISTIC
+) -> Problem:
     """The inputs as a Problem, or ValueError when they cannot be fitted."""
     if points.ndim != QUADRATIC or points.shape[1] != AXES or points.shape[0] != len(times_ns):
         msg = "points must be one row of east, north and up per time"
@@ -82,15 +103,20 @@ def checked_problem(times_ns: Sequence[int], points: Matrix, settings: FitSettin
     if not np.all(np.isfinite(points)) or not settings.sigma_m > 0.0:
         msg = "points must be finite and sigma positive"
         raise ValueError(msg)
-    return Problem(tuple(times_ns), points.astype(np.float64), settings)
+    size = fit_model.law.size
+    if len(fit_model.derivative_steps) != size or len(fit_model.step_floors) != size:
+        msg = f"the {fit_model.name} model needs a derivative step and a floor for each of its {size} elements"
+        raise ValueError(msg)
+    return Problem(tuple(times_ns), points.astype(np.float64), settings, fit_model)
 
 
 def seed(problem: Problem) -> Vector:
-    """The quadratic seed: position and velocity at the first time, and the settings' κ."""
+    """The quadratic seed: position and velocity at the first time, the settings' κ, and the model's extra seeds."""
     seconds = np.array([float(time - problem.times_ns[0]) / NANOSECONDS_PER_SECOND for time in problem.times_ns])
     design = np.stack([np.ones_like(seconds), seconds, seconds * seconds], axis=1)
     coefficients = np.linalg.lstsq(design, problem.points, rcond=None)[0]
-    return np.array([*coefficients[0], *coefficients[1], problem.settings.initial_kappa_m2_kg])
+    extra = problem.fit_model.extra_seeds
+    return np.array([*coefficients[0], *coefficients[1], problem.settings.initial_kappa_m2_kg, *extra])
 
 
 def whitened_residuals(predicted: Matrix, problem: Problem) -> Vector:
@@ -100,22 +126,26 @@ def whitened_residuals(predicted: Matrix, problem: Problem) -> Vector:
 
 def residuals_and_jacobian(state: Vector, problem: Problem) -> tuple[Vector, Matrix]:
     """The whitened residuals at a state, and their central-difference Jacobian."""
-    steps = np.diag(np.array(DERIVATIVE_STEPS))
-    rows = np.vstack([state.reshape(1, STATE_SIZE), state + steps, state - steps])
-    paths = propagate(rows, problem.times_ns[0], problem.times_ns, problem.settings.model)
+    size, derivative_steps = problem.fit_model.law.size, problem.fit_model.derivative_steps
+    steps = np.diag(np.array(derivative_steps))
+    rows = np.vstack([state.reshape(1, size), state + steps, state - steps])
+    paths = propagate_with(problem.fit_model.law, rows, problem.times_ns[0], problem.times_ns, problem.settings.model)
     residuals = whitened_residuals(paths[:, 0, 0:AXES], problem)
-    jacobian = np.empty((residuals.size, STATE_SIZE))
-    for column in range(STATE_SIZE):
+    jacobian = np.empty((residuals.size, size))
+    for column in range(size):
         plus = paths[:, 1 + column, 0:AXES].reshape(-1)
-        minus = paths[:, 1 + STATE_SIZE + column, 0:AXES].reshape(-1)
-        jacobian[:, column] = (plus - minus) / (2.0 * DERIVATIVE_STEPS[column] * problem.settings.sigma_m)
+        minus = paths[:, 1 + size + column, 0:AXES].reshape(-1)
+        jacobian[:, column] = (plus - minus) / (2.0 * derivative_steps[column] * problem.settings.sigma_m)
     return residuals, jacobian
 
 
 def cost(state: Vector, problem: Problem) -> float:
     """The sum of squared whitened residuals at a state, or infinity if its path leaves the atmosphere."""
+    law = problem.fit_model.law
     try:
-        paths = propagate(state.reshape(1, STATE_SIZE), problem.times_ns[0], problem.times_ns, problem.settings.model)
+        paths = propagate_with(
+            law, state.reshape(1, law.size), problem.times_ns[0], problem.times_ns, problem.settings.model
+        )
     except ValueError:
         return math.inf
     residuals = whitened_residuals(paths[:, 0, 0:AXES], problem)
@@ -129,14 +159,19 @@ def damped_step(residuals: Vector, jacobian: Matrix, damping: float) -> Vector:
     return np.asarray(np.linalg.solve(damped, -(jacobian.T @ residuals)), dtype=np.float64)
 
 
-def is_small(step: Vector, state: Vector, tolerance: float) -> bool:
+def is_small(step: Vector, state: Vector, tolerance: float, floors: tuple[float, ...] = STEP_FLOORS) -> bool:
     """Whether every step element is under tolerance of its state element's size plus floor."""
-    return bool(np.all(np.abs(step) <= tolerance * (np.abs(state) + np.array(STEP_FLOORS))))
+    return bool(np.all(np.abs(step) <= tolerance * (np.abs(state) + np.array(floors))))
 
 
 def fit(times_ns: Sequence[int], points: Matrix, settings: FitSettings) -> FitResult:
     """Fit the state at the first time, and κ, to the points."""
-    problem = checked_problem(times_ns, points, settings)
+    return fit_with(BALLISTIC, times_ns, points, settings)
+
+
+def fit_with(fit_model: FitModel, times_ns: Sequence[int], points: Matrix, settings: FitSettings) -> FitResult:
+    """Fit a model's state at the first time, with κ and its other parameters, to the points."""
+    problem = checked_problem(times_ns, points, settings, fit_model)
     state, damping, converged, iterations = seed(problem), settings.initial_damping, False, 0
     while iterations < settings.max_iterations and not converged:
         iterations += 1
@@ -145,7 +180,7 @@ def fit(times_ns: Sequence[int], points: Matrix, settings: FitSettings) -> FitRe
         trial = state + step
         if cost(trial, problem) <= float(residuals @ residuals):
             state, damping = trial, damping / DAMPING_FACTOR
-            converged = is_small(step, state, settings.step_tolerance)
+            converged = is_small(step, state, settings.step_tolerance, fit_model.step_floors)
         else:
             damping *= DAMPING_FACTOR
     return finished(state, problem, iterations, converged)

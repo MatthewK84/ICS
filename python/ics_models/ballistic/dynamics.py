@@ -12,7 +12,7 @@ the fit propagates its perturbed states together.
 """
 
 import math
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -52,12 +52,26 @@ def derivative(states: Matrix, model: Model) -> Matrix:
     return rates
 
 
-def rk4_step(states: Matrix, seconds: float, model: Model) -> Matrix:
-    """The states one RK4 step of the given length later."""
-    first = derivative(states, model)
-    second = derivative(states + (HALF * seconds) * first, model)
-    third = derivative(states + (HALF * seconds) * second, model)
-    fourth = derivative(states + seconds * third, model)
+type Derivative = Callable[[Matrix, Model], Matrix]
+
+
+@dataclass(frozen=True)
+class Law:
+    """A law of motion: the time derivative of state rows, and how many numbers each row holds."""
+
+    rates: Derivative
+    size: int
+
+
+DRAG = Law(rates=derivative, size=STATE_SIZE)
+
+
+def rk4_step(states: Matrix, seconds: float, model: Model, rates: Derivative = derivative) -> Matrix:
+    """The states one RK4 step of the given length later, under a derivative (the drag model's by default)."""
+    first = rates(states, model)
+    second = rates(states + (HALF * seconds) * first, model)
+    third = rates(states + (HALF * seconds) * second, model)
+    fourth = rates(states + seconds * third, model)
     return states + (SIXTH * seconds) * (first + 2.0 * second + 2.0 * third + fourth)
 
 
@@ -66,13 +80,21 @@ def propagate(states: Matrix, start_ns: int, times_ns: Sequence[int], model: Mod
 
     The times must not decrease and none may precede start_ns.
     """
-    if states.ndim != UP or states.shape[1] != STATE_SIZE:
-        msg = f"states must be rows of {STATE_SIZE} numbers"
+    return propagate_with(DRAG, states, start_ns, times_ns, model)
+
+
+def propagate_with(
+    law: Law, states: Matrix, start_ns: int, times_ns: Sequence[int], model: Model
+) -> npt.NDArray[np.float64]:
+    """propagate under any law of motion: an array of times by rows by the law's state size (ICS-045 uses it)."""
+    size = law.size
+    if states.ndim != UP or states.shape[1] != size:
+        msg = f"states must be rows of {size} numbers"
         raise ValueError(msg)
     if model.step_ns <= 0:
         msg = "the RK4 step must be positive"
         raise ValueError(msg)
-    result = np.empty((len(times_ns), states.shape[0], STATE_SIZE))
+    result = np.empty((len(times_ns), states.shape[0], size))
     current_ns, current = start_ns, states.astype(np.float64)
     for index, time_ns in enumerate(times_ns):
         if time_ns < current_ns:
@@ -80,7 +102,7 @@ def propagate(states: Matrix, start_ns: int, times_ns: Sequence[int], model: Mod
             raise ValueError(msg)
         while current_ns < time_ns:
             step_ns = min(model.step_ns, time_ns - current_ns)
-            current = rk4_step(current, float(step_ns) / NANOSECONDS_PER_SECOND, model)
+            current = rk4_step(current, float(step_ns) / NANOSECONDS_PER_SECOND, model, law.rates)
             current_ns += step_ns
         result[index] = current
     return result
