@@ -1,0 +1,9 @@
+name,value
+origin_height_m,1200.0
+gravity_m_s2,9.80665
+step_ns,10000000
+sigma_m,0.02
+initial_kappa_m2_kg,0.05
+max_iterations,100
+step_tolerance,1e-10
+initial_damping,0.001

@@ -16,6 +16,7 @@ on:
       - golden/tracker/**
       - golden/handoff/**
       - golden/trigger/**
+      - golden/ballistic/**
       - schemas/**
       - .github/workflows/python-toolchain.yml
   push:
@@ -28,6 +29,7 @@ on:
       - golden/tracker/**
       - golden/handoff/**
       - golden/trigger/**
+      - golden/ballistic/**
       - schemas/**
       - .github/workflows/python-toolchain.yml
   workflow_dispatch:
