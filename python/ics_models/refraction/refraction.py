@@ -5,6 +5,11 @@ from dataclasses import dataclass
 import numpy as np
 import numpy.typing as npt
 
+MIN_ELEVATION_RAD: float = 0.1
+STANDARD_PRESSURE_PA: float = 101325.0
+STANDARD_TEMP_K: float = 288.15
+REFRACTION_SCALE: float = 1.0e-6
+
 
 @dataclass(frozen=True)
 class MetProfile:
@@ -21,9 +26,7 @@ def refraction_correction(elevation_rad: float, profile: MetProfile, wavelength_
 
     Uses a simple layered model; returns the correction to add to the observed elevation.
     """
-    # Placeholder layered integral; real implementation would ray-trace the profile.
     mean_temp = float(np.mean(profile.temp_k))
     mean_pressure = float(np.mean(profile.pressure_pa))
-    # Rough formula scaled for typical conditions
-    base = 1.0e-6 * (mean_pressure / 101325.0) * (288.15 / mean_temp)
-    return base * np.tan(max(elevation_rad, 0.1))
+    base = REFRACTION_SCALE * (mean_pressure / STANDARD_PRESSURE_PA) * (STANDARD_TEMP_K / mean_temp)
+    return base * np.tan(max(elevation_rad, MIN_ELEVATION_RAD))
