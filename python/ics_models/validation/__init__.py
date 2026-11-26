@@ -2,4 +2,4 @@
 
 from ics_models.validation.scorer import score_criteria
 
-__all__ = ["score_criteria"]
+__all__ = ("score_criteria",)
