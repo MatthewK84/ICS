@@ -29,4 +29,4 @@ def refraction_correction(elevation_rad: float, profile: MetProfile) -> float:
     mean_temp = float(np.mean(profile.temp_k))
     mean_pressure = float(np.mean(profile.pressure_pa))
     base = REFRACTION_SCALE * (mean_pressure / STANDARD_PRESSURE_PA) * (STANDARD_TEMP_K / mean_temp)
-    return base * np.tan(max(elevation_rad, MIN_ELEVATION_RAD))
+    return float(base * np.tan(max(elevation_rad, MIN_ELEVATION_RAD)))
