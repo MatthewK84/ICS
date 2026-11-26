@@ -8,6 +8,11 @@ import numpy.typing as npt
 from ics_models.ballistic.dynamics import Model, trajectory
 from ics_models.footprint.wind import WindProfile
 
+POSITION_NOISE_M: float = 5.0
+VELOCITY_NOISE_MPS: float = 1.0
+MAX_PROPAGATION_NS: int = 30_000_000_000
+STATE_DIM: int = 6
+
 
 @dataclass(frozen=True)
 class Fragment:
@@ -37,15 +42,15 @@ def run_monte_carlo(
     impacts: list[npt.NDArray[np.float64]] = []
     for frag in fragments:
         for _ in range(n_samples):
-            noise = rng.normal(0.0, 1.0, size=6)
+            noise = rng.normal(0.0, 1.0, size=STATE_DIM)
             state = frag.state.copy()
-            state[0:3] += noise[0:3] * 5.0
-            state[3:6] += noise[3:6] * 1.0
+            state[0:3] += noise[0:3] * POSITION_NOISE_M
+            state[3:6] += noise[3:6] * VELOCITY_NOISE_MPS
             h = model.origin_height_m + state[2]
             we, wn = wind.at(h)
             state[3] += we
             state[4] += wn
-            times = [int(t) for t in np.arange(0, 30_000_000_000, model.step_ns)]
+            times = [int(t) for t in np.arange(0, MAX_PROPAGATION_NS, model.step_ns)]
             traj = trajectory(state, 0, times, model)
             impact_idx = int(np.argmax(traj[:, 2] <= 0.0))
             if traj[impact_idx, 2] > 0.0:
