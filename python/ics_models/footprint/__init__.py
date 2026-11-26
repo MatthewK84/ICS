@@ -9,11 +9,11 @@ from ics_models.footprint.propagate import FootprintResult, run_monte_carlo
 from ics_models.footprint.regions import ContainmentRegions, compute_regions
 from ics_models.footprint.wind import WindProfile, read_wind_profile
 
-__all__ = [
+__all__ = (
     "ContainmentRegions",
     "FootprintResult",
     "WindProfile",
     "compute_regions",
     "read_wind_profile",
     "run_monte_carlo",
-]
+)
