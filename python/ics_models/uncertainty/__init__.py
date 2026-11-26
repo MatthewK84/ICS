@@ -2,4 +2,4 @@
 
 from ics_models.uncertainty.propagate import ErrorBudget, sigma_versus_range
 
-__all__ = ["ErrorBudget", "sigma_versus_range"]
+__all__ = ("ErrorBudget", "sigma_versus_range")
