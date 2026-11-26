@@ -7,6 +7,8 @@ import numpy.typing as npt
 
 DEFAULT_TIME_S: float = 1.0
 DEFAULT_RESIDUAL_M: float = 2.0
+N_CANDIDATES: tuple[int, ...] = (2, 3, 5)
+MASS_CANDIDATES: tuple[float, ...] = (0.02, 0.05, 0.1)
 
 
 @dataclass(frozen=True)
@@ -27,8 +29,8 @@ def recommend_thresholds(
     """Recommend thresholds that maximise a simple Youden index on synthetic data."""
     best = Thresholds(3, 0.05, DEFAULT_TIME_S, DEFAULT_RESIDUAL_M)
     best_score = -1.0
-    for n in (2, 3, 5):
-        for m in (0.02, 0.05, 0.1):
+    for n in N_CANDIDATES:
+        for m in MASS_CANDIDATES:
             pred = (n_obs >= n) & (mass_obs >= m)
             tp = np.sum(pred & truth_kills)
             fn = np.sum(~pred & truth_kills)
