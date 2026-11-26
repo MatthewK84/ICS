@@ -1,4 +1,4 @@
-"""Compute C1–C19 accreditation criteria."""
+"""Compute C1-C19 accreditation criteria."""
 
 from dataclasses import dataclass
 
@@ -16,7 +16,7 @@ class CriterionResult:
 
 def score_criteria(data: dict[str, float]) -> list[CriterionResult]:
     """Placeholder scorer that checks a few representative criteria."""
-    results = [
+    return [
         CriterionResult(
             "C17",
             data.get("pointing_rms_urad", 20.0) <= POINTING_THRESHOLD_URAD,
@@ -30,4 +30,3 @@ def score_criteria(data: dict[str, float]) -> list[CriterionResult]:
             TIMETAG_THRESHOLD_US,
         ),
     ]
-    return results
