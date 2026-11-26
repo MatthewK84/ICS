@@ -9,6 +9,7 @@ MIN_ELEVATION_RAD: float = 0.1
 STANDARD_PRESSURE_PA: float = 101325.0
 STANDARD_TEMP_K: float = 288.15
 REFRACTION_SCALE: float = 1.0e-6
+DEFAULT_WAVELENGTH_M: float = 550e-9
 
 
 @dataclass(frozen=True)
@@ -21,7 +22,9 @@ class MetProfile:
     humidity: npt.NDArray[np.float64]
 
 
-def refraction_correction(elevation_rad: float, profile: MetProfile, wavelength_m: float = 550e-9) -> float:
+def refraction_correction(
+    elevation_rad: float, profile: MetProfile, wavelength_m: float = DEFAULT_WAVELENGTH_M
+) -> float:
     """Approximate angular refraction correction (radians) for a given elevation.
 
     Uses a simple layered model; returns the correction to add to the observed elevation.
