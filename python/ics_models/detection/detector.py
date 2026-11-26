@@ -7,6 +7,7 @@ import numpy.typing as npt
 
 STD_EPS: float = 1e-6
 DEFAULT_AREA_PX: float = 4.0
+DEFAULT_THRESHOLD: float = 3.0
 
 
 @dataclass(frozen=True)
@@ -17,7 +18,7 @@ class Detection:
     contrast: float
 
 
-def detect_blobs(image: npt.NDArray[np.float64], threshold: float = 3.0) -> list[Detection]:
+def detect_blobs(image: npt.NDArray[np.float64], threshold: float = DEFAULT_THRESHOLD) -> list[Detection]:
     """Simple threshold blob detector for the reference."""
     mean = float(np.mean(image))
     std = float(np.std(image)) + STD_EPS
