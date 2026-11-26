@@ -30,10 +30,13 @@ def recommend_thresholds(
     for n in N_CANDIDATES:
         for m in MASS_CANDIDATES:
             pred = (n_obs >= n) & (mass_obs >= m)
-            tp = np.sum(pred & truth_kills)
-            fn = np.sum(~pred & truth_kills)
-            fp = np.sum(pred & ~truth_kills)
-            score = tp / max(tp + fn, 1) - fp / max(np.sum(~truth_kills), 1)
+            tp = int(np.sum(pred & truth_kills))
+            fn = int(np.sum(~pred & truth_kills))
+            fp = int(np.sum(pred & ~truth_kills))
+            tn = int(np.sum(~truth_kills))
+            denom_pos = max(tp + fn, 1)
+            denom_neg = max(tn, 1)
+            score = float(tp) / float(denom_pos) - float(fp) / float(denom_neg)
             if score > best_score:
                 best_score = score
                 best = Thresholds(n, m, DEFAULT_TIME_S, DEFAULT_RESIDUAL_M)
