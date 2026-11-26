@@ -2,4 +2,4 @@
 
 from ics_models.killclass.thresholds import Thresholds, recommend_thresholds
 
-__all__ = ["Thresholds", "recommend_thresholds"]
+__all__ = ("Thresholds", "recommend_thresholds")
