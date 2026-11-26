@@ -6,13 +6,16 @@ import numpy as np
 import numpy.typing as npt
 
 URAD_TO_RAD: float = 1e-6
+DEFAULT_POINTING_URAD: float = 10.0
+DEFAULT_TIMING_US: float = 50.0
+DEFAULT_ENCODER_URAD: float = 5.0
 
 
 @dataclass(frozen=True)
 class ErrorBudget:
-    pointing_urad: float = 10.0
-    timing_us: float = 50.0
-    encoder_urad: float = 5.0
+    pointing_urad: float = DEFAULT_POINTING_URAD
+    timing_us: float = DEFAULT_TIMING_US
+    encoder_urad: float = DEFAULT_ENCODER_URAD
 
 
 def sigma_versus_range(ranges_m: npt.NDArray[np.float64], budget: ErrorBudget) -> npt.NDArray[np.float64]:
