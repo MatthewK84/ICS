@@ -6,6 +6,8 @@ from ics_models.stats.miss import miss_distance_summary
 from ics_models.stats.pk import clopper_pearson_pk
 from ics_models.stats.timeline import timeline_gates
 
+EXPECTED_MEDIAN: float = 2.0
+
 
 def test_pk_interval() -> None:
     interval = clopper_pearson_pk(5, 10)
@@ -14,7 +16,7 @@ def test_pk_interval() -> None:
 
 def test_miss_summary() -> None:
     summary = miss_distance_summary(np.array([1.0, 2.0, 3.0]))
-    assert summary.median_m == 2.0
+    assert summary.median_m == EXPECTED_MEDIAN
 
 
 def test_timeline_pass() -> None:
