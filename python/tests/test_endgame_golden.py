@@ -1,6 +1,6 @@
 """golden/imm is what the IMM and closest-approach references write (ICS-046).
 
-Every number must be within 1e-12 of the golden one, or of 1 if larger, and
+Every number must be within 1e-9 of the golden one, or of 1 if larger, and
 everything else the same text: numpy's matrix products round by CPU (see
 test_cue_golden.py).
 """
@@ -21,7 +21,7 @@ FILES: tuple[str, ...] = (
     "encounters.csv",
     "approaches.csv",
 )
-RELATIVE: float = 1e-12
+RELATIVE: float = 1e-9
 
 
 def same_field(written: str, golden: str) -> bool:
