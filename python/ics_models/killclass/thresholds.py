@@ -23,8 +23,6 @@ def recommend_thresholds(
     truth_kills: npt.NDArray[np.bool_],
     n_obs: npt.NDArray[np.int_],
     mass_obs: npt.NDArray[np.float64],
-    time_obs: npt.NDArray[np.float64],
-    residual_obs: npt.NDArray[np.float64],
 ) -> Thresholds:
     """Recommend thresholds that maximise a simple Youden index on synthetic data."""
     best = Thresholds(3, 0.05, DEFAULT_TIME_S, DEFAULT_RESIDUAL_M)
