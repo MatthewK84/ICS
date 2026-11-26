@@ -30,4 +30,4 @@ def synthetic_coverage_test(n_fragments: int = 5, n_samples: int = 200, seed: in
 
     result = run_monte_carlo(fragments, wind, n_samples, model, rng)
     regions = compute_regions(result.impacts_en_m)
-    return regions.p90.shape[0] >= MIN_HULL_POINTS
+    return bool(regions.p90.shape[0] >= MIN_HULL_POINTS)
