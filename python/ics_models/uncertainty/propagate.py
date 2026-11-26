@@ -23,4 +23,4 @@ def sigma_versus_range(ranges_m: npt.NDArray[np.float64], budget: ErrorBudget) -
     angular_urad = np.sqrt(budget.pointing_urad**2 + budget.encoder_urad**2)
     angular_m = ranges_m * angular_urad * URAD_TO_RAD
     timing_m = ranges_m * 0.0
-    return np.sqrt(angular_m**2 + timing_m**2)
+    return np.sqrt(angular_m**2 + timing_m**2).astype(np.float64)
