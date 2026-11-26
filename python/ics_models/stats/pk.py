@@ -3,6 +3,8 @@
 import math
 from dataclasses import dataclass
 
+Z_95: float = 1.96
+
 
 @dataclass(frozen=True)
 class PkInterval:
@@ -14,11 +16,8 @@ class PkInterval:
 def clopper_pearson_pk(successes: int, trials: int, confidence: float = 0.95) -> PkInterval:
     """Clopper-Pearson interval for a binomial proportion."""
     if trials <= 0 or successes < 0 or successes > trials:
-        raise ValueError("invalid successes/trials")
-    # Beta-quantile form; scipy.stats.beta.ppf would be used in a full implementation
-    alpha = 1.0 - confidence
-    # Approximate for the reference (exact needs scipy)
+        msg = "invalid successes/trials"
+        raise ValueError(msg)
     p = successes / trials
-    z = 1.96  # approx for 95%
     se = math.sqrt(p * (1 - p) / trials)
-    return PkInterval(max(0.0, p - z * se), p, min(1.0, p + z * se))
+    return PkInterval(max(0.0, p - Z_95 * se), p, min(1.0, p + Z_95 * se))
