@@ -1,0 +1,43 @@
+"""ROC-based threshold recommendation."""
+
+from dataclasses import dataclass
+
+import numpy as np
+import numpy.typing as npt
+
+DEFAULT_TIME_S: float = 1.0
+DEFAULT_RESIDUAL_M: float = 2.0
+N_CANDIDATES: tuple[int, ...] = (2, 3, 5)
+MASS_CANDIDATES: tuple[float, ...] = (0.02, 0.05, 0.1)
+
+
+@dataclass(frozen=True)
+class Thresholds:
+    n_fragments: int
+    mass_kg: float
+    time_s: float
+    residual_m: float
+
+
+def recommend_thresholds(
+    truth_kills: npt.NDArray[np.bool_],
+    n_obs: npt.NDArray[np.int_],
+    mass_obs: npt.NDArray[np.float64],
+) -> Thresholds:
+    """Recommend thresholds that maximise a simple Youden index on synthetic data."""
+    best = Thresholds(3, 0.05, DEFAULT_TIME_S, DEFAULT_RESIDUAL_M)
+    best_score = -1.0
+    for n in N_CANDIDATES:
+        for m in MASS_CANDIDATES:
+            pred = (n_obs >= n) & (mass_obs >= m)
+            tp = int(np.sum(pred & truth_kills))
+            fn = int(np.sum(~pred & truth_kills))
+            fp = int(np.sum(pred & ~truth_kills))
+            tn = int(np.sum(~truth_kills))
+            denom_pos = max(tp + fn, 1)
+            denom_neg = max(tn, 1)
+            score = float(tp) / float(denom_pos) - float(fp) / float(denom_neg)
+            if score > best_score:
+                best_score = score
+                best = Thresholds(n, m, DEFAULT_TIME_S, DEFAULT_RESIDUAL_M)
+    return best
