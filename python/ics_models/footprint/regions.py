@@ -4,7 +4,9 @@ from dataclasses import dataclass
 
 import numpy as np
 import numpy.typing as npt
-from scipy.spatial import ConvexHull
+from scipy.spatial import ConvexHull, QhullError
+
+MIN_POINTS_FOR_HULL: int = 3
 
 
 @dataclass(frozen=True)
@@ -18,7 +20,7 @@ class ContainmentRegions:
 
 def compute_regions(impacts: npt.NDArray[np.float64]) -> ContainmentRegions:
     """Return convex hulls of the central 50/90/99% of samples by distance from median."""
-    if impacts.shape[0] < 3:
+    if impacts.shape[0] < MIN_POINTS_FOR_HULL:
         empty = np.empty((0, 2))
         return ContainmentRegions(empty, empty, empty)
     median = np.median(impacts, axis=0)
@@ -26,11 +28,11 @@ def compute_regions(impacts: npt.NDArray[np.float64]) -> ContainmentRegions:
     order = np.argsort(dist)
 
     def hull(fraction: float) -> npt.NDArray[np.float64]:
-        n = max(3, int(fraction * impacts.shape[0]))
+        n = max(MIN_POINTS_FOR_HULL, int(fraction * impacts.shape[0]))
         pts = impacts[order[:n]]
         try:
             return pts[ConvexHull(pts).vertices]
-        except Exception:
+        except QhullError:
             return pts
 
     return ContainmentRegions(p50=hull(0.50), p90=hull(0.90), p99=hull(0.99))

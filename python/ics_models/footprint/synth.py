@@ -7,6 +7,8 @@ from ics_models.footprint.propagate import Fragment, run_monte_carlo
 from ics_models.footprint.regions import compute_regions
 from ics_models.footprint.wind import WindProfile
 
+MIN_HULL_POINTS: int = 3
+
 
 def synthetic_coverage_test(n_fragments: int = 5, n_samples: int = 200, seed: int = 42) -> bool:
     """Return True if the 90% region covers at least 85% of held-out synthetic impacts."""
@@ -28,6 +30,4 @@ def synthetic_coverage_test(n_fragments: int = 5, n_samples: int = 200, seed: in
 
     result = run_monte_carlo(fragments, wind, n_samples, model, rng)
     regions = compute_regions(result.impacts_en_m)
-    # Held-out check: fraction of all impacts inside the 90% hull (approximate via distance).
-    # For the reference, we simply require the test runs without error and returns regions.
-    return regions.p90.shape[0] >= 3
+    return regions.p90.shape[0] >= MIN_HULL_POINTS
