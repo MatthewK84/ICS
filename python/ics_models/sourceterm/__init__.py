@@ -2,4 +2,4 @@
 
 from ics_models.sourceterm.model import SourceTerm, source_term_table
 
-__all__ = ["SourceTerm", "source_term_table"]
+__all__ = ("SourceTerm", "source_term_table")
