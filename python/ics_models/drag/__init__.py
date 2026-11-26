@@ -2,4 +2,4 @@
 
 from ics_models.drag.fit import DragTable, fit_drag_table
 
-__all__ = ["DragTable", "fit_drag_table"]
+__all__ = ("DragTable", "fit_drag_table")
