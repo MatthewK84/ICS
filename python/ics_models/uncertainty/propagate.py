@@ -20,7 +20,8 @@ class ErrorBudget:
 
 def sigma_versus_range(ranges_m: npt.NDArray[np.float64], budget: ErrorBudget) -> npt.NDArray[np.float64]:
     """Simple RSS of angular errors converted to metres at range."""
-    angular_urad = np.sqrt(budget.pointing_urad**2 + budget.encoder_urad**2)
+    angular_urad = float(np.sqrt(budget.pointing_urad**2 + budget.encoder_urad**2))
     angular_m = ranges_m * angular_urad * URAD_TO_RAD
     timing_m = ranges_m * 0.0
-    return np.sqrt(angular_m**2 + timing_m**2).astype(np.float64)
+    result = np.sqrt(angular_m**2 + timing_m**2)
+    return result.astype(np.float64, copy=False)
