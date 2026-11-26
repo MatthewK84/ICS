@@ -5,6 +5,10 @@ from dataclasses import dataclass
 import numpy as np
 import numpy.typing as npt
 
+MIN_MASS_KG: float = 0.01
+MIN_CD: float = 0.1
+MAX_CD: float = 2.0
+
 
 @dataclass(frozen=True)
 class DragTable:
@@ -24,7 +28,6 @@ def fit_drag_table(
         mask = np.array([m == mat for m in materials])
         if not np.any(mask):
             continue
-        # Placeholder: Cd ~ beta / (area * rho) approximated from mass proxy
-        cd = float(np.mean(betas[mask]) / max(np.mean(masses_kg[mask]), 0.01))
-        table[mat] = max(0.1, min(cd, 2.0))
+        cd = float(np.mean(betas[mask]) / max(np.mean(masses_kg[mask]), MIN_MASS_KG))
+        table[mat] = max(MIN_CD, min(cd, MAX_CD))
     return DragTable(materials=table)
